@@ -1,0 +1,45 @@
+{
+  "welcome": "👋 Hi! I'm a notification bot for GitLab/GitHub.\nUse /connect <URL> to connect a repository.\n/help — list of commands.",
+  "help": "📚 Available commands:\n/start — get started\n/connect <URL> — connect a repository\n/status — connected repositories status\n/help — this help",
+  "connect_dev": "🔗 Repository connection feature is in development.\nGitHub/GitLab integration coming soon!",
+  "unknown_command": "Sorry, I only understand commands. Type /help",
+
+  "bot_registered": "✅ Bot @%s registered. Session active",
+  "bot_started": "🚀 Bot @%s started, listening for commands...",
+  "new_message": "📩 New message from @%s (chat %d): %s",
+  "send_failed": "❌ Failed to send message to chat %d: %v",
+  "proxy_enabled": "🛡️ Bot using proxy %s://%s:%s",
+  "direct_connection": "✅ Bot using direct connection",
+
+  "star_created": "⭐ <b>%s</b> — new star!\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">View repo</a> | <a href=\"%s\">Stargazers</a>",
+  "star_deleted": "💔 <b>%s</b> — star removed\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">View repo</a> | <a href=\"%s\">Stargazers</a>",
+  "star_verb_created": "starred",
+  "star_verb_deleted": "unstarred",
+
+  "push_new": "New push",
+  "push_force": "Force push",
+  "push_created": "New branch created",
+  "push_deleted": "Branch deleted",
+
+  "push_header": "%s <b>%s</b>\n%s to branch <code>%s</code>\n\n",
+  "pusher": "👤 <a href=\"%s\">@%s</a>",
+  "pusher_email": " (<code>%s</code>)",
+  "commits_count": "📦 Commits: <b>%d</b>",
+  "commits_forced": " ⚠️ FORCE PUSH",
+  "commits_header": "<b>📝 Commits:</b>\n",
+  "commits_more": "  <i>...and %d more commits</i>\n",
+  "files_header": "<b>📁 Changed files:</b>\n",
+  "files_added": "  ➕ Added: %s\n",
+  "files_modified": "  ✏️ Modified: %s\n",
+  "files_removed": "  ➖ Removed: %s\n",
+  "view_changes": "🔗 <a href=\"%s\">View changes</a>",
+
+  "dispatcher_init": "✅ Dispatcher initialized with %d handlers",
+  "unknown_event_log": "⚠️ Unknown event: %s / %s",
+  "no_handler_log": "⚠️ No handler for: %v",
+  "error_event_log": "❌ Error handling %v: %v",
+  "unknown_event": "📢 New event <code>%s</code> from %s",
+  "error_event": "❌ Error processing event <code>%s</code>",
+
+  "server_started": "🚀 Server started on port %s (version %s)"
+}

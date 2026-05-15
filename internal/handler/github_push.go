@@ -1,25 +1,22 @@
 package handler
 
 import (
+	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"encoding/json"
 	"fmt"
 	"strings"
 )
 
-// ──────────────────────────────────────────────────────────────
-// DTO
-// ──────────────────────────────────────────────────────────────
+// ─── DTO (без изменений) ───
 
-// GitHubPushDto represents the GitHub push event webhook payload.
-//
-// DTO для вебхук-события push от GitHub.
 type GitHubPushDto struct {
 	Ref        string             `json:"ref"`
 	Before     string             `json:"before"`
 	After      string             `json:"after"`
 	Repository GitHubPushRepo     `json:"repository"`
 	Pusher     GitHubPushPusher   `json:"pusher"`
+	Sender     GitHubPushSender   `json:"sender"`
 	Forced     bool               `json:"forced"`
 	Created    bool               `json:"created"`
 	Deleted    bool               `json:"deleted"`
@@ -27,6 +24,13 @@ type GitHubPushDto struct {
 	Compare    string             `json:"compare"`
 	Commits    []GitHubPushCommit `json:"commits"`
 	HeadCommit *GitHubPushCommit  `json:"head_commit"`
+}
+
+type GitHubPushSender struct {
+	Login     string `json:"login"`
+	ID        int    `json:"id"`
+	AvatarURL string `json:"avatar_url"`
+	HTMLURL   string `json:"html_url"`
 }
 
 type GitHubPushRepo struct {
@@ -51,8 +55,9 @@ type GitHubPushOwner struct {
 }
 
 type GitHubPushPusher struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
 type GitHubPushCommit struct {
@@ -83,24 +88,20 @@ type GitHubPushCommitter struct {
 	Date     string `json:"date"`
 }
 
-// Branch extracts branch name from ref.
 func (d *GitHubPushDto) Branch() string {
 	return strings.TrimPrefix(d.Ref, "refs/heads/")
 }
 
-// CommitCount returns the number of commits.
 func (d *GitHubPushDto) CommitCount() int {
 	return len(d.Commits)
 }
 
-// ──────────────────────────────────────────────────────────────
-// Handler
-// ──────────────────────────────────────────────────────────────
+// ─── Handler ───
 
 // GitHubPushHandler handles GitHub push events.
-//
-// Обрабатывает события push от GitHub.
-type GitHubPushHandler struct{}
+type GitHubPushHandler struct {
+	Lang i18n.Lang
+}
 
 func (h *GitHubPushHandler) GetEventType() platform.EventType {
 	return platform.GitHubPush
@@ -111,7 +112,6 @@ func (h *GitHubPushHandler) Handle(rawJSON string) (string, error) {
 	if err := json.Unmarshal([]byte(rawJSON), &dto); err != nil {
 		return "", fmt.Errorf("failed to parse push event: %w", err)
 	}
-
 	return h.formatMessage(&dto), nil
 }
 
@@ -119,88 +119,31 @@ func (h *GitHubPushHandler) formatMessage(dto *GitHubPushDto) string {
 	var sb strings.Builder
 
 	emoji := getEmoji(dto)
-	action := getAction(dto)
+	action := getActionText(h.Lang, dto)
 	repoName := dto.Repository.FullName
 
 	// Заголовок
-	sb.WriteString(fmt.Sprintf("%s <b>%s</b>\n", emoji, repoName))
-	sb.WriteString(fmt.Sprintf("%s в ветку <code>%s</code>\n\n", action, dto.Branch()))
+	sb.WriteString(i18n.Tf(h.Lang, i18n.MsgPushHeader,
+		emoji, repoName, action, dto.Branch()))
 
 	// Пушер
-	if dto.Pusher.Name != "" {
-		sb.WriteString(fmt.Sprintf("👤 <b>%s</b>", dto.Pusher.Name))
-		if dto.Pusher.Email != "" {
-			sb.WriteString(fmt.Sprintf(" (<code>%s</code>)", dto.Pusher.Email))
-		}
-		sb.WriteString("\n")
-	}
+	sb.WriteString(fmt.Sprintf("%s\n", formatPusher(h.Lang, dto)))
 
-	// Статистика
-	sb.WriteString(fmt.Sprintf("📦 Коммитов: <b>%d</b>", dto.CommitCount()))
-	if dto.Forced {
-		sb.WriteString(" ⚠️ FORCE PUSH")
-	}
-	sb.WriteString("\n\n")
+	// Коммиты
+	sb.WriteString(formatCommits(h.Lang, dto))
 
-	// Список коммитов
-	if len(dto.Commits) > 0 {
-		sb.WriteString("<b>📝 Коммиты:</b>\n")
-		max := len(dto.Commits)
-		if max > 5 {
-			max = 5
-		}
-		for i := 0; i < max; i++ {
-			c := dto.Commits[i]
-			shortID := c.ID[:7]
-			msg := strings.Split(c.Message, "\n")[0]
-			if len(msg) > 70 {
-				msg = msg[:67] + "..."
-			}
-			authorName := "unknown"
-			if c.Author.Name != "" {
-				authorName = c.Author.Name
-			}
-			sb.WriteString(fmt.Sprintf("  <code>%s</code> %s — <i>%s</i>\n", shortID, msg, authorName))
-		}
-		if len(dto.Commits) > max {
-			sb.WriteString(fmt.Sprintf("  <i>...и ещё %d коммитов</i>\n", len(dto.Commits)-max))
-		}
-		sb.WriteString("\n")
-	}
-
-	// Изменённые файлы
-	if dto.HeadCommit != nil {
-		added := dto.HeadCommit.Added
-		removed := dto.HeadCommit.Removed
-		modified := dto.HeadCommit.Modified
-
-		if len(added) > 0 || len(removed) > 0 || len(modified) > 0 {
-			sb.WriteString("<b>📁 Изменённые файлы:</b>\n")
-			if len(added) > 0 {
-				tagged := wrapWithCode(added)
-				sb.WriteString(fmt.Sprintf("  ➕ Добавлено: %s\n", strings.Join(tagged, ", ")))
-			}
-			if len(modified) > 0 {
-				tagged := wrapWithCode(modified)
-				sb.WriteString(fmt.Sprintf("  ✏️ Изменено: %s\n", strings.Join(tagged, ", ")))
-			}
-			if len(removed) > 0 {
-				tagged := wrapWithCode(removed)
-				sb.WriteString(fmt.Sprintf("  ➖ Удалено: %s\n", strings.Join(tagged, ", ")))
-			}
-			sb.WriteString("\n")
-		}
-	}
+	// Файлы
+	sb.WriteString(formatFiles(h.Lang, dto))
 
 	// Ссылка
 	if dto.Compare != "" {
-		sb.WriteString(fmt.Sprintf("🔗 <a href=\"%s\">Смотреть изменения</a>", dto.Compare))
+		sb.WriteString(i18n.Tf(h.Lang, i18n.MsgViewChanges, dto.Compare))
 	}
 
 	return sb.String()
 }
 
-// ── Helpers ──
+// ─── Helpers ───
 
 func getEmoji(dto *GitHubPushDto) string {
 	if dto.Deleted {
@@ -215,17 +158,99 @@ func getEmoji(dto *GitHubPushDto) string {
 	return "🚀"
 }
 
-func getAction(dto *GitHubPushDto) string {
+func getActionText(lang i18n.Lang, dto *GitHubPushDto) string {
 	if dto.Deleted {
-		return "Удалена ветка"
+		return i18n.T(lang, i18n.MsgPushDeleted)
 	}
 	if dto.Created {
-		return "Создана новая ветка"
+		return i18n.T(lang, i18n.MsgPushCreated)
 	}
 	if dto.Forced {
-		return "Force push"
+		return i18n.T(lang, i18n.MsgPushForce)
 	}
-	return "Новый пуш"
+	return i18n.T(lang, i18n.MsgPushNew)
+}
+
+func formatPusher(lang i18n.Lang, dto *GitHubPushDto) string {
+	sender := dto.Sender
+	pusher := dto.Pusher
+
+	result := i18n.Tf(lang, i18n.MsgPusher, sender.HTMLURL, sender.Login)
+	if pusher.Email != "" {
+		result += i18n.Tf(lang, i18n.MsgPusherEmail, pusher.Email)
+	}
+	return result
+}
+
+func formatCommits(lang i18n.Lang, dto *GitHubPushDto) string {
+	var sb strings.Builder
+
+	sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsCount, dto.CommitCount()))
+	if dto.Forced {
+		sb.WriteString(i18n.T(lang, i18n.MsgCommitsForced))
+	}
+	sb.WriteString("\n\n")
+
+	if len(dto.Commits) > 0 {
+		sb.WriteString(i18n.T(lang, i18n.MsgCommitsHeader))
+		max := len(dto.Commits)
+		if max > 5 {
+			max = 5
+		}
+		for i := 0; i < max; i++ {
+			c := dto.Commits[i]
+			shortID := c.ID[:7]
+			msg := strings.Split(c.Message, "\n")[0]
+			if len(msg) > 70 {
+				msg = msg[:67] + "..."
+			}
+			authorName := c.Author.Name
+			if authorName == "" {
+				authorName = "unknown"
+			}
+			sb.WriteString(fmt.Sprintf("  <a href=\"%s\">%s</a> %s — <i><a href=\"https://github.com/%s\">%s</a></i>\n",
+				c.URL, shortID, msg, c.Author.Username, authorName))
+		}
+		if len(dto.Commits) > max {
+			sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsMore, len(dto.Commits)-max))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+func formatFiles(lang i18n.Lang, dto *GitHubPushDto) string {
+	if dto.HeadCommit == nil {
+		return ""
+	}
+
+	added := dto.HeadCommit.Added
+	removed := dto.HeadCommit.Removed
+	modified := dto.HeadCommit.Modified
+
+	if len(added) == 0 && len(removed) == 0 && len(modified) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString(i18n.T(lang, i18n.MsgFilesHeader))
+
+	if len(added) > 0 {
+		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesAdded,
+			strings.Join(wrapWithCode(added), ", ")))
+	}
+	if len(modified) > 0 {
+		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesModified,
+			strings.Join(wrapWithCode(modified), ", ")))
+	}
+	if len(removed) > 0 {
+		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesRemoved,
+			strings.Join(wrapWithCode(removed), ", ")))
+	}
+	sb.WriteString("\n")
+
+	return sb.String()
 }
 
 func wrapWithCode(items []string) []string {

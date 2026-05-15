@@ -3,6 +3,7 @@ package main
 import (
 	"GitHub-GitLab-Notifier/internal/bot"
 	"GitHub-GitLab-Notifier/internal/dispatcher"
+	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"flag"
 	"fmt"
@@ -16,18 +17,20 @@ import (
 )
 
 var (
-	b                 *bot.Bot
-	dispatcherService *dispatcher.Dispatcher
-	chatID            int64
-)
-
-var (
 	Version   = "dev-0.0.1"
 	BuildTime = "unknown"
 )
 
+var (
+	b                 *bot.Bot
+	dispatcherService *dispatcher.Dispatcher
+	chatID            int64
+	lang              i18n.Lang
+)
+
 func main() {
 	showVersion := flag.Bool("version", false, "Show version and exit")
+	langFlag := flag.String("lang", "en", "Language (ru, en)")
 	flag.Parse()
 
 	if *showVersion {
@@ -35,9 +38,18 @@ func main() {
 		os.Exit(0)
 	}
 
+	lang = i18n.Lang(*langFlag)
+	if !i18n.Valid(lang) {
+		fmt.Printf("Invalid language: %s. Supported: ru, en\n", *langFlag)
+		os.Exit(1)
+	}
+
+	if err := i18n.Load("locales"); err != nil {
+		log.Fatalf("❌ %v", err)
+	}
+
 	loadEnv()
 
-	// Chat ID для уведомлений
 	chatIDStr := os.Getenv("CHAT_ID")
 	if chatIDStr == "" {
 		log.Fatal("❌ CHAT_ID is not set")
@@ -48,17 +60,14 @@ func main() {
 		log.Fatalf("❌ Invalid CHAT_ID: %v", err)
 	}
 
-	// Бот
-	b, err = bot.NewBot()
+	b, err = bot.NewBot(lang)
 	if err != nil {
 		log.Fatalf("❌ %v", err)
 	}
 	b.Start()
 
-	// Диспетчер вебхуков
-	dispatcherService = dispatcher.NewDispatcher()
+	dispatcherService = dispatcher.NewDispatcher(lang)
 
-	// HTTP-сервер
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"
@@ -67,24 +76,18 @@ func main() {
 	http.HandleFunc("/webhook", webhookHandler)
 	http.HandleFunc("/webhook/health", healthHandler)
 
-	log.Printf("🚀 Server starting on port %s", port)
+	log.Printf(i18n.T(lang, i18n.MsgServerStarted), port, Version)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("❌ Server failed: %v", err)
 	}
 }
 
-// webhookHandler handles incoming webhooks from GitHub and GitLab.
-// Auto-detects platform from headers.
-//
-// Обрабатывает входящие вебхуки от GitHub и GitLab.
-// Автоматически определяет платформу по заголовкам.
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Читаем тело
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("❌ Failed to read body: %v", err)
@@ -94,9 +97,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	payload := string(body)
-	log.Printf("📥 payload=%s", payload)
 
-	// Определяем платформу
 	var eventType string
 	var p platform.Platform
 
@@ -110,17 +111,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		p = platform.GitLab
 		eventType = gitlabEvent
 	} else {
-		log.Println("❓ Unknown platform")
+		log.Println(i18n.T(lang, i18n.MsgUnknownEvent))
 		http.Error(w, "Unknown platform", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("📥 Webhook | platform=%s | event=%s", p, eventType)
-
-	// Диспатчим
 	message := dispatcherService.Dispatch(p, eventType, payload)
 	b.SendMessage(chatID, message)
-	log.Println("✅ Notification sent")
 
 	w.Write([]byte("OK"))
 }
@@ -131,8 +128,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func loadEnv() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️ .env file not found, using system environment variables")
-	} else {
-		log.Println("✅ .env file loaded")
+		log.Println("⚠️ .env file not found")
 	}
 }

@@ -1,0 +1,45 @@
+{
+  "welcome": "👋 Привет! Я бот для уведомлений из GitLab/GitHub.\nИспользуй /connect <URL> для подключения репозитория.\n/help — список команд.",
+  "help": "📚 Доступные команды:\n/start — начало работы\n/connect <URL> — подключить репозиторий\n/status — статус подключённых репозиториев\n/help — эта справка",
+  "connect_dev": "🔗 Функция подключения репозитория в разработке.\nСкоро здесь будет интеграция с GitHub/GitLab!",
+  "unknown_command": "Извини, я пока понимаю только команды. Напиши /help",
+
+  "bot_registered": "✅ Бот @%s зарегистрирован. Сессия активна",
+  "bot_started": "🚀 Бот @%s запущен, слушаю команды...",
+  "new_message": "📩 Новое сообщение от @%s (чат %d): %s",
+  "send_failed": "❌ Не удалось отправить сообщение в чат %d: %v",
+  "proxy_enabled": "🛡️ Бот использует прокси %s://%s:%s",
+  "direct_connection": "✅ Бот использует прямое соединение",
+
+  "star_created": "⭐ <b>%s</b> — новый звёздный статус!\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">Смотреть репозиторий</a> | <a href=\"%s\">Звёзды</a>",
+  "star_deleted": "💔 <b>%s</b> — звезда убрана\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">Смотреть репозиторий</a> | <a href=\"%s\">Звёзды</a>",
+  "star_verb_created": "поставил(а) звезду",
+  "star_verb_deleted": "убрал(а) звезду",
+
+  "push_new": "Новый пуш",
+  "push_force": "Force push",
+  "push_created": "Создана новая ветка",
+  "push_deleted": "Удалена ветка",
+
+  "push_header": "%s <b>%s</b>\n%s в ветку <code>%s</code>\n\n",
+  "pusher": "👤 <a href=\"%s\">@%s</a>",
+  "pusher_email": " (<code>%s</code>)",
+  "commits_count": "📦 Коммитов: <b>%d</b>",
+  "commits_forced": " ⚠️ FORCE PUSH",
+  "commits_header": "<b>📝 Коммиты:</b>\n",
+  "commits_more": "  <i>...и ещё %d коммитов</i>\n",
+  "files_header": "<b>📁 Изменённые файлы:</b>\n",
+  "files_added": "  ➕ Добавлено: %s\n",
+  "files_modified": "  ✏️ Изменено: %s\n",
+  "files_removed": "  ➖ Удалено: %s\n",
+  "view_changes": "🔗 <a href=\"%s\">Смотреть изменения</a>",
+
+  "dispatcher_init": "✅ Диспетчер инициализирован с %d обработчиками",
+  "unknown_event_log": "⚠️ Неизвестное событие: %s / %s",
+  "no_handler_log": "⚠️ Нет обработчика для: %v",
+  "error_event_log": "❌ Ошибка обработки %v: %v",
+  "unknown_event": "📢 Новое событие <code>%s</code> от %s",
+  "error_event": "❌ Ошибка обработки события <code>%s</code>",
+
+  "server_started": "🚀 Сервер запущен на порту %s (версия %s)"
+}

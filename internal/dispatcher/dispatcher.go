@@ -2,29 +2,28 @@ package dispatcher
 
 import (
 	"GitHub-GitLab-Notifier/internal/handler"
+	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/platform"
-	"fmt"
 	"log"
 )
 
 // Dispatcher routes webhook events to the appropriate handler.
-//
-// Распределяет вебхук-события по соответствующим обработчикам.
 type Dispatcher struct {
 	handlers map[platform.EventType]handler.EventHandler
+	lang     i18n.Lang
 }
 
 // NewDispatcher creates a Dispatcher with all registered handlers.
-//
-// Создаёт Dispatcher со всеми зарегистрированными обработчиками.
-func NewDispatcher() *Dispatcher {
+func NewDispatcher(lang i18n.Lang) *Dispatcher {
 	d := &Dispatcher{
 		handlers: make(map[platform.EventType]handler.EventHandler),
+		lang:     lang,
 	}
 
-	d.register(&handler.GitHubPushHandler{})
+	d.register(&handler.GitHubPushHandler{Lang: lang})
+	d.register(&handler.GitHubStarHandler{Lang: lang})
 
-	log.Printf("✅ WebhookDispatcher initialized with %d handlers", len(d.handlers))
+	log.Printf(i18n.T(lang, i18n.MsgDispatcherInit), len(d.handlers))
 	return d
 }
 
@@ -34,26 +33,24 @@ func (d *Dispatcher) register(h handler.EventHandler) {
 }
 
 // Dispatch routes an event and returns the formatted message.
-//
-// Направляет событие и возвращает отформатированное сообщение.
 func (d *Dispatcher) Dispatch(p platform.Platform, eventName string, json string) string {
 	eventType := platform.FromEventName(p, eventName)
 
 	if eventType == nil {
-		log.Printf("⚠️ Unknown event: %s / %s", p, eventName)
-		return fmt.Sprintf("📢 Новое событие <code>%s</code> от %s", eventName, p)
+		log.Printf(i18n.T(d.lang, i18n.MsgUnknownEventLog), p, eventName)
+		return i18n.Tf(d.lang, i18n.MsgUnknownEvent, eventName, p)
 	}
 
 	h, ok := d.handlers[*eventType]
 	if !ok {
-		log.Printf("⚠️ No handler for: %v", eventType)
-		return fmt.Sprintf("📢 Новое событие <code>%s</code> от %s", eventName, p)
+		log.Printf(i18n.T(d.lang, i18n.MsgNoHandlerLog), eventType)
+		return i18n.Tf(d.lang, i18n.MsgUnknownEvent, eventName, p)
 	}
 
 	message, err := h.Handle(json)
 	if err != nil {
-		log.Printf("❌ Error handling %v: %v", eventType, err)
-		return fmt.Sprintf("❌ Ошибка обработки события <code>%s</code>", eventName)
+		log.Printf(i18n.T(d.lang, i18n.MsgErrorEventLog), eventType, err)
+		return i18n.Tf(d.lang, i18n.MsgErrorEvent, eventName)
 	}
 
 	return message

@@ -22,6 +22,7 @@ type EventType struct {
 var (
 	// GitHub
 	GitHubPush = EventType{"push", GitHub}
+	GitHubStar = EventType{"star", GitHub}
 )
 
 // FromEventName finds EventType by platform and event name string.
@@ -33,7 +34,10 @@ func FromEventName(p Platform, name string) *EventType {
 		switch name {
 		case "push":
 			return &GitHubPush
+		case "star":
+			return &GitHubStar
 		}
+
 	}
 	return nil
 }

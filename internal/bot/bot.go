@@ -1,79 +1,96 @@
 package bot
 
 import (
+	"GitHub-GitLab-Notifier/internal/i18n"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Bot Core Telegram bot for the GitHub-GitLab Notifier.
-//
-// Handles user commands via Long Polling and sends
-// repository event notifications.
-//
-// Основной Telegram-бот для GitHub-GitLab Notifier.
-//
-// Обрабатывает команды пользователей через Long Polling
-// и отправляет уведомления о событиях в репозиториях.
-//
-// Author: marensovich
-// Version: v.0.0.2
-// Since: v.0.0.2
+// Bot handles Telegram messages and sends repository event notifications.
 type Bot struct {
 	api   *tgbotapi.BotAPI
 	token string
 	self  tgbotapi.User
+	lang  i18n.Lang
 }
 
-// NewBot creates a new Bot instance and validates the token.
-//
-// Создаёт новый экземпляр Bot и проверяет токен.
-func NewBot() (*Bot, error) {
+// NewBot creates a Bot with optional proxy from environment variables.
+func NewBot(lang i18n.Lang) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
 		return nil, fmt.Errorf("BOT_TOKEN is not set")
 	}
 
-	api, err := tgbotapi.NewBotAPI(token)
+	httpClient := newHTTPClient(lang)
+
+	api, err := tgbotapi.NewBotAPIWithClient(token, tgbotapi.APIEndpoint, httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
-
-	api.Debug = false // включай true для отладки
 
 	bot := &Bot{
 		api:   api,
 		token: token,
 		self:  api.Self,
+		lang:  lang,
 	}
 
-	log.Printf("✅ Bot @%s registered. Session running: true", bot.self.UserName)
+	log.Printf(i18n.T(lang, i18n.MsgBotRegistered), bot.self.UserName)
 	return bot, nil
 }
 
+// newHTTPClient creates an *http.Client with optional proxy.
+func newHTTPClient(lang i18n.Lang) *http.Client {
+	proxyEnabled, _ := strconv.ParseBool(os.Getenv("PROXY_ENABLED"))
+	proxyHost := os.Getenv("PROXY_HOST")
+	proxyPort := os.Getenv("PROXY_PORT")
+	proxyType := os.Getenv("PROXY_TYPE")
+	if proxyType == "" {
+		proxyType = "HTTP"
+	}
+
+	transport := &http.Transport{}
+
+	if proxyEnabled && proxyHost != "" && proxyPort != "" {
+		proxyURL := fmt.Sprintf("%s://%s:%s", proxyType, proxyHost, proxyPort)
+		parsed, err := url.Parse(proxyURL)
+		if err != nil {
+			log.Printf("⚠️ Invalid proxy URL: %v", err)
+		} else {
+			transport.Proxy = http.ProxyURL(parsed)
+			log.Printf(i18n.T(lang, i18n.MsgProxyEnabled), proxyType, proxyHost, proxyPort)
+		}
+	} else {
+		log.Println(i18n.T(lang, i18n.MsgDirectConnection))
+	}
+
+	return &http.Client{Transport: transport}
+}
+
 // Token returns the bot token.
-//
-// Возвращает токен бота.
 func (b *Bot) Token() string {
 	return b.token
 }
 
 // Username returns the bot username.
-//
-// Возвращает имя пользователя бота.
 func (b *Bot) Username() string {
 	return b.self.UserName
 }
 
-// Start begins Long Polling for incoming updates.
-// Runs in a separate goroutine and handles commands.
-//
-// Запускает Long Polling для входящих обновлений.
-// Работает в отдельной горутине и обрабатывает команды.
+// Lang returns the current language.
+func (b *Bot) Lang() i18n.Lang {
+	return b.lang
+}
+
+// Start begins Long Polling.
 func (b *Bot) Start() {
-	log.Printf("🚀 Bot @%s started, listening for commands...", b.self.UserName)
+	log.Printf(i18n.T(b.lang, i18n.MsgBotStarted), b.self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -87,9 +104,7 @@ func (b *Bot) Start() {
 	}()
 }
 
-// consume processes a single Telegram update.
-//
-// Обрабатывает одно обновление Telegram.
+// consume processes incoming messages.
 func (b *Bot) consume(update tgbotapi.Update) {
 	if update.Message == nil || update.Message.Text == "" {
 		return
@@ -99,42 +114,33 @@ func (b *Bot) consume(update tgbotapi.Update) {
 	userName := update.Message.From.UserName
 	text := update.Message.Text
 
-	log.Printf("📩 New message from @%s (chat %d): %s", userName, chatID, text)
+	log.Printf(i18n.T(b.lang, i18n.MsgNewMessage), userName, chatID, text)
 
 	var response string
 
 	switch {
 	case text == "/start":
-		response = "👋 Привет! Я бот для уведомлений из GitLab/GitHub.\n" +
-			"Используй /connect <URL> для подключения репозитория.\n" +
-			"/help — список команд."
+		response = i18n.T(b.lang, i18n.MsgWelcome)
 
 	case text == "/help":
-		response = "📚 Доступные команды:\n" +
-			"/start — начало работы\n" +
-			"/connect <URL> — подключить репозиторий\n" +
-			"/status — статус подключённых репозиториев\n" +
-			"/help — эта справка"
+		response = i18n.T(b.lang, i18n.MsgHelp)
 
 	case len(text) >= 8 && text[:8] == "/connect":
-		response = "🔗 Функция подключения репозитория в разработке.\n" +
-			"Скоро здесь будет интеграция с GitHub/GitLab!"
+		response = i18n.T(b.lang, i18n.MsgConnectDev)
 
 	default:
-		response = "Извини, я пока понимаю только команды. Напиши /help"
+		response = i18n.T(b.lang, i18n.MsgUnknownCmd)
 	}
 
 	b.SendMessage(chatID, response)
 }
 
-// SendMessage sends a text message with HTML parse mode to the specified chat.
-//
-// Отправляет текстовое сообщение с HTML-разметкой в указанный чат.
+// SendMessage sends a message with HTML parse mode.
 func (b *Bot) SendMessage(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = tgbotapi.ModeHTML
 
 	if _, err := b.api.Send(msg); err != nil {
-		log.Printf("❌ Failed to send message to chat %d: %v", chatID, err)
+		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
 	}
 }
