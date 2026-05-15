@@ -27,6 +27,7 @@ const (
 	MsgSendFailed       = "send_failed"
 	MsgProxyEnabled     = "proxy_enabled"
 	MsgDirectConnection = "direct_connection"
+	MsgBotStartFailed   = "bot_start_failed"
 
 	// Push
 	MsgPushNew       = "push_new"

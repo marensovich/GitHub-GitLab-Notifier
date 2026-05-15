@@ -2,6 +2,7 @@ package bot
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,18 +10,23 @@ import (
 	"os"
 	"strconv"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/mymmrac/telego"
+	"github.com/mymmrac/telego/telegoutil"
 )
 
 // Bot handles Telegram messages and sends repository event notifications.
+//
+// Основной Telegram-бот для GitHub-GitLab Notifier.
 type Bot struct {
-	api   *tgbotapi.BotAPI
+	api   *telego.Bot
 	token string
-	self  tgbotapi.User
+	self  *telego.User
 	lang  i18n.Lang
 }
 
 // NewBot creates a Bot with optional proxy from environment variables.
+//
+// Создаёт новый экземпляр Bot и проверяет токен.
 func NewBot(lang i18n.Lang) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
@@ -29,23 +35,30 @@ func NewBot(lang i18n.Lang) (*Bot, error) {
 
 	httpClient := newHTTPClient(lang)
 
-	api, err := tgbotapi.NewBotAPIWithClient(token, tgbotapi.APIEndpoint, httpClient)
+	api, err := telego.NewBot(token, telego.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot: %w", err)
+	}
+
+	self, err := api.GetMe(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bot info: %w", err)
 	}
 
 	bot := &Bot{
 		api:   api,
 		token: token,
-		self:  api.Self,
+		self:  self,
 		lang:  lang,
 	}
 
-	log.Printf(i18n.T(lang, i18n.MsgBotRegistered), bot.self.UserName)
+	log.Printf(i18n.T(lang, i18n.MsgBotRegistered), bot.self.Username)
 	return bot, nil
 }
 
 // newHTTPClient creates an *http.Client with optional proxy.
+//
+// Создаёт *http.Client с опциональным прокси.
 func newHTTPClient(lang i18n.Lang) *http.Client {
 	proxyEnabled, _ := strconv.ParseBool(os.Getenv("PROXY_ENABLED"))
 	proxyHost := os.Getenv("PROXY_HOST")
@@ -74,28 +87,40 @@ func newHTTPClient(lang i18n.Lang) *http.Client {
 }
 
 // Token returns the bot token.
+//
+// Возвращает токен бота.
 func (b *Bot) Token() string {
 	return b.token
 }
 
 // Username returns the bot username.
+//
+// Возвращает имя пользователя бота.
 func (b *Bot) Username() string {
-	return b.self.UserName
+	return b.self.Username
 }
 
 // Lang returns the current language.
+//
+// Возвращает текущий язык.
 func (b *Bot) Lang() i18n.Lang {
 	return b.lang
 }
 
-// Start begins Long Polling.
+// Start begins Long Polling for incoming updates.
+//
+// Запускает Long Polling для входящих обновлений.
 func (b *Bot) Start() {
-	log.Printf(i18n.T(b.lang, i18n.MsgBotStarted), b.self.UserName)
+	log.Printf(i18n.T(b.lang, i18n.MsgBotStarted), b.self.Username)
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
+	ctx := context.Background()
 
-	updates := b.api.GetUpdatesChan(u)
+	updates, err := b.api.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{
+		Timeout: 60,
+	})
+	if err != nil {
+		log.Fatalf(i18n.T(b.lang, i18n.MsgBotStartFailed), err)
+	}
 
 	go func() {
 		for update := range updates {
@@ -104,14 +129,16 @@ func (b *Bot) Start() {
 	}()
 }
 
-// consume processes incoming messages.
-func (b *Bot) consume(update tgbotapi.Update) {
+// consume processes a single Telegram update.
+//
+// Обрабатывает одно обновление Telegram.
+func (b *Bot) consume(update telego.Update) {
 	if update.Message == nil || update.Message.Text == "" {
 		return
 	}
 
 	chatID := update.Message.Chat.ID
-	userName := update.Message.From.UserName
+	userName := update.Message.From.Username
 	text := update.Message.Text
 
 	log.Printf(i18n.T(b.lang, i18n.MsgNewMessage), userName, chatID, text)
@@ -135,12 +162,16 @@ func (b *Bot) consume(update tgbotapi.Update) {
 	b.SendMessage(chatID, response)
 }
 
-// SendMessage sends a message with HTML parse mode.
+// SendMessage sends a text message with HTML parse mode to the specified chat.
+//
+// Отправляет текстовое сообщение с HTML-разметкой в указанный чат.
 func (b *Bot) SendMessage(chatID int64, text string) {
-	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = tgbotapi.ModeHTML
-
-	if _, err := b.api.Send(msg); err != nil {
+	_, err := b.api.SendMessage(context.Background(), &telego.SendMessageParams{
+		ChatID:    telegoutil.ID(chatID),
+		Text:      text,
+		ParseMode: telego.ModeHTML,
+	})
+	if err != nil {
 		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
 	}
 }

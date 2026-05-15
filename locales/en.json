@@ -10,6 +10,7 @@
   "send_failed": "❌ Failed to send message to chat %d: %v",
   "proxy_enabled": "🛡️ Bot using proxy %s://%s:%s",
   "direct_connection": "✅ Bot using direct connection",
+  "bot_start_failed": "❌ Failed to start bot: %v",
 
   "star_created": "⭐ <b>%s</b> — new star!\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">View repo</a> | <a href=\"%s\">Stargazers</a>",
   "star_deleted": "💔 <b>%s</b> — star removed\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">View repo</a> | <a href=\"%s\">Stargazers</a>",
