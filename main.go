@@ -4,6 +4,8 @@ import (
 	"GitHub-GitLab-Notifier/internal/bot"
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/platform"
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -19,7 +21,20 @@ var (
 	chatID            int64
 )
 
+var (
+	Version   = "dev-0.0.1"
+	BuildTime = "unknown"
+)
+
 func main() {
+	showVersion := flag.Bool("version", false, "Show version and exit")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("GitHub-GitLab-Notifier %s (built %s)\n", Version, BuildTime)
+		os.Exit(0)
+	}
+
 	loadEnv()
 
 	// Chat ID для уведомлений
