@@ -7,16 +7,12 @@ import (
 	"fmt"
 )
 
-// ─── Action ───
-
 type StarAction string
 
 const (
 	StarCreated StarAction = "created"
 	StarDeleted StarAction = "deleted"
 )
-
-// ─── DTO ───
 
 type GitHubStarDto struct {
 	Action     string           `json:"action"`
@@ -45,8 +41,6 @@ type GitHubStarSender struct {
 	AvatarURL string `json:"avatar_url"`
 	HTMLURL   string `json:"html_url"`
 }
-
-// ─── Handler ───
 
 type GitHubStarHandler struct {
 	Lang i18n.Lang

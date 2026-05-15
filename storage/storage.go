@@ -42,8 +42,6 @@ type RepoInfo struct {
 	Secret   string `json:"secret"`
 }
 
-// ─── Инициализация ───
-
 // Open opens or creates a SQLite database and creates tables.
 //
 // Открывает или создаёт базу данных SQLite и создаёт таблицы.
@@ -130,8 +128,6 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// ─── Чаты ───
-
 // SaveChat inserts or updates a chat configuration.
 //
 // Вставляет или обновляет конфигурацию чата.
@@ -197,8 +193,6 @@ func (s *Store) DeleteChat(chatID int64) error {
 	return err
 }
 
-// ─── Темы ───
-
 // SaveTopic inserts or updates a topic.
 //
 // Вставляет или обновляет тему.
@@ -244,8 +238,6 @@ func (s *Store) DeleteTopic(chatID int64, topicID int) error {
 	_, err := s.db.Exec("DELETE FROM topics WHERE chat_id = ? AND topic_id = ?", chatID, topicID)
 	return err
 }
-
-// ─── Репозитории ───
 
 // SaveRepo inserts or updates a repository.
 //
@@ -303,8 +295,6 @@ func (s *Store) GetAllRepos() []RepoInfo {
 	return repos
 }
 
-// ─── Привязка событий к темам ───
-
 // GetTopicByEvent returns the topic ID for a given event type in a chat.
 // Returns 0 if no mapping exists.
 //
@@ -343,8 +333,6 @@ func (s *Store) SetEventTopic(chatID int64, eventType string, topicID int) error
 	`, chatID, eventType, topicID)
 	return err
 }
-
-// ─── Вспомогательные ───
 
 func boolToInt(b bool) int {
 	if b {

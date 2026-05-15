@@ -104,7 +104,6 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	payload := string(body)
 
-	// Определяем платформу и тип события
 	var eventType string
 	var p platform.Platform
 
@@ -125,14 +124,12 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventType))
 
-	// Получаем отформатированное сообщение от диспетчера
 	message := dispatcherService.Dispatch(p, eventType, payload)
 
-	// Отправляем уведомления во все подключённые чаты
 	chats := store.GetAllChats()
 	if len(chats) == 0 {
 		log.Println(i18n.T(lang, i18n.MsgNoChatsConfigured))
-		b.SendMessage(chatID, message) // fallback: личка из .env
+		b.SendMessage(chatID, message)
 	} else {
 		for _, chat := range chats {
 			topicID := store.GetTopicByEvent(chat.ChatID, eventType)

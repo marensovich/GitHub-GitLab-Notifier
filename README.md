@@ -4,20 +4,24 @@
 ![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-A lightweight, self-hosted Telegram bot that sends real-time notifications from your GitHub and GitLab repositories directly to your Telegram **Forum** chat.
+A lightweight, self-hosted Telegram bot that sends real-time notifications from your GitHub and GitLab repositories
+directly to your Telegram **Forum** chat.
 
-**Why?** Because sometimes you don't want to check email or open an app — you just want a message when something happens in your repo.
+**Why?** Because sometimes you don't want to check email or open an app — you just want a message when something happens
+in your repo.
 
 ---
 
 ## ⚠️ Important: Forum Required
 
-This bot is designed to work with **Telegram Forum Groups** (topics enabled). It creates separate topics for each event type:
+This bot is designed to work with **Telegram Forum Groups** (topics enabled). It creates separate topics for each event
+type:
 
 - ⭐ **Stars** — new stars on your repository
 - 🚀 **Pushes** — new commits pushed
 
-**Regular groups and channels are not supported** for automatic topic creation. You can still use them, but all notifications will arrive in the general chat (no topic separation).
+**Regular groups and channels are not supported** for automatic topic creation. You can still use them, but all
+notifications will arrive in the general chat (no topic separation).
 
 ### How to enable Forum mode
 
@@ -75,6 +79,7 @@ make build
 ```
 
 Expected output:
+
 ```
 ✅ Bot using direct connection
 ✅ Bot @YourGitBot registered. Session active
@@ -92,6 +97,7 @@ Send these commands to your bot in Telegram:
 ```
 
 This will:
+
 - Save your chat in the database
 - Create 4 forum topics (Stars, Pushes, Pull Requests, Issues)
 - Map each event type to its topic
@@ -103,6 +109,7 @@ This will:
 ```
 
 The bot will respond with:
+
 - Webhook URL
 - Content type
 - Setup instructions for GitHub/GitLab
@@ -110,6 +117,7 @@ The bot will respond with:
 ### 8. Add the webhook on GitHub/GitLab
 
 **GitHub:**
+
 1. Go to your repository → **Settings** → **Webhooks** → **Add webhook**
 2. **Payload URL:** the URL from `/connect` output
 3. **Content type:** `application/json`
@@ -117,6 +125,7 @@ The bot will respond with:
 5. Click **Add webhook**
 
 **GitLab:**
+
 1. Go to your project → **Settings** → **Webhooks**
 2. **URL:** the URL from `/connect` output
 3. **Trigger:** select events (Push, Merge Request, Issues, etc.)
@@ -124,39 +133,45 @@ The bot will respond with:
 
 ### 9. Test
 
-Make a push, create an issue, or star your repository. You should receive a notification in the corresponding forum topic.
+Make a push, create an issue, or star your repository. You should receive a notification in the corresponding forum
+topic.
 
 ---
 
 ## 🤖 Bot Commands
 
-| Command | Description |
-|:---|:---|
-| `/start` | Welcome message and getting started |
-| `/help` | List of available commands |
-| `/configure` | Set up forum topics for notifications |
-| `/connect <repo_url>` | Connect a GitHub/GitLab repository |
-| `/status` | Show database contents (chats, topics, repos) |
-| `/lang ru` or `/lang en` | Change notification language |
-| `/version` | Show bot version |
+| Command                  | Description                                   |
+|:-------------------------|:----------------------------------------------|
+| `/start`                 | Welcome message and getting started           |
+| `/help`                  | List of available commands                    |
+| `/configure`             | Set up forum topics for notifications         |
+| `/connect <repo_url>`    | Connect a GitHub/GitLab repository            |
+| `/status`                | Show database contents (chats, topics, repos) |
+| `/lang ru` or `/lang en` | Change notification language                  |
+| `/version`               | Show bot version                              |
 
 ---
 
 ## 📸 Screenshots
 
 ### New commit notification
+
 ![New commit](images/img.png)
 
 ### New star notification
+
 ![New star](images/img_1.png)
 
 ### Automatic forum setup
+
 ![Forum setup](images/img_2.png)
 
 ### Connecting a repository
+
 ![Connect repo](images/img_3.png)
 
 ### Unknown event fallback
+
 ![Unknown event](images/img_4.png)
 
 ---
@@ -177,20 +192,20 @@ Make a push, create an issue, or star your repository. You should receive a noti
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|:---|:---|:---|:---|
-| `BOT_TOKEN` | **Yes** | — | Telegram bot token from [@BotFather](https://t.me/BotFather) |
-| `TELEGRAM_BOT_USERNAME` | **Yes** | — | Bot username without `@` (e.g., `YourGitBot`) |
-| `CHAT_ID` | **Yes** | — | Telegram chat ID for notifications |
-| `SERVER_ADDRESS` | No | `0.0.0.0` | Listen address (`0.0.0.0` = all, `127.0.0.1` = localhost) |
-| `SERVER_PORT` | No | `8080` | HTTP server port for webhooks |
-| `PROXY_ENABLED` | No | `false` | Enable proxy for Telegram API |
-| `PROXY_HOST` | No | — | Proxy host (for restricted networks) |
-| `PROXY_PORT` | No | — | Proxy port |
-| `PROXY_TYPE` | No | `HTTP` | Proxy type: `HTTP` or `SOCKS` |
-| `DEV_MODE` | No | `false` | Enable debug logging |
-| `DOMAIN` | No | — | Public domain/IP for webhook URL generation |
-| `USE_HTTPS` | No | `true` | Use `https://` in webhook URL |
+| Variable                | Required | Default   | Description                                                  |
+|:------------------------|:---------|:----------|:-------------------------------------------------------------|
+| `BOT_TOKEN`             | **Yes**  | —         | Telegram bot token from [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_BOT_USERNAME` | **Yes**  | —         | Bot username without `@` (e.g., `YourGitBot`)                |
+| `CHAT_ID`               | **Yes**  | —         | Telegram chat ID for notifications                           |
+| `SERVER_ADDRESS`        | No       | `0.0.0.0` | Listen address (`0.0.0.0` = all, `127.0.0.1` = localhost)    |
+| `SERVER_PORT`           | No       | `8080`    | HTTP server port for webhooks                                |
+| `PROXY_ENABLED`         | No       | `false`   | Enable proxy for Telegram API                                |
+| `PROXY_HOST`            | No       | —         | Proxy host (for restricted networks)                         |
+| `PROXY_PORT`            | No       | —         | Proxy port                                                   |
+| `PROXY_TYPE`            | No       | `HTTP`    | Proxy type: `HTTP` or `SOCKS`                                |
+| `DEV_MODE`              | No       | `false`   | Enable debug logging                                         |
+| `DOMAIN`                | No       | —         | Public domain/IP for webhook URL generation                  |
+| `USE_HTTPS`             | No       | `true`    | Use `https://` in webhook URL                                |
 
 ---
 
@@ -198,26 +213,27 @@ Make a push, create an issue, or star your repository. You should receive a noti
 
 ### GitHub
 
-| Event | Header (`X-GitHub-Event`) | Status |
-|:---|:---|:---|
-| Push | `push` | ✅ Implemented |
-| Star | `star` | ✅ Implemented |
-| Pull Request | `pull_request` | ⏳ Planned |
-| Issues | `issues` | ⏳ Planned |
-| Fork | `fork` | ⏳ Planned |
-| Release | `release` | ⏳ Planned |
-| Workflow Run | `workflow_run` | ⏳ Planned |
+| Event        | Header (`X-GitHub-Event`) | Status        |
+|:-------------|:--------------------------|:--------------|
+| Push         | `push`                    | ✅ Implemented |
+| Star         | `star`                    | ✅ Implemented |
+| Pull Request | `pull_request`            | ⏳ Planned     |
+| Issues       | `issues`                  | ⏳ Planned     |
+| Fork         | `fork`                    | ⏳ Planned     |
+| Release      | `release`                 | ⏳ Planned     |
+| Workflow Run | `workflow_run`            | ⏳ Planned     |
 
 ### GitLab
 
-| Event | Header (`X-Gitlab-Event`) | Status |
-|:---|:---|:---|
-| Push Hook | `Push Hook` | ⏳ Planned |
-| Merge Request Hook | `Merge Request Hook` | ⏳ Planned |
-| Issue Hook | `Issue Hook` | ⏳ Planned |
-| Pipeline Hook | `Pipeline Hook` | ⏳ Planned |
+| Event              | Header (`X-Gitlab-Event`) | Status    |
+|:-------------------|:--------------------------|:----------|
+| Push Hook          | `Push Hook`               | ⏳ Planned |
+| Merge Request Hook | `Merge Request Hook`      | ⏳ Planned |
+| Issue Hook         | `Issue Hook`              | ⏳ Planned |
+| Pipeline Hook      | `Pipeline Hook`           | ⏳ Planned |
 
-> Want more events? Contributions welcome! Adding a new event handler takes ~100 lines of Go — see [CONTRIBUTING.md](CONTRIBUTING.md).
+> Want more events? Contributions welcome! Adding a new event handler takes ~100 lines of Go —
+> see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -225,14 +241,15 @@ Make a push, create an issue, or star your repository. You should receive a noti
 
 The bot uses **SQLite** (file: `data/notifier.db`).
 
-| Table | Description |
-|:---|:---|
-| `chats` | Configured Telegram chats |
-| `topics` | Created forum topics |
-| `repos` | Connected repositories |
+| Table           | Description                     |
+|:----------------|:--------------------------------|
+| `chats`         | Configured Telegram chats       |
+| `topics`        | Created forum topics            |
+| `repos`         | Connected repositories          |
 | `event_mapping` | Which event goes to which topic |
 
 View data:
+
 - Send `/status` to the bot in Telegram
 - Or use SQLite CLI: `sqlite3 data/notifier.db "SELECT * FROM chats"`
 
@@ -240,17 +257,16 @@ View data:
 
 ## Troubleshooting
 
-| Problem | Solution |
-|:---|:---|
-| "FOREIGN KEY constraint failed" | Run `/configure` again — chat must be saved before topics |
-| Topics not created | Make sure the bot is **administrator** in the forum group |
-| "This chat is not a forum" | Enable **Topics** in group settings |
-| Webhook not receiving events | Check that URL is accessible from internet |
-| Notifications go to general chat | Run `/configure` to create topics and map events |
-| "Unknown event: watch" | This is GitHub's watch event — add a handler or ignore |
-| Wrong IP in `/connect` output | Set `DOMAIN=your-server.com` in `.env` |
-| Bot can't connect to Telegram | Enable proxy: `PROXY_ENABLED=true` |
-
+| Problem                          | Solution                                                  |
+|:---------------------------------|:----------------------------------------------------------|
+| "FOREIGN KEY constraint failed"  | Run `/configure` again — chat must be saved before topics |
+| Topics not created               | Make sure the bot is **administrator** in the forum group |
+| "This chat is not a forum"       | Enable **Topics** in group settings                       |
+| Webhook not receiving events     | Check that URL is accessible from internet                |
+| Notifications go to general chat | Run `/configure` to create topics and map events          |
+| "Unknown event: watch"           | This is GitHub's watch event — add a handler or ignore    |
+| Wrong IP in `/connect` output    | Set `DOMAIN=your-server.com` in `.env`                    |
+| Bot can't connect to Telegram    | Enable proxy: `PROXY_ENABLED=true`                        |
 
 ---
 

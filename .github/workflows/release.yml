@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ linux, darwin, windows, freebsd ]
+        goarch: [ amd64, arm64 ]
+        exclude:
+          - goos: windows
+            goarch: arm64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          BINARY="GitHub-GitLab-Notifier-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "$GOOS" = "windows" ]; then
+            BINARY="$BINARY.exe"
+          fi
+          go build -ldflags "-X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "$BINARY" main.go
+          echo "BINARY=$BINARY" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: GitHub-GitLab-Notifier-*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Create archives
+        run: |
+          mkdir -p release
+          find . -name "GitHub-GitLab-Notifier-*" -type f | while read f; do
+            if [[ "$f" == *.exe ]]; then
+              zip "release/$(basename $f).zip" "$f"
+            else
+              tar -czf "release/$(basename $f).tar.gz" "$f"
+            fi
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+          name: ${{ github.ref_name }}

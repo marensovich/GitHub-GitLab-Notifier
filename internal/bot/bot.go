@@ -182,7 +182,6 @@ func (b *Bot) handleConnect(update telego.Update) {
 	chatID := update.Message.Chat.ID
 	text := update.Message.Text
 
-	// Парсим URL репозитория из команды: /connect https://github.com/user/repo
 	parts := strings.Fields(text)
 	if len(parts) < 2 {
 		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectUsage))
@@ -191,13 +190,11 @@ func (b *Bot) handleConnect(update telego.Update) {
 
 	repoURL := parts[1]
 
-	// Проверяем, что URL похож на GitHub/GitLab
 	if !strings.Contains(repoURL, "github.com") && !strings.Contains(repoURL, "gitlab.com") {
 		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectInvalidURL))
 		return
 	}
 
-	// Определяем платформу по URL
 	platform := "GitHub"
 	if strings.Contains(repoURL, "gitlab.com") {
 		platform = "GitLab"
@@ -209,7 +206,6 @@ func (b *Bot) handleConnect(update telego.Update) {
 		return
 	}
 
-	// Нормализация домена: убираем протокол и слеш в конце
 	domain = strings.TrimPrefix(domain, "https://")
 	domain = strings.TrimPrefix(domain, "http://")
 	domain = strings.TrimRight(domain, "/")
@@ -219,7 +215,6 @@ func (b *Bot) handleConnect(update telego.Update) {
 		return
 	}
 
-	// Определяем протокол: HTTPS если включён, иначе HTTP
 	protocol := "http"
 	useHTTPS := os.Getenv("USE_HTTPS")
 	if useHTTPS == "true" || useHTTPS == "1" || useHTTPS == "yes" {
@@ -227,10 +222,8 @@ func (b *Bot) handleConnect(update telego.Update) {
 	}
 
 	webhookURL := fmt.Sprintf("%s://%s/webhook", protocol, domain)
-	// Генерируем секрет для подписи (если нужно)
 	secret := b.generateSecret()
 
-	// Сохраняем репозиторий в БД
 	err := b.store.SaveRepo(storage.RepoInfo{
 		ChatID:   chatID,
 		RepoURL:  repoURL,
@@ -243,7 +236,6 @@ func (b *Bot) handleConnect(update telego.Update) {
 		return
 	}
 
-	// Формируем ответ
 	var response strings.Builder
 
 	response.WriteString(i18n.Tf(b.lang, i18n.MsgConnectSuccess, platform, repoURL))
@@ -420,7 +412,6 @@ func (b *Bot) isBotAdmin(chatID int64) bool {
 		return false
 	}
 
-	// Проверяем статус: creator или administrator
 	status := member.MemberStatus()
 	return status == "creator" || status == "administrator"
 }

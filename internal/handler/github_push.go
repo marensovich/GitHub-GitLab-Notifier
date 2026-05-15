@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-// ─── DTO (без изменений) ───
-
 type GitHubPushDto struct {
 	Ref        string             `json:"ref"`
 	Before     string             `json:"before"`
@@ -96,8 +94,6 @@ func (d *GitHubPushDto) CommitCount() int {
 	return len(d.Commits)
 }
 
-// ─── Handler ───
-
 // GitHubPushHandler handles GitHub push events.
 type GitHubPushHandler struct {
 	Lang i18n.Lang
@@ -122,20 +118,15 @@ func (h *GitHubPushHandler) formatMessage(dto *GitHubPushDto) string {
 	action := getActionText(h.Lang, dto)
 	repoName := dto.Repository.FullName
 
-	// Заголовок
 	sb.WriteString(i18n.Tf(h.Lang, i18n.MsgPushHeader,
 		emoji, repoName, action, dto.Branch()))
 
-	// Пушер
 	sb.WriteString(fmt.Sprintf("%s\n", formatPusher(h.Lang, dto)))
 
-	// Коммиты
 	sb.WriteString(formatCommits(h.Lang, dto))
 
-	// Файлы
 	sb.WriteString(formatFiles(h.Lang, dto))
 
-	// Ссылка
 	if dto.Compare != "" {
 		sb.WriteString(i18n.Tf(h.Lang, i18n.MsgViewChanges, dto.Compare))
 	}
