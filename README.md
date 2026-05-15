@@ -2,10 +2,162 @@
 
 ![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-A lightweight, self-hosted Telegram bot that sends real-time notifications from your GitHub and GitLab repositories directly to your Telegram chat.
+A lightweight, self-hosted Telegram bot that sends real-time notifications from your GitHub and GitLab repositories directly to your Telegram **Forum** chat.
 
 **Why?** Because sometimes you don't want to check email or open an app — you just want a message when something happens in your repo.
+
+---
+
+## ⚠️ Important: Forum Required
+
+This bot is designed to work with **Telegram Forum Groups** (topics enabled). It creates separate topics for each event type:
+
+- ⭐ **Stars** — new stars on your repository
+- 🚀 **Pushes** — new commits pushed
+
+**Regular groups and channels are not supported** for automatic topic creation. You can still use them, but all notifications will arrive in the general chat (no topic separation).
+
+### How to enable Forum mode
+
+1. Open your Telegram group settings
+2. Click **Edit** → **Administrators**
+3. Enable **Topics**
+4. Now your group is a Forum
+
+---
+
+## 🚀 Step-by-Step Setup
+
+### 1. Create a Telegram bot
+
+1. Open [@BotFather](https://t.me/BotFather)
+2. Send `/newbot`
+3. Choose a name and username
+4. Copy the **token** you receive
+
+### 2. Create a Forum group
+
+1. Create a new Telegram group
+2. Enable **Topics** in group settings
+3. Add your bot to the group
+4. **Make the bot an administrator** (required for creating topics)
+
+### 3. Get your Chat ID
+
+1. Send any message to the bot
+2. Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+3. Find `"chat":{"id":-1001234567890}` — this is your `CHAT_ID`
+
+### 4. Clone and configure
+
+```bash
+git clone https://github.com/marensovich/github-gitlab-notifier.git
+cd github-gitlab-notifier
+cp .env.example .env
+```
+
+Edit `.env` with your values:
+
+```bash
+BOT_TOKEN=123456:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_BOT_USERNAME=YourGitBot
+CHAT_ID=-1001234567890
+DOMAIN=your-server.com    # optional, for webhook URL
+```
+
+### 5. Build and run
+
+```bash
+make build
+./GitHub-GitLab-Notifier --lang=en
+```
+
+Expected output:
+```
+✅ Bot using direct connection
+✅ Bot @YourGitBot registered. Session active
+✅ Dispatcher initialized with 2 handlers
+🚀 Bot @YourGitBot started, listening for commands...
+🚀 Server started on port 8080 (version v0.0.1)
+```
+
+### 6. Configure the chat
+
+Send these commands to your bot in Telegram:
+
+```
+/configure
+```
+
+This will:
+- Save your chat in the database
+- Create 4 forum topics (Stars, Pushes, Pull Requests, Issues)
+- Map each event type to its topic
+
+### 7. Connect a repository
+
+```
+/connect https://github.com/your-username/your-repo
+```
+
+The bot will respond with:
+- Webhook URL
+- Content type
+- Setup instructions for GitHub/GitLab
+
+### 8. Add the webhook on GitHub/GitLab
+
+**GitHub:**
+1. Go to your repository → **Settings** → **Webhooks** → **Add webhook**
+2. **Payload URL:** the URL from `/connect` output
+3. **Content type:** `application/json`
+4. **Events:** `Send me everything`
+5. Click **Add webhook**
+
+**GitLab:**
+1. Go to your project → **Settings** → **Webhooks**
+2. **URL:** the URL from `/connect` output
+3. **Trigger:** select events (Push, Merge Request, Issues, etc.)
+4. Click **Add webhook**
+
+### 9. Test
+
+Make a push, create an issue, or star your repository. You should receive a notification in the corresponding forum topic.
+
+---
+
+## 🤖 Bot Commands
+
+| Command | Description |
+|:---|:---|
+| `/start` | Welcome message and getting started |
+| `/help` | List of available commands |
+| `/configure` | Set up forum topics for notifications |
+| `/connect <repo_url>` | Connect a GitHub/GitLab repository |
+| `/status` | Show database contents (chats, topics, repos) |
+| `/lang ru` or `/lang en` | Change notification language |
+| `/version` | Show bot version |
+
+---
+
+## 📸 Screenshots
+
+### New commit notification
+![New commit](images/img.png)
+
+### New star notification
+![New star](images/img_1.png)
+
+### Automatic forum setup
+![Forum setup](images/img_2.png)
+
+### Connecting a repository
+![Connect repo](images/img_3.png)
+
+### Unknown event fallback
+![Unknown event](images/img_4.png)
 
 ---
 
@@ -18,113 +170,27 @@ A lightweight, self-hosted Telegram bot that sends real-time notifications from 
 - **Proxy support:** works behind HTTP or SOCKS5 proxies (useful in restricted networks)
 - **i18n:** Russian and English (easy to add more)
 - **Cross-platform:** Linux, macOS, Windows, FreeBSD — single binary, no dependencies
-- **No database required:** notifications go straight to your Telegram chat
+- **SQLite database:** stores chats, topics, repos, event mappings
 - **MIT licensed:** free for any use
-
----
-
-## Quick Start
-
-### Download binary
-
-Go to [Releases](https://github.com/marensovich/github-gitlab-notifier/releases) and download the binary for your platform.
-
-### Or build from source
-
-```bash
-git clone https://github.com/marensovich/github-gitlab-notifier.git
-cd github-gitlab-notifier
-go mod tidy
-make build
-```
-
-### Configure
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```bash
-BOT_TOKEN=token
-TELEGRAM_BOT_USERNAME=username
-CHAT_ID=chatid
-SERVER_ADDRESS=0.0.0.0
-SERVER_PORT=port
-
-PROXY_HOST=127.0.0.1
-PROXY_PORT=port
-PROXY_TYPE=HTTP/SOCKS
-PROXY_ENABLED=true/false
-
-DEV_MODE=true/false
-```
-
-### Run
-
-```bash
-./GitHub-GitLab-Notifier --lang=en
-```
-
-Expected output:
-
-```
-✅ Bot using direct connection
-✅ Bot @YourGitBot registered. Session active
-✅ Dispatcher initialized with 2 handlers
-🚀 Bot @YourGitBot started, listening for commands...
-🚀 Server started on port 8080 (version v0.0.1)
-```
 
 ---
 
 ## Environment Variables
 
-| Variable               | Description                                                  | Required | Default |
-|:-----------------------|:-------------------------------------------------------------|:---------|:--------|
-| `BOT_TOKEN`            | Telegram bot token from [@BotFather](https://t.me/BotFather) | **Yes**  | —       |
-| `TELEGRAM_BOT_USERNAME`| Telegram bot username                                        | No       |  —       |
-| `CHAT_ID`              | Telegram chat ID where notifications will be sent            | **Yes**  | —       |
-| `SERVER_PORT`          | HTTP server port for webhooks                                | No       | `8080`  |
-| `PROXY_ENABLED`        | Enable proxy (`true` or `false`)                             | No       | `false` |
-| `PROXY_HOST`           | Proxy host (e.g., `127.0.0.1`)                               | No       | —       |
-| `PROXY_PORT`           | Proxy port (e.g., `1080`)                                    | No       | —       |
-| `PROXY_TYPE`           | Proxy type: `HTTP` or `SOCKS`                                | No       | `HTTP`  |
-
-### How to get your Chat ID
-
-1. Start a chat with your bot on Telegram
-2. Send any message
-3. Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
-4. Find `"chat":{"id":123456789}` in the response
-
----
-
-## Setting Up Webhooks
-
-### Single endpoint for both platforms
-
-```
-https://your-server.com/webhook
-```
-
-### GitHub
-
-1. Go to your repository → **Settings** → **Webhooks** → **Add webhook**
-2. **Payload URL:** `https://your-server.com/webhook`
-3. **Content type:** `application/json`
-4. **Events:** select what you need (recommended: `Send me everything`)
-5. Click **Add webhook**
-
-### GitLab
-
-1. Go to your project → **Settings** → **Webhooks**
-2. **URL:** `https://your-server.com/webhook`
-3. **Trigger:** select events (Push, Merge Request, Issues, etc.)
-4. Click **Add webhook**
-
-The bot automatically detects the platform from request headers — no separate endpoints needed.
+| Variable | Required | Default | Description |
+|:---|:---|:---|:---|
+| `BOT_TOKEN` | **Yes** | — | Telegram bot token from [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_BOT_USERNAME` | **Yes** | — | Bot username without `@` (e.g., `YourGitBot`) |
+| `CHAT_ID` | **Yes** | — | Telegram chat ID for notifications |
+| `SERVER_ADDRESS` | No | `0.0.0.0` | Listen address (`0.0.0.0` = all, `127.0.0.1` = localhost) |
+| `SERVER_PORT` | No | `8080` | HTTP server port for webhooks |
+| `PROXY_ENABLED` | No | `false` | Enable proxy for Telegram API |
+| `PROXY_HOST` | No | — | Proxy host (for restricted networks) |
+| `PROXY_PORT` | No | — | Proxy port |
+| `PROXY_TYPE` | No | `HTTP` | Proxy type: `HTTP` or `SOCKS` |
+| `DEV_MODE` | No | `false` | Enable debug logging |
+| `DOMAIN` | No | — | Public domain/IP for webhook URL generation |
+| `USE_HTTPS` | No | `true` | Use `https://` in webhook URL |
 
 ---
 
@@ -135,9 +201,9 @@ The bot automatically detects the platform from request headers — no separate 
 | Event | Header (`X-GitHub-Event`) | Status |
 |:---|:---|:---|
 | Push | `push` | ✅ Implemented |
-| Pull Request | `pull_request` | ⏳ Planned |
-| Issues | `issues` |⏳ Planned |
 | Star | `star` | ✅ Implemented |
+| Pull Request | `pull_request` | ⏳ Planned |
+| Issues | `issues` | ⏳ Planned |
 | Fork | `fork` | ⏳ Planned |
 | Release | `release` | ⏳ Planned |
 | Workflow Run | `workflow_run` | ⏳ Planned |
@@ -150,190 +216,41 @@ The bot automatically detects the platform from request headers — no separate 
 | Merge Request Hook | `Merge Request Hook` | ⏳ Planned |
 | Issue Hook | `Issue Hook` | ⏳ Planned |
 | Pipeline Hook | `Pipeline Hook` | ⏳ Planned |
-| Release Hook | `Release Hook` | ⏳ Planned |
 
 > Want more events? Contributions welcome! Adding a new event handler takes ~100 lines of Go — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## Proxy Setup
+## Database
 
-If Telegram API is blocked in your country, use a proxy:
+The bot uses **SQLite** (file: `data/notifier.db`).
 
-```bash
-PROXY_ENABLED=true
-PROXY_HOST=127.0.0.1
-PROXY_PORT=10808
-PROXY_TYPE=HTTP
-```
+| Table | Description |
+|:---|:---|
+| `chats` | Configured Telegram chats |
+| `topics` | Created forum topics |
+| `repos` | Connected repositories |
+| `event_mapping` | Which event goes to which topic |
 
-The bot will route all Telegram API calls through the proxy. Webhook endpoint is not affected — it still receives requests directly.
-
-Tested with:
-- [GoXRay VPN](https://github.com/XTLS/Xray-core) (TUN mode — no proxy config needed)
-- [V2Ray](https://www.v2ray.com/) (SOCKS5 proxy)
-- [Clash](https://github.com/Dreamacro/clash) (HTTP proxy)
+View data:
+- Send `/status` to the bot in Telegram
+- Or use SQLite CLI: `sqlite3 data/notifier.db "SELECT * FROM chats"`
 
 ---
 
-## Command-Line Flags
+## Troubleshooting
 
-| Flag | Description | Default |
-|:---|:---|:--------|
-| `--lang` | Language for notifications (`ru` or `en`) | `en`    |
-| `--version` | Show version and exit | —       |
+| Problem | Solution |
+|:---|:---|
+| "FOREIGN KEY constraint failed" | Run `/configure` again — chat must be saved before topics |
+| Topics not created | Make sure the bot is **administrator** in the forum group |
+| "This chat is not a forum" | Enable **Topics** in group settings |
+| Webhook not receiving events | Check that URL is accessible from internet |
+| Notifications go to general chat | Run `/configure` to create topics and map events |
+| "Unknown event: watch" | This is GitHub's watch event — add a handler or ignore |
+| Wrong IP in `/connect` output | Set `DOMAIN=your-server.com` in `.env` |
+| Bot can't connect to Telegram | Enable proxy: `PROXY_ENABLED=true` |
 
-```bash
-./GitHub-GitLab-Notifier --lang=ru
-./GitHub-GitLab-Notifier --version
-```
-
----
-
-## Building from Source
-
-### Prerequisites
-
-- [Go](https://go.dev/dl/) 1.21 or higher
-- `make`
-
-### Build for current platform
-
-```bash
-make build
-```
-
-### Build for all platforms
-
-```bash
-make build-all
-```
-
-Outputs:
-
-```
-build/
-├── GitHub-GitLab-Notifier-linux-amd64
-├── GitHub-GitLab-Notifier-linux-arm64
-├── GitHub-GitLab-Notifier-darwin-amd64
-├── GitHub-GitLab-Notifier-darwin-arm64
-├── GitHub-GitLab-Notifier-windows-amd64.exe
-└── GitHub-GitLab-Notifier-freebsd-amd64
-```
-
-### Create release archives
-
-```bash
-make release
-```
-
-Outputs: `.tar.gz` for Unix, `.zip` for Windows.
-
----
-
-## Local Testing
-
-### Without a public server
-
-Use [localhost.run](https://localhost.run/) or [serveo](https://serveo.net/) to expose your local port:
-
-```bash
-# No registration, no download — just SSH
-ssh -R 80:localhost:8080 nokey@localhost.run
-```
-
-You'll get a public URL like:
-
-```
-https://random-string.localhost.run
-```
-
-Use it as your webhook URL: `https://random-string.localhost.run/webhook`
-
-### Simulate a webhook
-
-```bash
-curl -X POST http://localhost:8080/webhook \
-  -H "Content-Type: application/json" \
-  -H "X-GitHub-Event: push" \
-  -d '{
-    "ref": "refs/heads/main",
-    "pusher": {"name": "test"},
-    "repository": {"full_name": "user/repo"},
-    "commits": []
-  }'
-```
-
----
-
-## Project Structure
-
-```
-.
-├── main.go                  # Entry point
-├── Makefile                 # Build scripts
-├── build.sh                 # Alternative build script (bash)
-├── .env.example             # Example environment file
-├── locales/                 # Localization files
-│   ├── ru.json
-│   └── en.json
-└── internal/
-    ├── bot/
-    │   └── bot.go           # Telegram bot (Long Polling)
-    ├── handler/             # Webhook event handlers
-    │   ├── handler.go       # EventHandler interface
-    │   ├── github_push.go   # GitHub Push handler
-    │   ├── github_star.go   # GitHub Star handler
-    │   └── gitlab_push.go   # GitLab Push handler
-    ├── dispatcher/
-    │   └── dispatcher.go    # Routes events to handlers
-    ├── platform/
-    │   └── platform.go      # Platform & EventType definitions
-    └── i18n/
-        └── i18n.go          # Internationalization engine
-```
-
----
-
-## Adding a New Language
-
-1. Copy `locales/en.json` to `locales/xx.json`
-2. Translate all string values (keep the keys)
-3. Add the language code in `internal/i18n/i18n.go`:
-
-```go
-const (
-    RU Lang = "ru"
-    EN Lang = "en"
-    XX Lang = "xx" // your language
-)
-```
-
-4. Add it to `Load()`:
-
-```go
-{XX, "xx.json"},
-```
-
-5. Add validation in `Valid()`:
-
-```go
-func Valid(lang Lang) bool {
-    return lang == RU || lang == EN || lang == XX
-}
-```
-
-Pull requests for new languages are welcome!
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-1. Fork the repo
-2. Create a branch (`feature/something`)
-3. Run `go fmt ./...`
-4. Open a Pull Request
 
 ---
 
@@ -341,8 +258,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 - **Language:** Go 1.21+
 - **Telegram library:** [telego](https://github.com/mymmrac/telego) — high-performance, fully compliant with Bot API
+- **Database:** SQLite via [modernc.org/sqlite](https://modernc.org/sqlite) — pure Go, no CGO
 - **Environment:** [godotenv](https://github.com/joho/godotenv)
-- **No database** — notifications go directly to Telegram
 
 ### Why Go?
 
@@ -356,7 +273,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## License
 
 MIT © [marensovich](https://github.com/marensovich)
-
-See [LICENSE](LICENSE) for full text.
-
----

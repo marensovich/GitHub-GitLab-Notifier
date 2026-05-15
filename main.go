@@ -104,6 +104,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	payload := string(body)
 
+	// Определяем платформу и тип события
 	var eventType string
 	var p platform.Platform
 
@@ -117,13 +118,28 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		p = platform.GitLab
 		eventType = gitlabEvent
 	} else {
-		log.Println(i18n.T(lang, i18n.MsgUnknownEvent))
+		log.Println(i18n.T(lang, i18n.MsgUnknownPlatform))
 		http.Error(w, i18n.T(lang, i18n.MsgUnknownPlatform), http.StatusBadRequest)
 		return
 	}
 
+	log.Printf(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventType))
+
+	// Получаем отформатированное сообщение от диспетчера
 	message := dispatcherService.Dispatch(p, eventType, payload)
-	b.SendMessage(chatID, message)
+
+	// Отправляем уведомления во все подключённые чаты
+	chats := store.GetAllChats()
+	if len(chats) == 0 {
+		log.Println(i18n.T(lang, i18n.MsgNoChatsConfigured))
+		b.SendMessage(chatID, message) // fallback: личка из .env
+	} else {
+		for _, chat := range chats {
+			topicID := store.GetTopicByEvent(chat.ChatID, eventType)
+			b.SendMessageToTopic(chat.ChatID, topicID, message)
+			log.Printf(i18n.Tf(lang, i18n.MsgWebhookNotificationSent, chat.ChatID))
+		}
+	}
 
 	w.Write([]byte("OK"))
 }

@@ -67,4 +67,18 @@
   "configure_chat_all_exist": "✅ Все темы уже настроены!",
   "failed_to_get_existing_topics": "Не удалось получить список существующих тем: %v",
   "topic_already_exists": "Тема '%s' уже существует, пропускаем",
+  "connect_usage": "❌ Использование: /connect <url_репозитория>\n\nПример:\n/connect https://github.com/user/repo",
+  "connect_invalid_url": "❌ Неверный URL. Должен быть URL репозитория GitHub или GitLab.",
+  "connect_success": "✅ Репозиторий подключён к %s!\n\n<b>%s</b>",
+  "connect_url": "📡 <b>URL вебхука:</b>",
+  "connect_content_type": "📋 <b>Content type:</b>",
+  "connect_github": "💡 <b>Настройка GitHub:</b>\n1. Зайдите в Settings → Webhooks → Add webhook\n2. Вставьте URL выше\n3. Выберите события: Send me everything",
+  "connect_gitlab": "💡 <b>Настройка GitLab:</b>\n1. Зайдите в Settings → Webhooks\n2. Вставьте URL выше\n3. Выберите триггеры: Push, Merge Request, Issues и др.",
+  "connect_test": "🧪 <b>Проверка:</b>\n<code>curl -X POST %s -H \"Content-Type: application/json\" -H \"X-GitHub-Event: push\" -d '{}'</code>",
+  "connect_failed": "❌ Не удалось сохранить конфигурацию репозитория. Попробуйте ещё раз.",
+  "connect_logged": "Новый репозиторий подключён: чат=%d репо=%s вебхук=%s",
+  "connect_no_domain": "❌ DOMAIN не установлен в .env файле. Установите его.\n\nПример: DOMAIN=IP/DOMAIN:PORT",
+  "webhook_received": "Вебхук | платформа=%s | событие=%s",
+  "no_chats_configured": "Нет настроенных чатов, отправляю в чат по умолчанию",
+  "webhook_notification_sent": "Уведомление отправлено в чат %d"
 }

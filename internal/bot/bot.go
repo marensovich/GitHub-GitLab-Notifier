@@ -4,6 +4,8 @@ import (
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -161,13 +163,122 @@ func (b *Bot) consume(update telego.Update) {
 		return
 
 	case strings.HasPrefix(text, "/connect"):
-		response = i18n.T(b.lang, i18n.MsgConnectDev)
+		b.handleConnect(update)
+		return
 
 	default:
 		response = i18n.T(b.lang, i18n.MsgUnknownCmd)
 	}
 
 	b.SendMessage(chatID, response)
+}
+
+// handleConnect prepares and returns the webhook URL for the user.
+// Detects external IP and port automatically.
+//
+// Обрабатывает команду /connect — подготавливает и возвращает URL вебхука.
+// Автоматически определяет внешний IP и порт.
+func (b *Bot) handleConnect(update telego.Update) {
+	chatID := update.Message.Chat.ID
+	text := update.Message.Text
+
+	// Парсим URL репозитория из команды: /connect https://github.com/user/repo
+	parts := strings.Fields(text)
+	if len(parts) < 2 {
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectUsage))
+		return
+	}
+
+	repoURL := parts[1]
+
+	// Проверяем, что URL похож на GitHub/GitLab
+	if !strings.Contains(repoURL, "github.com") && !strings.Contains(repoURL, "gitlab.com") {
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectInvalidURL))
+		return
+	}
+
+	// Определяем платформу по URL
+	platform := "GitHub"
+	if strings.Contains(repoURL, "gitlab.com") {
+		platform = "GitLab"
+	}
+
+	domain := os.Getenv("DOMAIN")
+	if domain == "" {
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectNoDomain))
+		return
+	}
+
+	// Нормализация домена: убираем протокол и слеш в конце
+	domain = strings.TrimPrefix(domain, "https://")
+	domain = strings.TrimPrefix(domain, "http://")
+	domain = strings.TrimRight(domain, "/")
+
+	if domain == "" {
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectNoDomain))
+		return
+	}
+
+	// Определяем протокол: HTTPS если включён, иначе HTTP
+	protocol := "http"
+	useHTTPS := os.Getenv("USE_HTTPS")
+	if useHTTPS == "true" || useHTTPS == "1" || useHTTPS == "yes" {
+		protocol = "https"
+	}
+
+	webhookURL := fmt.Sprintf("%s://%s/webhook", protocol, domain)
+	// Генерируем секрет для подписи (если нужно)
+	secret := b.generateSecret()
+
+	// Сохраняем репозиторий в БД
+	err := b.store.SaveRepo(storage.RepoInfo{
+		ChatID:   chatID,
+		RepoURL:  repoURL,
+		Platform: platform,
+		Secret:   secret,
+	})
+	if err != nil {
+		log.Printf("❌ Failed to save repo: %v", err)
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectFailed))
+		return
+	}
+
+	// Формируем ответ
+	var response strings.Builder
+
+	response.WriteString(i18n.Tf(b.lang, i18n.MsgConnectSuccess, platform, repoURL))
+	response.WriteString("\n\n")
+	response.WriteString(i18n.T(b.lang, i18n.MsgConnectURL))
+	response.WriteString("\n")
+	response.WriteString(fmt.Sprintf("<code>%s</code>", webhookURL))
+	response.WriteString("\n\n")
+	response.WriteString(i18n.T(b.lang, i18n.MsgConnectContentType))
+	response.WriteString("\n")
+	response.WriteString("<code>application/json</code>")
+
+	if platform == "GitHub" {
+		response.WriteString("\n\n")
+		response.WriteString(i18n.T(b.lang, i18n.MsgConnectGitHub))
+	} else {
+		response.WriteString("\n\n")
+		response.WriteString(i18n.T(b.lang, i18n.MsgConnectGitLab))
+	}
+
+	response.WriteString("\n\n")
+	response.WriteString(i18n.Tf(b.lang, i18n.MsgConnectTest, webhookURL))
+
+	b.SendMessage(chatID, response.String())
+
+	log.Printf(i18n.Tf(b.lang, i18n.MsgConnectLogged, chatID, repoURL, webhookURL))
+}
+
+// generateSecret creates a random secret for webhook verification.
+//
+// Создаёт случайный секрет для проверки вебхуков.
+func (b *Bot) generateSecret() string {
+	bytes := make([]byte, 32)
+	_, _ = rand.Read(bytes)
+	return hex.EncodeToString(bytes)
 }
 
 // getExistingTopics returns a set of existing topic names for the given chat.
@@ -203,6 +314,15 @@ func (b *Bot) configureChat(update telego.Update) {
 	if !b.isBotAdmin(chatID) {
 		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConfigureChatNotAdmin))
 		return
+	}
+
+	err := b.store.SaveChat(storage.ChatConfig{
+		ChatID:   chatID,
+		Language: string(b.lang),
+		IsForum:  true,
+	})
+	if err != nil {
+		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 	}
 
 	existingNames, err := b.getExistingTopicNames(chatID)
@@ -261,15 +381,6 @@ func (b *Bot) configureChat(update telego.Update) {
 			fmt.Sprintf("  • %s — ID: <code>%d</code>", t.name, topic.MessageThreadID))
 
 		log.Printf(i18n.Tf(b.lang, i18n.MsgTopicCreated, t.name, topic.MessageThreadID))
-	}
-
-	err = b.store.SaveChat(storage.ChatConfig{
-		ChatID:   chatID,
-		Language: string(b.lang),
-		IsForum:  true,
-	})
-	if err != nil {
-		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 	}
 
 	var response strings.Builder

@@ -67,4 +67,18 @@
   "configure_chat_all_exist": "✅ All topics already configured!",
   "failed_to_get_existing_topics": "Failed to get existing topics: %v",
   "topic_already_exists": "Topic '%s' already exists, skipping",
+  "connect_usage": "❌ Usage: /connect <repository_url>\n\nExample:\n/connect https://github.com/user/repo",
+  "connect_invalid_url": "❌ Invalid URL. Must be a GitHub or GitLab repository URL.",
+  "connect_success": "✅ Repository connected to %s!\n\n<b>%s</b>",
+  "connect_url": "📡 <b>Webhook URL:</b>",
+  "connect_content_type": "📋 <b>Content type:</b>",
+  "connect_github": "💡 <b>GitHub setup:</b>\n1. Go to Settings → Webhooks → Add webhook\n2. Paste the URL above\n3. Select events: Send me everything",
+  "connect_gitlab": "💡 <b>GitLab setup:</b>\n1. Go to Settings → Webhooks\n2. Paste the URL above\n3. Select triggers: Push, Merge Request, Issues, etc.",
+  "connect_test": "🧪 <b>Test it:</b>\n<code>curl -X POST %s -H \"Content-Type: application/json\" -H \"X-GitHub-Event: push\" -d '{}'</code>",
+  "connect_failed": "❌ Failed to save repository configuration. Please try again.",
+  "connect_logged": "New repository connected: chat=%d repo=%s webhook=%s",
+  "connect_no_domain": "❌ DOMAIN is not set in .env file. Set it to your server's public IP or domain.\n\nExample: DOMAIN=IP/DOMAIN:PORT",
+  "webhook_received": "Webhook | platform=%s | event=%s",
+  "no_chats_configured": "No chats configured, sending to default chat",
+  "webhook_notification_sent": "Notification sent to chat %d"
 }
