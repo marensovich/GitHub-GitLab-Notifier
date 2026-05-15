@@ -42,5 +42,19 @@
   "unknown_event": "📢 Новое событие <code>%s</code> от %s",
   "error_event": "❌ Ошибка обработки события <code>%s</code>",
 
-  "server_started": "🚀 Сервер запущен на порту %s (версия %s)"
+  "server_started": "🚀 Сервер запущен на порту %s (версия %s)",
+  "server_failed": "❌ Ошибка запуска сервера: %v",
+  "bot_token_is_not_set": "❌ BOT_TOKEN не задан",
+  "failed_to_create_bot": "❌ Не удалось создать бота: %w",
+  "failed_to_get_bot_info": "❌ Не удалось получить информацию о боте: %w",
+  "invalid_proxy_url": "⚠️ Неверный URL прокси: %v",
+  "failed_to_parse_push_event": "Не удалось разобрать push-событие: %w",
+  "failed_to_parse_star_event": "Не удалось разобрать star-событие: %w",
+  "bot_chat_id_is_not_set": "❌ CHAT_ID не задан",
+  "invalid_bot_chat_id": "❌ Неверный CHAT_ID: %v",
+  "method_not_allowed": "Метод не поддерживается",
+  "failed_to_read_body": "❌ Не удалось прочитать тело запроса: %v",
+  "bad_request": "Неверный запрос",
+  "unknown_platform": "Неизвестная Git-платформа",
+  "env_file_not_found": "⚠️ .env файл не найден"
 }

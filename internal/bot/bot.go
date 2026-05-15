@@ -30,19 +30,19 @@ type Bot struct {
 func NewBot(lang i18n.Lang) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf("BOT_TOKEN is not set")
+		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
 	}
 
 	httpClient := newHTTPClient(lang)
 
 	api, err := telego.NewBot(token, telego.WithHTTPClient(httpClient))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create bot: %w", err)
+		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgFailedToCreateBot), err)
 	}
 
 	self, err := api.GetMe(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get bot info: %w", err)
+		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgFailedToGetBotInfo), err)
 	}
 
 	bot := &Bot{
@@ -74,7 +74,7 @@ func newHTTPClient(lang i18n.Lang) *http.Client {
 		proxyURL := fmt.Sprintf("%s://%s:%s", proxyType, proxyHost, proxyPort)
 		parsed, err := url.Parse(proxyURL)
 		if err != nil {
-			log.Printf("⚠️ Invalid proxy URL: %v", err)
+			log.Printf(i18n.T(lang, i18n.MsgInvalidProxyUrl), err)
 		} else {
 			transport.Proxy = http.ProxyURL(parsed)
 			log.Printf(i18n.T(lang, i18n.MsgProxyEnabled), proxyType, proxyHost, proxyPort)

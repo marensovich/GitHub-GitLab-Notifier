@@ -52,12 +52,12 @@ func main() {
 
 	chatIDStr := os.Getenv("CHAT_ID")
 	if chatIDStr == "" {
-		log.Fatal("❌ CHAT_ID is not set")
+		log.Fatal(i18n.T(lang, i18n.MsgBotChatIdIsNotSet))
 	}
 	var err error
 	chatID, err = strconv.ParseInt(chatIDStr, 10, 64)
 	if err != nil {
-		log.Fatalf("❌ Invalid CHAT_ID: %v", err)
+		log.Fatalf(i18n.T(lang, i18n.MsgInvalidBotChatId), err)
 	}
 
 	b, err = bot.NewBot(lang)
@@ -78,20 +78,20 @@ func main() {
 
 	log.Printf(i18n.T(lang, i18n.MsgServerStarted), port, Version)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("❌ Server failed: %v", err)
+		log.Fatalf(i18n.T(lang, i18n.MsgServerFailed), err)
 	}
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, i18n.T(lang, i18n.MsgMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("❌ Failed to read body: %v", err)
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		log.Printf(i18n.T(lang, i18n.MsgFailedToReadBody), err)
+		http.Error(w, i18n.T(lang, i18n.MsgBadRequest), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
@@ -112,7 +112,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		eventType = gitlabEvent
 	} else {
 		log.Println(i18n.T(lang, i18n.MsgUnknownEvent))
-		http.Error(w, "Unknown platform", http.StatusBadRequest)
+		http.Error(w, i18n.T(lang, i18n.MsgUnknownPlatform), http.StatusBadRequest)
 		return
 	}
 
@@ -128,6 +128,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func loadEnv() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️ .env file not found")
+		log.Println(i18n.T(lang, i18n.MsgEnvFileNotFound))
 	}
 }

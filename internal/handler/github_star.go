@@ -59,7 +59,7 @@ func (h *GitHubStarHandler) GetEventType() platform.EventType {
 func (h *GitHubStarHandler) Handle(rawJSON string) (string, error) {
 	var dto GitHubStarDto
 	if err := json.Unmarshal([]byte(rawJSON), &dto); err != nil {
-		return "", fmt.Errorf("failed to parse star event: %w", err)
+		return "", fmt.Errorf(i18n.T(h.Lang, i18n.MsgFailedToParseStarEvent), err)
 	}
 	return h.formatMessage(&dto), nil
 }

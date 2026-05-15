@@ -42,5 +42,19 @@
   "unknown_event": "📢 New event <code>%s</code> from %s",
   "error_event": "❌ Error processing event <code>%s</code>",
 
-  "server_started": "🚀 Server started on port %s (version %s)"
+  "server_started": "🚀 Server started on port %s (version %s)",
+  "server_failed": "❌ Server failed: %v",
+  "bot_token_is_not_set": "❌ BOT_TOKEN is not set",
+  "failed_to_create_bot": "❌ Failed to create bot: %w",
+  "failed_to_get_bot_info": "❌ Failed to get bot info: %w",
+  "invalid_proxy_url": "⚠ Invalid proxy URL: %v",
+  "failed_to_parse_push_event": "Failed to parse push event: %w",
+  "failed_to_parse_star_event": "Failed to parse star event: %w",
+  "bot_chat_id_is_not_set": "❌ CHAT_ID is not set",
+  "invalid_bot_chat_id": "❌ Invalid CHAT_ID: %v",
+  "method_not_allowed": "Method not allowed",
+  "failed_to_read_body": "❌ Failed to read body: %v",
+  "bad_request": "Bad request",
+  "unknown_platform": "Unknown Git platform",
+  "env_file_not_found": "⚠ .env file not found"
 }

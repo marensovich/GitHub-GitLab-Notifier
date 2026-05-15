@@ -110,7 +110,7 @@ func (h *GitHubPushHandler) GetEventType() platform.EventType {
 func (h *GitHubPushHandler) Handle(rawJSON string) (string, error) {
 	var dto GitHubPushDto
 	if err := json.Unmarshal([]byte(rawJSON), &dto); err != nil {
-		return "", fmt.Errorf("failed to parse push event: %w", err)
+		return "", fmt.Errorf(i18n.T(h.Lang, i18n.MsgFailedToParsePushEvent), err)
 	}
 	return h.formatMessage(&dto), nil
 }
