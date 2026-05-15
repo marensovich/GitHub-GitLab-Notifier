@@ -18,11 +18,9 @@ run:
 run-ru:
 	go run main.go --lang=ru
 
-# Запуск на английском
 run-en:
 	go run main.go --lang=en
 
-# Запуск с произвольными флагами (пример: make run ARGS="--lang=en")
 run-args:
 	go run main.go $(ARGS)
 

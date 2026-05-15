@@ -5,6 +5,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/platform"
+	"GitHub-GitLab-Notifier/storage"
 	"flag"
 	"fmt"
 	"io"
@@ -17,15 +18,13 @@ import (
 )
 
 var (
-	Version   = "dev-0.0.1"
-	BuildTime = "unknown"
-)
-
-var (
+	Version           = "dev-0.0.1"
+	BuildTime         = "unknown"
 	b                 *bot.Bot
 	dispatcherService *dispatcher.Dispatcher
 	chatID            int64
 	lang              i18n.Lang
+	store             *storage.Store
 )
 
 func main() {
@@ -50,6 +49,13 @@ func main() {
 
 	loadEnv()
 
+	var dberr error
+	store, dberr = storage.Open("data/notifier.db")
+	if dberr != nil {
+		log.Fatalf("❌ %v", dberr)
+	}
+	defer store.Close()
+
 	chatIDStr := os.Getenv("CHAT_ID")
 	if chatIDStr == "" {
 		log.Fatal(i18n.T(lang, i18n.MsgBotChatIdIsNotSet))
@@ -60,7 +66,7 @@ func main() {
 		log.Fatalf(i18n.T(lang, i18n.MsgInvalidBotChatId), err)
 	}
 
-	b, err = bot.NewBot(lang)
+	b, err = bot.NewBot(lang, store)
 	if err != nil {
 		log.Fatalf("❌ %v", err)
 	}

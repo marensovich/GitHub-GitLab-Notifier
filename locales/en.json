@@ -1,9 +1,8 @@
 {
-  "welcome": "👋 Hi! I'm a notification bot for GitLab/GitHub.\nUse /connect <URL> to connect a repository.\n/help — list of commands.",
-  "help": "📚 Available commands:\n/start — get started\n/connect <URL> — connect a repository\n/status — connected repositories status\n/help — this help",
+  "welcome": "👋 Hi! I'm a notification bot for GitLab/GitHub.\nUse /connect URL to connect a repository.\n/help — list of commands.",
+  "help": "📚 Available commands:\n/start — get started\n/connect URL — connect a repository\n/status — connected repositories status\n/help — this help",
   "connect_dev": "🔗 Repository connection feature is in development.\nGitHub/GitLab integration coming soon!",
   "unknown_command": "Sorry, I only understand commands. Type /help",
-
   "bot_registered": "✅ Bot @%s registered. Session active",
   "bot_started": "🚀 Bot @%s started, listening for commands...",
   "new_message": "📩 New message from @%s (chat %d): %s",
@@ -11,17 +10,14 @@
   "proxy_enabled": "🛡️ Bot using proxy %s://%s:%s",
   "direct_connection": "✅ Bot using direct connection",
   "bot_start_failed": "❌ Failed to start bot: %v",
-
   "star_created": "⭐ <b>%s</b> — new star!\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">View repo</a> | <a href=\"%s\">Stargazers</a>",
   "star_deleted": "💔 <b>%s</b> — star removed\n\n👤 <a href=\"%s\">%s</a> %s\n🔗 <a href=\"%s\">View repo</a> | <a href=\"%s\">Stargazers</a>",
   "star_verb_created": "starred",
   "star_verb_deleted": "unstarred",
-
   "push_new": "New push",
   "push_force": "Force push",
   "push_created": "New branch created",
   "push_deleted": "Branch deleted",
-
   "push_header": "%s <b>%s</b>\n%s to branch <code>%s</code>\n\n",
   "pusher": "👤 <a href=\"%s\">@%s</a>",
   "pusher_email": " (<code>%s</code>)",
@@ -34,14 +30,12 @@
   "files_modified": "  ✏️ Modified: %s\n",
   "files_removed": "  ➖ Removed: %s\n",
   "view_changes": "🔗 <a href=\"%s\">View changes</a>",
-
   "dispatcher_init": "✅ Dispatcher initialized with %d handlers",
   "unknown_event_log": "⚠️ Unknown event: %s / %s",
   "no_handler_log": "⚠️ No handler for: %v",
   "error_event_log": "❌ Error handling %v: %v",
   "unknown_event": "📢 New event <code>%s</code> from %s",
   "error_event": "❌ Error processing event <code>%s</code>",
-
   "server_started": "🚀 Server started on port %s (version %s)",
   "server_failed": "❌ Server failed: %v",
   "bot_token_is_not_set": "❌ BOT_TOKEN is not set",
@@ -56,5 +50,21 @@
   "failed_to_read_body": "❌ Failed to read body: %v",
   "bad_request": "Bad request",
   "unknown_platform": "Unknown Git platform",
-  "env_file_not_found": "⚠ .env file not found"
+  "env_file_not_found": "⚠ .env file not found",
+  "configure_chat_is_not_forum": "❌ This chat is not a forum. Enable \"Topics\" in group settings first.",
+  "configure_chat_not_admin": "❌ I need to be an administrator to create topics. Grant me admin rights first.",
+  "configure_chat_success": "✅ Forum topics created successfully!\n\nYou can now configure which events go to which topic.",
+  "configure_chat_how_to_use": "💡 <b>How to use:</b>\n\n1. Create webhook: <code>/connect</code>\n2. Notifications will appear in the General topic by default\n3. Future update: map events to specific topics",
+  "topic_create_failed": "Failed to create topic '%s': %s",
+  "failed_topic_create": "❌ Failed to create topic '%s': %v",
+  "failed_save_topic_to_storage": "❌ Failed to save topic '%s' to storage: %v",
+  "failed_to_map_event_to_storage": "❌ Failed to map event '%s' to topic %d: %v",
+  "topic_created": "✅ Topic '%s' created with ID %d",
+  "failed_to_save_chat_config": "❌ Failed to save chat config: %v",
+  "failed_to_check_bot_admin_status": "❌ Failed to check bot admin status: %v",
+  "failed_to_get_topics": "❌ Failed to get existing topics",
+  "configure_chat_skipped": "⏭️ Skipped (already exist): %s",
+  "configure_chat_all_exist": "✅ All topics already configured!",
+  "failed_to_get_existing_topics": "Failed to get existing topics: %v",
+  "topic_already_exists": "Topic '%s' already exists, skipping",
 }

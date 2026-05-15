@@ -2,6 +2,7 @@ package bot
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/storage"
 	"context"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/mymmrac/telego"
 	"github.com/mymmrac/telego/telegoutil"
@@ -22,12 +24,13 @@ type Bot struct {
 	token string
 	self  *telego.User
 	lang  i18n.Lang
+	store *storage.Store
 }
 
 // NewBot creates a Bot with optional proxy from environment variables.
 //
 // Создаёт новый экземпляр Bot и проверяет токен.
-func NewBot(lang i18n.Lang) (*Bot, error) {
+func NewBot(lang i18n.Lang, store *storage.Store) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
 		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
@@ -50,6 +53,7 @@ func NewBot(lang i18n.Lang) (*Bot, error) {
 		token: token,
 		self:  self,
 		lang:  lang,
+		store: store,
 	}
 
 	log.Printf(i18n.T(lang, i18n.MsgBotRegistered), bot.self.Username)
@@ -146,13 +150,17 @@ func (b *Bot) consume(update telego.Update) {
 	var response string
 
 	switch {
-	case text == "/start":
+	case strings.HasPrefix(text, "/start"):
 		response = i18n.T(b.lang, i18n.MsgWelcome)
 
-	case text == "/help":
+	case strings.HasPrefix(text, "/help"):
 		response = i18n.T(b.lang, i18n.MsgHelp)
 
-	case len(text) >= 8 && text[:8] == "/connect":
+	case strings.HasPrefix(text, "/configure"):
+		b.configureChat(update)
+		return
+
+	case strings.HasPrefix(text, "/connect"):
 		response = i18n.T(b.lang, i18n.MsgConnectDev)
 
 	default:
@@ -160,6 +168,181 @@ func (b *Bot) consume(update telego.Update) {
 	}
 
 	b.SendMessage(chatID, response)
+}
+
+// getExistingTopics returns a set of existing topic names for the given chat.
+//
+// Возвращает множество существующих названий тем для указанного чата.
+func (b *Bot) getExistingTopicNames(chatID int64) (map[string]bool, error) {
+	existingTopics, err := b.store.GetTopicsByChat(chatID)
+	if err != nil {
+		return nil, fmt.Errorf(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
+	}
+
+	names := make(map[string]bool, len(existingTopics))
+	for _, t := range existingTopics {
+		names[t.Name] = true
+	}
+	return names, nil
+}
+
+// configureChat sets up a forum chat for repository notifications.
+// Skips topics that already exist.
+//
+// Настраивает чат-форум для уведомлений о репозиториях.
+// Пропускает уже существующие темы.
+// configureChat sets up a forum chat for repository notifications.
+func (b *Bot) configureChat(update telego.Update) {
+	chatID := update.Message.Chat.ID
+
+	if !update.Message.Chat.IsForum {
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConfigureChatIsNotForum))
+		return
+	}
+
+	if !b.isBotAdmin(chatID) {
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConfigureChatNotAdmin))
+		return
+	}
+
+	existingNames, err := b.getExistingTopicNames(chatID)
+	if err != nil {
+		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
+		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgFailedToGetTopics))
+		return
+	}
+
+	type topicDef struct {
+		name      string
+		eventType string
+	}
+
+	topics := []topicDef{
+		{"⭐ Stars", "star"},
+		{"🚀 Pushes", "push"},
+	}
+
+	var createdTopics []string
+	var skippedTopics []string
+
+	for _, t := range topics {
+		if existingNames[t.name] {
+			skippedTopics = append(skippedTopics, t.name)
+			log.Printf(i18n.Tf(b.lang, i18n.MsgTopicAlreadyExists, t.name))
+			continue
+		}
+
+		topic, err := b.api.CreateForumTopic(context.Background(), &telego.CreateForumTopicParams{
+			ChatID: telegoutil.ID(chatID),
+			Name:   t.name,
+		})
+		if err != nil {
+			log.Printf(i18n.Tf(b.lang, i18n.MsgFailedTopicCreate, t.name, err))
+			b.SendMessage(chatID, i18n.Tf(b.lang, i18n.MsgTopicCreateFailed, t.name, err.Error()))
+			return
+		}
+
+		err = b.store.SaveTopic(storage.TopicInfo{
+			TopicID:   topic.MessageThreadID,
+			ChatID:    chatID,
+			Name:      t.name,
+			EventType: t.eventType,
+		})
+		if err != nil {
+			log.Printf(i18n.Tf(b.lang, i18n.MsgFailedSaveTopicToStorage, t.name, err))
+		}
+
+		err = b.store.SetEventTopic(chatID, t.eventType, topic.MessageThreadID)
+		if err != nil {
+			log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToMapEventToStorage, t.eventType, topic.MessageThreadID, err))
+		}
+
+		createdTopics = append(createdTopics,
+			fmt.Sprintf("  • %s — ID: <code>%d</code>", t.name, topic.MessageThreadID))
+
+		log.Printf(i18n.Tf(b.lang, i18n.MsgTopicCreated, t.name, topic.MessageThreadID))
+	}
+
+	err = b.store.SaveChat(storage.ChatConfig{
+		ChatID:   chatID,
+		Language: string(b.lang),
+		IsForum:  true,
+	})
+	if err != nil {
+		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
+	}
+
+	var response strings.Builder
+
+	if len(createdTopics) > 0 {
+		response.WriteString(i18n.T(b.lang, i18n.MsgConfigureChatSuccess))
+		response.WriteString("\n\n")
+		response.WriteString(strings.Join(createdTopics, "\n"))
+		response.WriteString("\n\n")
+	}
+
+	if len(skippedTopics) > 0 {
+		response.WriteString(i18n.Tf(b.lang, i18n.MsgConfigureChatSkipped, strings.Join(skippedTopics, ", ")))
+		response.WriteString("\n\n")
+	}
+
+	if len(createdTopics) == 0 && len(skippedTopics) > 0 {
+		response.WriteString(i18n.T(b.lang, i18n.MsgConfigureChatAllExist))
+		response.WriteString("\n\n")
+	}
+
+	response.WriteString(i18n.T(b.lang, i18n.MsgConfigureChatHowToUse))
+
+	b.SendMessageToTopic(chatID, update.Message.MessageThreadID, response.String())
+}
+
+// isBotAdmin checks if the bot is an administrator in the given chat.
+//
+// Проверяет, является ли бот администратором в указанном чате.
+func (b *Bot) isBotAdmin(chatID int64) bool {
+	member, err := b.api.GetChatMember(context.Background(), &telego.GetChatMemberParams{
+		ChatID: telegoutil.ID(chatID),
+		UserID: b.self.ID,
+	})
+	if err != nil {
+		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToCheckBotAdminStatus, err))
+		return false
+	}
+
+	// Проверяем статус: creator или administrator
+	status := member.MemberStatus()
+	return status == "creator" || status == "administrator"
+}
+
+// getTopicIDForEvent returns the topic ID for a given event type.
+// Returns 0 if no topic is configured (sends to general).
+//
+// Возвращает ID темы для указанного типа события.
+// Возвращает 0, если тема не настроена (отправка в общий чат).
+func (b *Bot) getTopicIDForEvent(chatID int64, eventType string) int {
+	return b.store.GetTopicByEvent(chatID, eventType)
+}
+
+// SendMessageToTopic sends a message to a specific forum topic.
+// If topicID is 0, sends to the main chat.
+//
+// Отправляет сообщение в определённую тему форума.
+// Если topicID равен 0, отправляет в общий чат.
+func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) {
+	params := &telego.SendMessageParams{
+		ChatID:    telegoutil.ID(chatID),
+		Text:      text,
+		ParseMode: telego.ModeHTML,
+	}
+
+	if topicID > 0 {
+		params.MessageThreadID = topicID
+	}
+
+	_, err := b.api.SendMessage(context.Background(), params)
+	if err != nil {
+		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
+	}
 }
 
 // SendMessage sends a text message with HTML parse mode to the specified chat.
