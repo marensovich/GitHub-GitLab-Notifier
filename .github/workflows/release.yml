@@ -9,7 +9,18 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -count=1 ./...
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,8 +29,6 @@ jobs:
         exclude:
           - goos: windows
             goarch: arm64
-          - goos: darwin
-            goarch: arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -27,42 +36,56 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: go.mod
 
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
         run: |
-          BINARY="GitHub-GitLab-Notifier-${{ matrix.goos }}-${{ matrix.goarch }}"
+          BINARY="GitHub-GitLab-Notifier-${GOOS}-${GOARCH}"
           if [ "$GOOS" = "windows" ]; then
             BINARY="$BINARY.exe"
           fi
-          go build -ldflags "-X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "$BINARY" main.go
-          echo "BINARY=$BINARY" >> $GITHUB_ENV
+          go build -trimpath \
+            -ldflags "-s -w -X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
+            -o "dist/$BINARY" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.goos }}-${{ matrix.goarch }}
-          path: GitHub-GitLab-Notifier-*
+          path: dist/*
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Create archives
+        # Archive names are used by scripts/install.sh:
+        # GitHub-GitLab-Notifier-<os>-<arch>.tar.gz with the binary at the root.
         run: |
           mkdir -p release
-          find . -name "GitHub-GitLab-Notifier-*" -type f | while read f; do
+          cd artifacts
+          for f in GitHub-GitLab-Notifier-*; do
+            chmod +x "$f"
             if [[ "$f" == *.exe ]]; then
-              zip "release/$(basename $f).zip" "$f"
+              zip -j "../release/${f%.exe}.zip" "$f" ../LICENSE ../README.md
             else
-              tar -czf "release/$(basename $f).tar.gz" "$f"
+              tar -czf "../release/$f.tar.gz" "$f" -C .. LICENSE README.md
             fi
           done
+          cd ../release
+          sha256sum * > checksums.txt
+          cp ../scripts/install.sh .
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
