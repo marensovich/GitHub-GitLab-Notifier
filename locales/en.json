@@ -36,7 +36,7 @@
   "error_event_log": "❌ Error handling %v: %v",
   "unknown_event": "📢 New event <code>%s</code> from %s",
   "error_event": "❌ Error processing event <code>%s</code>",
-  "server_started": "🚀 Server started on port %s (version %s)",
+  "server_started": "🚀 Server listening on %s (version %s)",
   "server_failed": "❌ Server failed: %v",
   "bot_token_is_not_set": "❌ BOT_TOKEN is not set",
   "failed_to_create_bot": "❌ Failed to create bot: %w",
@@ -125,5 +125,7 @@
   "release_prerelease": "🧪 New pre-release",
   "ci_success": "✅ CI passed",
   "ci_failed": "❌ CI failed",
-  "ci_cancelled": "⏹️ CI cancelled"
+  "ci_cancelled": "⏹️ CI cancelled",
+  "webhook_unauthorized": "⛔ Rejected webhook with invalid or missing secret | platform=%s | event=%s | repo=%s",
+  "shutting_down": "🛑 Shutting down..."
 }

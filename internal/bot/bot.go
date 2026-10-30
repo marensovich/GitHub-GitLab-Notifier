@@ -23,17 +23,18 @@ import (
 //
 // Основной Telegram-бот для GitHub-GitLab Notifier.
 type Bot struct {
-	api   *telego.Bot
-	token string
-	self  *telego.User
-	lang  i18n.Lang
-	store *storage.Store
+	api     *telego.Bot
+	token   string
+	self    *telego.User
+	lang    i18n.Lang
+	store   *storage.Store
+	version string
 }
 
 // NewBot creates a Bot with optional proxy from environment variables.
 //
 // Создаёт новый экземпляр Bot и проверяет токен.
-func NewBot(lang i18n.Lang, store *storage.Store) (*Bot, error) {
+func NewBot(lang i18n.Lang, store *storage.Store, version string) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
 		return nil, errors.New(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
@@ -52,11 +53,12 @@ func NewBot(lang i18n.Lang, store *storage.Store) (*Bot, error) {
 	}
 
 	bot := &Bot{
-		api:   api,
-		token: token,
-		self:  self,
-		lang:  lang,
-		store: store,
+		api:     api,
+		token:   token,
+		self:    self,
+		lang:    lang,
+		store:   store,
+		version: version,
 	}
 
 	log.Printf(i18n.T(lang, i18n.MsgBotRegistered), bot.self.Username)
@@ -114,13 +116,9 @@ func (b *Bot) Lang() i18n.Lang {
 	return b.lang
 }
 
-// Start begins Long Polling for incoming updates.
-//
-// Запускает Long Polling для входящих обновлений.
-func (b *Bot) Start() {
+// Start begins Long Polling for incoming updates until ctx is cancelled.
+func (b *Bot) Start(ctx context.Context) {
 	log.Printf(i18n.T(b.lang, i18n.MsgBotStarted), b.self.Username)
-
-	ctx := context.Background()
 
 	updates, err := b.api.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{
 		Timeout: 60,
@@ -431,7 +429,7 @@ func (b *Bot) getTopicIDForEvent(chatID int64, eventType string) int {
 //
 // Отправляет сообщение в определённую тему форума.
 // Если topicID равен 0, отправляет в общий чат.
-func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) {
+func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) error {
 	params := &telego.SendMessageParams{
 		ChatID:    telegoutil.ID(chatID),
 		Text:      text,
@@ -446,6 +444,7 @@ func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) {
 	if err != nil {
 		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
 	}
+	return err
 }
 
 // SendMessage sends a text message with HTML parse mode to the specified chat.

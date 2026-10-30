@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -343,4 +344,76 @@ func boolToInt(b bool) int {
 
 func intToBool(i int) bool {
 	return i == 1
+}
+
+// NormalizeRepoURL converts a repository URL into a canonical form used for
+// matching webhook payloads against connected repositories:
+// no scheme, no "www.", lowercase, no trailing slash or ".git".
+func NormalizeRepoURL(raw string) string {
+	u := strings.ToLower(strings.TrimSpace(raw))
+	u = strings.TrimPrefix(u, "https://")
+	u = strings.TrimPrefix(u, "http://")
+	u = strings.TrimPrefix(u, "www.")
+	u = strings.TrimRight(u, "/")
+	u = strings.TrimSuffix(u, ".git")
+	return strings.TrimRight(u, "/")
+}
+
+// FindRepo returns the connected repository matching the given URL,
+// ignoring scheme, case and trailing slashes. Returns nil if not found.
+func (s *Store) FindRepo(repoURL string) *RepoInfo {
+	want := NormalizeRepoURL(repoURL)
+	if want == "" {
+		return nil
+	}
+	for _, r := range s.GetAllRepos() {
+		if NormalizeRepoURL(r.RepoURL) == want {
+			return &r
+		}
+	}
+	return nil
+}
+
+// GetReposByChat returns all repositories connected to a chat.
+func (s *Store) GetReposByChat(chatID int64) ([]RepoInfo, error) {
+	rows, err := s.db.Query(
+		"SELECT repo_url, chat_id, platform, secret FROM repos WHERE chat_id = ? ORDER BY repo_url",
+		chatID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var repos []RepoInfo
+	for rows.Next() {
+		var r RepoInfo
+		if err := rows.Scan(&r.RepoURL, &r.ChatID, &r.Platform, &r.Secret); err != nil {
+			return nil, err
+		}
+		repos = append(repos, r)
+	}
+	return repos, rows.Err()
+}
+
+// DeleteRepo disconnects a repository from a chat.
+// Returns false if the repository was not connected to that chat.
+func (s *Store) DeleteRepo(chatID int64, repoURL string) (bool, error) {
+	repo := s.FindRepo(repoURL)
+	if repo == nil || repo.ChatID != chatID {
+		return false, nil
+	}
+	_, err := s.db.Exec("DELETE FROM repos WHERE repo_url = ?", repo.RepoURL)
+	return err == nil, err
+}
+
+// SetChatLanguage updates the notification language of a chat,
+// creating the chat record if it does not exist yet.
+func (s *Store) SetChatLanguage(chatID int64, language string, isForum bool) error {
+	_, err := s.db.Exec(`
+		INSERT INTO chats (chat_id, language, is_forum)
+		VALUES (?, ?, ?)
+		ON CONFLICT(chat_id) DO UPDATE SET language = excluded.language
+	`, chatID, language, boolToInt(isForum))
+	return err
 }
