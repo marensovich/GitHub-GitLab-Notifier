@@ -1,0 +1,32 @@
+{
+  "ref": "refs/heads/main",
+  "before": "6113728f27ae82c7b1a177c8d03f9e96e0adf246",
+  "after": "59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5",
+  "created": false,
+  "deleted": false,
+  "forced": false,
+  "compare": "https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f",
+  "commits": [
+    {
+      "id": "59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5",
+      "message": "fix: handle <nil> & empty values\n\nLonger description",
+      "url": "https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5",
+      "author": {"name": "Octo Cat", "email": "octo@example.com", "username": "octocat"},
+      "added": ["new.go"],
+      "removed": [],
+      "modified": ["main.go"]
+    }
+  ],
+  "head_commit": {
+    "id": "59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5",
+    "message": "fix: handle <nil> & empty values",
+    "url": "https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5",
+    "author": {"name": "Octo Cat", "email": "octo@example.com", "username": "octocat"},
+    "added": ["new.go"],
+    "removed": [],
+    "modified": ["main.go"]
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"},
+  "pusher": {"name": "octocat", "email": "octo@example.com"},
+  "sender": {"login": "octocat", "html_url": "https://github.com/octocat"}
+}

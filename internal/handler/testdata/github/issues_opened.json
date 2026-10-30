@@ -1,0 +1,12 @@
+{
+  "action": "opened",
+  "issue": {
+    "number": 10,
+    "title": "App crashes on start",
+    "body": "Steps:\n1. Open the app\n2. <crash>",
+    "html_url": "https://github.com/octo/hello/issues/10",
+    "user": {"login": "user1", "html_url": "https://github.com/user1"}
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"},
+  "sender": {"login": "user1", "html_url": "https://github.com/user1"}
+}

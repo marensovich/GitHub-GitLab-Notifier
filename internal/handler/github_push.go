@@ -113,6 +113,19 @@ func (h *GitHubPushHandler) Handle(lang i18n.Lang, payload []byte) (string, erro
 }
 
 func formatPushMessage(lang i18n.Lang, dto *GitHubPushDto) string {
+	if strings.HasPrefix(dto.Ref, "refs/tags/") {
+		tag := dto.Branch()
+		return formatTag(lang, tagView{
+			Repo:     dto.Repository.FullName,
+			RepoURL:  dto.Repository.HTMLURL,
+			Tag:      tag,
+			URL:      dto.Repository.HTMLURL + "/releases/tag/" + tag,
+			Deleted:  dto.Deleted,
+			Actor:    firstNonEmpty(dto.Sender.Login, dto.Pusher.Name),
+			ActorURL: dto.Sender.HTMLURL,
+		})
+	}
+
 	var sb strings.Builder
 
 	sb.WriteString(i18n.Tf(lang, i18n.MsgPushHeader,
@@ -254,4 +267,32 @@ func joinFiles(items []string) string {
 		result = append(result, fmt.Sprintf("+%d", len(items)-shown))
 	}
 	return strings.Join(result, ", ")
+}
+
+// tagView describes a created or deleted git tag.
+type tagView struct {
+	Repo     string
+	RepoURL  string
+	Tag      string
+	URL      string
+	Deleted  bool
+	Actor    string
+	ActorURL string
+}
+
+// formatTag renders a tag push notification (shared by GitHub and GitLab).
+func formatTag(lang i18n.Lang, v tagView) string {
+	header, url := i18n.T(lang, i18n.MsgTagCreated), v.URL
+	if v.Deleted {
+		header, url = i18n.T(lang, i18n.MsgTagDeleted), ""
+	}
+	return formatItem(lang, itemView{
+		Header:   header,
+		Repo:     v.Repo,
+		RepoURL:  v.RepoURL,
+		Ref:      v.Tag,
+		URL:      url,
+		Actor:    v.Actor,
+		ActorURL: v.ActorURL,
+	})
 }

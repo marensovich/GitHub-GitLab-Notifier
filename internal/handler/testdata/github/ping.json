@@ -1,0 +1,7 @@
+{
+  "zen": "Keep it logically awesome.",
+  "hook_id": 1,
+  "hook": {"events": ["*"]},
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"},
+  "sender": {"login": "octocat", "html_url": "https://github.com/octocat"}
+}

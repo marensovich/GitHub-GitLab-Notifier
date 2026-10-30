@@ -1,0 +1,12 @@
+{
+  "action": "published",
+  "release": {
+    "tag_name": "v1.2.0",
+    "name": "v1.2.0 — Dark mode",
+    "body": "## Changes\n- Dark mode",
+    "html_url": "https://github.com/octo/hello/releases/tag/v1.2.0",
+    "prerelease": false,
+    "author": {"login": "maintainer", "html_url": "https://github.com/maintainer"}
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"}
+}

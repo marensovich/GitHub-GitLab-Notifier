@@ -1,0 +1,18 @@
+{
+  "action": "completed",
+  "workflow_run": {
+    "name": "CI",
+    "run_number": 57,
+    "html_url": "https://github.com/octo/hello/actions/runs/1",
+    "head_branch": "main",
+    "head_sha": "59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_started_at": "2026-10-30T10:00:00Z",
+    "updated_at": "2026-10-30T10:02:05Z",
+    "actor": {"login": "octocat", "html_url": "https://github.com/octocat"},
+    "head_commit": {"message": "fix: handle nil values\n\nbody"}
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"}
+}

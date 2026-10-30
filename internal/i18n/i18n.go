@@ -89,6 +89,59 @@ const (
 
 	// Generic event handler messages
 	MsgFailedToParseEvent = "failed_to_parse_event"
+	MsgEventHeader        = "event_header"
+	MsgItemTitle          = "item_title"
+	MsgItemBranches       = "item_branches"
+	MsgItemActor          = "item_actor"
+	MsgItemBody           = "item_body"
+
+	// Ping / fork / tags
+	MsgPing       = "ping"
+	MsgPingZen    = "ping_zen"
+	MsgFork       = "fork"
+	MsgForkTotal  = "fork_total"
+	MsgTagCreated = "tag_created"
+	MsgTagDeleted = "tag_deleted"
+
+	// Pull / merge requests
+	MsgPROpened               = "pr_opened"
+	MsgPROpenedDraft          = "pr_opened_draft"
+	MsgPRClosed               = "pr_closed"
+	MsgPRMerged               = "pr_merged"
+	MsgPRReopened             = "pr_reopened"
+	MsgPRReady                = "pr_ready"
+	MsgPRStats                = "pr_stats"
+	MsgReviewApproved         = "review_approved"
+	MsgReviewChangesRequested = "review_changes_requested"
+	MsgReviewCommented        = "review_commented"
+	MsgMROpened               = "mr_opened"
+	MsgMROpenedDraft          = "mr_opened_draft"
+	MsgMRClosed               = "mr_closed"
+	MsgMRMerged               = "mr_merged"
+	MsgMRReopened             = "mr_reopened"
+	MsgMRApproved             = "mr_approved"
+
+	// Issues and comments
+	MsgIssueOpened           = "issue_opened"
+	MsgIssueClosed           = "issue_closed"
+	MsgIssueClosedNotPlanned = "issue_closed_not_planned"
+	MsgIssueReopened         = "issue_reopened"
+	MsgCommentIssue          = "comment_issue"
+	MsgCommentPR             = "comment_pr"
+	MsgCommentMR             = "comment_mr"
+	MsgCommentCommit         = "comment_commit"
+
+	// Releases
+	MsgReleasePublished  = "release_published"
+	MsgReleasePrerelease = "release_prerelease"
+
+	// CI/CD
+	MsgCISuccess   = "ci_success"
+	MsgCIFailed    = "ci_failed"
+	MsgCICancelled = "ci_cancelled"
+	MsgCIBranch    = "ci_branch"
+	MsgCICommit    = "ci_commit"
+	MsgCIDuration  = "ci_duration"
 
 	// Dispatcher
 	MsgDispatcherInit  = "dispatcher_init"

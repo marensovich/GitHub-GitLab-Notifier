@@ -23,7 +23,16 @@ type EventHandler interface {
 // All returns every built-in event handler.
 func All() []EventHandler {
 	return []EventHandler{
+		// GitHub
+		&GitHubPingHandler{},
 		&GitHubPushHandler{},
 		&GitHubStarHandler{},
+		&GitHubForkHandler{},
+		&GitHubPullRequestHandler{},
+		&GitHubPullRequestReviewHandler{},
+		&GitHubIssuesHandler{},
+		&GitHubIssueCommentHandler{},
+		&GitHubReleaseHandler{},
+		&GitHubWorkflowRunHandler{},
 	}
 }
