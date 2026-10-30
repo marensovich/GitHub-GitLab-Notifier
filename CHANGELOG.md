@@ -6,6 +6,13 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-10-30
+
+First stable release: complete GitHub and GitLab support, one-command Linux installation and Docker image.
+
+Pre-built binaries: Linux (amd64, arm64, armv7), macOS (Intel, Apple Silicon), Windows (amd64, arm64),
+FreeBSD (amd64, arm64).
+
 ### Added
 
 - **GitHub events:** `pull_request`, `pull_request_review`, `issues`, `issue_comment`, `release`, `workflow_run`,
@@ -20,7 +27,9 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - Notifications of a connected repository are delivered only to the chat it was connected from.
 - Linux installer `scripts/install.sh` with a hardened systemd service (install, update with rollback, uninstall).
 - `Dockerfile` (distroless, non-root) and `docker-compose.yml`.
-- CI workflow (gofmt, vet, race tests, shellcheck, Docker build).
+- CI workflow (gofmt, vet, race tests, shellcheck, Docker build) and a Build workflow that cross-compiles all
+  platforms on every push to `master`.
+- Release binaries for linux/armv7, windows/arm64 and freebsd/arm64; the installer supports 32-bit ARM.
 - Configuration: `BOT_LANG`, `DB_PATH`, `WEBHOOK_SECRET`, `NOTIFY_UNKNOWN_EVENTS`, `TELEGRAM_API_URL`;
   flags `--config` and `--db`; `/health` endpoint.
 - Graceful shutdown on SIGINT/SIGTERM.
@@ -71,5 +80,6 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - Wrong IP from VPN in `/connect` output
 - HTML parsing error in `/help` (unsupported `<url>` tag)
 
-[Unreleased]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/marensovich/GitHub-GitLab-Notifier/releases/tag/v0.0.1
+[Unreleased]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v.0.0.1...v1.0.0
+[0.0.1]: https://github.com/marensovich/GitHub-GitLab-Notifier/releases/tag/v.0.0.1

@@ -26,7 +26,7 @@ import (
 var embeddedLocales embed.FS
 
 var (
-	Version   = "dev-0.0.1"
+	Version   = "dev"
 	BuildTime = "unknown"
 )
 
