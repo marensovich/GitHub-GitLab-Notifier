@@ -22,6 +22,10 @@ type GitHubPushDto struct {
 	Compare    string             `json:"compare"`
 	Commits    []GitHubPushCommit `json:"commits"`
 	HeadCommit *GitHubPushCommit  `json:"head_commit"`
+
+	// TotalCommits is the real number of pushed commits when the payload
+	// lists only some of them (GitLab sends at most 20).
+	TotalCommits int `json:"-"`
 }
 
 type GitHubPushSender struct {
@@ -91,7 +95,7 @@ func (d *GitHubPushDto) Branch() string {
 }
 
 func (d *GitHubPushDto) CommitCount() int {
-	return len(d.Commits)
+	return max(len(d.Commits), d.TotalCommits)
 }
 
 // maxListedCommits is the number of commits shown in a push notification.
@@ -214,8 +218,8 @@ func formatCommits(lang i18n.Lang, dto *GitHubPushDto) string {
 		sb.WriteString(fmt.Sprintf("  %s %s — %s\n",
 			link(c.URL, shortSHA(c.ID)), esc(truncate(firstLine(c.Message), 70)), authorText))
 	}
-	if len(dto.Commits) > shown {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsMore, len(dto.Commits)-shown))
+	if dto.CommitCount() > shown {
+		sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsMore, dto.CommitCount()-shown))
 	}
 	sb.WriteString("\n")
 

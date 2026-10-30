@@ -34,5 +34,16 @@ func All() []EventHandler {
 		&GitHubIssueCommentHandler{},
 		&GitHubReleaseHandler{},
 		&GitHubWorkflowRunHandler{},
+
+		// GitLab
+		&GitLabPushHandler{},
+		&GitLabTagPushHandler{},
+		&GitLabMergeRequestHandler{},
+		&GitLabIssueHandler{Event: platform.GitLabIssue},
+		&GitLabIssueHandler{Event: platform.GitLabConfidentialIssue},
+		&GitLabNoteHandler{Event: platform.GitLabNote},
+		&GitLabNoteHandler{Event: platform.GitLabConfidentialNote},
+		&GitLabPipelineHandler{},
+		&GitLabReleaseHandler{},
 	}
 }

@@ -1,0 +1,19 @@
+{
+  "object_kind": "pipeline",
+  "user": {"name": "Dev One", "username": "dev1"},
+  "project": {"path_with_namespace": "group/app", "web_url": "https://gitlab.example.com/group/app"},
+  "object_attributes": {
+    "id": 31,
+    "iid": 3,
+    "name": "Pipeline for branch: master",
+    "ref": "master",
+    "sha": "bcbb5ec396a2c0f828686f14fac9b80b780504f2",
+    "status": "running",
+    "duration": null
+  },
+  "commit": {
+    "id": "bcbb5ec396a2c0f828686f14fac9b80b780504f2",
+    "message": "test\n",
+    "url": "https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2"
+  }
+}

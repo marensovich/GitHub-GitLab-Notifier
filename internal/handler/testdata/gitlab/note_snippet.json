@@ -1,0 +1,7 @@
+{
+  "object_kind": "note",
+  "user": {"name": "Dev One", "username": "dev1"},
+  "project": {"path_with_namespace": "group/app", "web_url": "https://gitlab.example.com/group/app"},
+  "object_attributes": {"note": "snippet note", "noteable_type": "Snippet", "url": "https://gitlab.example.com/group/app/-/snippets/1#note_1"},
+  "snippet": {"id": 1}
+}

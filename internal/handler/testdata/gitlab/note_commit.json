@@ -1,0 +1,11 @@
+{
+  "object_kind": "note",
+  "user": {"name": "Dev One", "username": "dev1"},
+  "project": {"path_with_namespace": "group/app", "web_url": "https://gitlab.example.com/group/app"},
+  "object_attributes": {
+    "note": "is this commit ready?",
+    "noteable_type": "Commit",
+    "url": "https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243"
+  },
+  "commit": {"id": "cfe32cf61b73a0d5e9f13e774abde7ff789b1660", "message": "Add submodule\n\nbody"}
+}
