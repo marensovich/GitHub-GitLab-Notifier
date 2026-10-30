@@ -1,11 +1,11 @@
+// Package bot implements the Telegram side of the notifier: command
+// handling (long polling) and message delivery.
 package bot
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -19,9 +19,7 @@ import (
 	"github.com/mymmrac/telego/telegoutil"
 )
 
-// Bot handles Telegram messages and sends repository event notifications.
-//
-// Основной Telegram-бот для GitHub-GitLab Notifier.
+// Bot handles Telegram commands and sends repository event notifications.
 type Bot struct {
 	api     *telego.Bot
 	token   string
@@ -31,18 +29,14 @@ type Bot struct {
 	version string
 }
 
-// NewBot creates a Bot with optional proxy from environment variables.
-//
-// Создаёт новый экземпляр Bot и проверяет токен.
+// NewBot creates a Bot with an optional proxy configured from environment variables.
 func NewBot(lang i18n.Lang, store *storage.Store, version string) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
 		return nil, errors.New(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
 	}
 
-	httpClient := newHTTPClient(lang)
-
-	api, err := telego.NewBot(token, telego.WithHTTPClient(httpClient))
+	api, err := telego.NewBot(token, telego.WithHTTPClient(newHTTPClient(lang)))
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgFailedToCreateBot), err)
 	}
@@ -65,19 +59,20 @@ func NewBot(lang i18n.Lang, store *storage.Store, version string) (*Bot, error) 
 	return bot, nil
 }
 
-// newHTTPClient creates an *http.Client with optional proxy.
-//
-// Создаёт *http.Client с опциональным прокси.
+// newHTTPClient creates an *http.Client with an optional HTTP or SOCKS5 proxy.
 func newHTTPClient(lang i18n.Lang) *http.Client {
 	proxyEnabled, _ := strconv.ParseBool(os.Getenv("PROXY_ENABLED"))
 	proxyHost := os.Getenv("PROXY_HOST")
 	proxyPort := os.Getenv("PROXY_PORT")
-	proxyType := os.Getenv("PROXY_TYPE")
-	if proxyType == "" {
-		proxyType = "HTTP"
+	proxyType := strings.ToLower(os.Getenv("PROXY_TYPE"))
+	switch proxyType {
+	case "", "http":
+		proxyType = "http"
+	case "socks", "socks5":
+		proxyType = "socks5"
 	}
 
-	transport := &http.Transport{}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if proxyEnabled && proxyHost != "" && proxyPort != "" {
 		proxyURL := fmt.Sprintf("%s://%s:%s", proxyType, proxyHost, proxyPort)
@@ -95,30 +90,16 @@ func newHTTPClient(lang i18n.Lang) *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-// Token returns the bot token.
-//
-// Возвращает токен бота.
-func (b *Bot) Token() string {
-	return b.token
-}
-
 // Username returns the bot username.
-//
-// Возвращает имя пользователя бота.
 func (b *Bot) Username() string {
 	return b.self.Username
 }
 
-// Lang returns the current language.
-//
-// Возвращает текущий язык.
-func (b *Bot) Lang() i18n.Lang {
-	return b.lang
-}
-
-// Start begins Long Polling for incoming updates until ctx is cancelled.
+// Start begins long polling for incoming updates until ctx is cancelled.
 func (b *Bot) Start(ctx context.Context) {
 	log.Printf(i18n.T(b.lang, i18n.MsgBotStarted), b.self.Username)
+
+	b.registerCommands(ctx)
 
 	updates, err := b.api.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{
 		Timeout: 60,
@@ -134,308 +115,108 @@ func (b *Bot) Start(ctx context.Context) {
 	}()
 }
 
+// registerCommands publishes the command list shown in the Telegram "Menu" button.
+func (b *Bot) registerCommands(ctx context.Context) {
+	for _, lang := range i18n.Supported {
+		var commands []telego.BotCommand
+		for _, name := range commandNames {
+			commands = append(commands, telego.BotCommand{
+				Command:     name,
+				Description: i18n.T(lang, "cmd_"+name),
+			})
+		}
+
+		params := &telego.SetMyCommandsParams{Commands: commands}
+		if lang != i18n.EN {
+			params.LanguageCode = string(lang)
+		}
+		if err := b.api.SetMyCommands(ctx, params); err != nil {
+			log.Printf(i18n.T(b.lang, i18n.MsgSetCommandsFailed), err)
+		}
+	}
+}
+
 // consume processes a single Telegram update.
-//
-// Обрабатывает одно обновление Telegram.
 func (b *Bot) consume(update telego.Update) {
-	if update.Message == nil || update.Message.Text == "" {
+	msg := update.Message
+	if msg == nil || msg.Text == "" || !strings.HasPrefix(msg.Text, "/") {
 		return
 	}
 
-	chatID := update.Message.Chat.ID
-	userName := update.Message.From.Username
-	text := update.Message.Text
-
-	log.Printf(i18n.T(b.lang, i18n.MsgNewMessage), userName, chatID, text)
-
-	var response string
-
-	switch {
-	case strings.HasPrefix(text, "/start"):
-		response = i18n.T(b.lang, i18n.MsgWelcome)
-
-	case strings.HasPrefix(text, "/help"):
-		response = i18n.T(b.lang, i18n.MsgHelp)
-
-	case strings.HasPrefix(text, "/configure"):
-		b.configureChat(update)
+	command, args, ok := parseCommand(msg.Text, b.self.Username)
+	if !ok {
 		return
-
-	case strings.HasPrefix(text, "/connect"):
-		b.handleConnect(update)
-		return
-
-	default:
-		response = i18n.T(b.lang, i18n.MsgUnknownCmd)
 	}
 
-	b.SendMessage(chatID, response)
+	userName := ""
+	if msg.From != nil {
+		// From is nil for anonymous group admins and channel posts.
+		userName = msg.From.Username
+	}
+	log.Printf(i18n.T(b.lang, i18n.MsgNewMessage), userName, msg.Chat.ID, msg.Text)
+
+	b.handleCommand(msg, command, args)
 }
 
-// handleConnect prepares and returns the webhook URL for the user.
-// Detects external IP and port automatically.
-//
-// Обрабатывает команду /connect — подготавливает и возвращает URL вебхука.
-// Автоматически определяет внешний IP и порт.
-func (b *Bot) handleConnect(update telego.Update) {
-	chatID := update.Message.Chat.ID
-	text := update.Message.Text
-
-	parts := strings.Fields(text)
-	if len(parts) < 2 {
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectUsage))
-		return
+// parseCommand splits "/cmd@BotName arg1 arg2" into "cmd" and its arguments.
+// Returns ok=false for commands addressed to another bot.
+func parseCommand(text, botUsername string) (command string, args []string, ok bool) {
+	fields := strings.Fields(text)
+	if len(fields) == 0 || !strings.HasPrefix(fields[0], "/") {
+		return "", nil, false
 	}
 
-	repoURL := parts[1]
-
-	if !strings.Contains(repoURL, "github.com") && !strings.Contains(repoURL, "gitlab.com") {
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectInvalidURL))
-		return
+	command = strings.TrimPrefix(fields[0], "/")
+	if name, target, found := strings.Cut(command, "@"); found {
+		if !strings.EqualFold(target, botUsername) {
+			return "", nil, false
+		}
+		command = name
 	}
+	return strings.ToLower(command), fields[1:], true
+}
 
-	platform := "GitHub"
-	if strings.Contains(repoURL, "gitlab.com") {
-		platform = "GitLab"
+// chatLang returns the language stored for a chat, or the default language.
+func (b *Bot) chatLang(chatID int64) i18n.Lang {
+	chat, err := b.store.GetChat(chatID)
+	if err == nil {
+		if l := i18n.Lang(chat.Language); i18n.Valid(l) {
+			return l
+		}
 	}
+	return b.lang
+}
 
-	domain := os.Getenv("DOMAIN")
-	if domain == "" {
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectNoDomain))
-		return
-	}
-
-	domain = strings.TrimPrefix(domain, "https://")
-	domain = strings.TrimPrefix(domain, "http://")
-	domain = strings.TrimRight(domain, "/")
-
-	if domain == "" {
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectNoDomain))
-		return
-	}
-
-	protocol := "http"
-	useHTTPS := os.Getenv("USE_HTTPS")
-	if useHTTPS == "true" || useHTTPS == "1" || useHTTPS == "yes" {
-		protocol = "https"
-	}
-
-	webhookURL := fmt.Sprintf("%s://%s/webhook", protocol, domain)
-	secret := b.generateSecret()
-
-	err := b.store.SaveRepo(storage.RepoInfo{
-		ChatID:   chatID,
-		RepoURL:  repoURL,
-		Platform: platform,
-		Secret:   secret,
+// ensureChat makes sure the chat exists in the database (repos and topics
+// reference it), keeping its stored language if it already exists.
+func (b *Bot) ensureChat(chat telego.Chat) error {
+	return b.store.SaveChat(storage.ChatConfig{
+		ChatID:   chat.ID,
+		Language: string(b.chatLang(chat.ID)),
+		IsForum:  chat.IsForum,
 	})
-	if err != nil {
-		log.Printf("❌ Failed to save repo: %v", err)
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConnectFailed))
-		return
-	}
-
-	var response strings.Builder
-
-	response.WriteString(i18n.Tf(b.lang, i18n.MsgConnectSuccess, platform, repoURL))
-	response.WriteString("\n\n")
-	response.WriteString(i18n.T(b.lang, i18n.MsgConnectURL))
-	response.WriteString("\n")
-	response.WriteString(fmt.Sprintf("<code>%s</code>", webhookURL))
-	response.WriteString("\n\n")
-	response.WriteString(i18n.T(b.lang, i18n.MsgConnectContentType))
-	response.WriteString("\n")
-	response.WriteString("<code>application/json</code>")
-
-	if platform == "GitHub" {
-		response.WriteString("\n\n")
-		response.WriteString(i18n.T(b.lang, i18n.MsgConnectGitHub))
-	} else {
-		response.WriteString("\n\n")
-		response.WriteString(i18n.T(b.lang, i18n.MsgConnectGitLab))
-	}
-
-	response.WriteString("\n\n")
-	response.WriteString(i18n.Tf(b.lang, i18n.MsgConnectTest, webhookURL))
-
-	b.SendMessage(chatID, response.String())
-
-	log.Print(i18n.Tf(b.lang, i18n.MsgConnectLogged, chatID, repoURL, webhookURL))
 }
 
-// generateSecret creates a random secret for webhook verification.
-//
-// Создаёт случайный секрет для проверки вебхуков.
-func (b *Bot) generateSecret() string {
-	bytes := make([]byte, 32)
-	_, _ = rand.Read(bytes)
-	return hex.EncodeToString(bytes)
+// reply sends a message to the chat (and forum topic) the command came from.
+func (b *Bot) reply(msg *telego.Message, text string) {
+	topicID := 0
+	if msg.IsTopicMessage {
+		topicID = msg.MessageThreadID
+	}
+	_ = b.SendMessageToTopic(msg.Chat.ID, topicID, text)
 }
 
-// getExistingTopics returns a set of existing topic names for the given chat.
-//
-// Возвращает множество существующих названий тем для указанного чата.
-func (b *Bot) getExistingTopicNames(chatID int64) (map[string]bool, error) {
-	existingTopics, err := b.store.GetTopicsByChat(chatID)
-	if err != nil {
-		return nil, errors.New(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
-	}
-
-	names := make(map[string]bool, len(existingTopics))
-	for _, t := range existingTopics {
-		names[t.Name] = true
-	}
-	return names, nil
-}
-
-// configureChat sets up a forum chat for repository notifications.
-// Skips topics that already exist.
-//
-// Настраивает чат-форум для уведомлений о репозиториях.
-// Пропускает уже существующие темы.
-// configureChat sets up a forum chat for repository notifications.
-func (b *Bot) configureChat(update telego.Update) {
-	chatID := update.Message.Chat.ID
-
-	if !update.Message.Chat.IsForum {
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConfigureChatIsNotForum))
-		return
-	}
-
-	if !b.isBotAdmin(chatID) {
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgConfigureChatNotAdmin))
-		return
-	}
-
-	err := b.store.SaveChat(storage.ChatConfig{
-		ChatID:   chatID,
-		Language: string(b.lang),
-		IsForum:  true,
-	})
-	if err != nil {
-		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
-	}
-
-	existingNames, err := b.getExistingTopicNames(chatID)
-	if err != nil {
-		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
-		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgFailedToGetTopics))
-		return
-	}
-
-	type topicDef struct {
-		name      string
-		eventType string
-	}
-
-	topics := []topicDef{
-		{"⭐ Stars", "star"},
-		{"🚀 Pushes", "push"},
-	}
-
-	var createdTopics []string
-	var skippedTopics []string
-
-	for _, t := range topics {
-		if existingNames[t.name] {
-			skippedTopics = append(skippedTopics, t.name)
-			log.Print(i18n.Tf(b.lang, i18n.MsgTopicAlreadyExists, t.name))
-			continue
-		}
-
-		topic, err := b.api.CreateForumTopic(context.Background(), &telego.CreateForumTopicParams{
-			ChatID: telegoutil.ID(chatID),
-			Name:   t.name,
-		})
-		if err != nil {
-			log.Print(i18n.Tf(b.lang, i18n.MsgFailedTopicCreate, t.name, err))
-			b.SendMessage(chatID, i18n.Tf(b.lang, i18n.MsgTopicCreateFailed, t.name, err.Error()))
-			return
-		}
-
-		err = b.store.SaveTopic(storage.TopicInfo{
-			TopicID:   topic.MessageThreadID,
-			ChatID:    chatID,
-			Name:      t.name,
-			EventType: t.eventType,
-		})
-		if err != nil {
-			log.Print(i18n.Tf(b.lang, i18n.MsgFailedSaveTopicToStorage, t.name, err))
-		}
-
-		err = b.store.SetEventTopic(chatID, t.eventType, topic.MessageThreadID)
-		if err != nil {
-			log.Print(i18n.Tf(b.lang, i18n.MsgFailedToMapEventToStorage, t.eventType, topic.MessageThreadID, err))
-		}
-
-		createdTopics = append(createdTopics,
-			fmt.Sprintf("  • %s — ID: <code>%d</code>", t.name, topic.MessageThreadID))
-
-		log.Print(i18n.Tf(b.lang, i18n.MsgTopicCreated, t.name, topic.MessageThreadID))
-	}
-
-	var response strings.Builder
-
-	if len(createdTopics) > 0 {
-		response.WriteString(i18n.T(b.lang, i18n.MsgConfigureChatSuccess))
-		response.WriteString("\n\n")
-		response.WriteString(strings.Join(createdTopics, "\n"))
-		response.WriteString("\n\n")
-	}
-
-	if len(skippedTopics) > 0 {
-		response.WriteString(i18n.Tf(b.lang, i18n.MsgConfigureChatSkipped, strings.Join(skippedTopics, ", ")))
-		response.WriteString("\n\n")
-	}
-
-	if len(createdTopics) == 0 && len(skippedTopics) > 0 {
-		response.WriteString(i18n.T(b.lang, i18n.MsgConfigureChatAllExist))
-		response.WriteString("\n\n")
-	}
-
-	response.WriteString(i18n.T(b.lang, i18n.MsgConfigureChatHowToUse))
-
-	b.SendMessageToTopic(chatID, update.Message.MessageThreadID, response.String())
-}
-
-// isBotAdmin checks if the bot is an administrator in the given chat.
-//
-// Проверяет, является ли бот администратором в указанном чате.
-func (b *Bot) isBotAdmin(chatID int64) bool {
-	member, err := b.api.GetChatMember(context.Background(), &telego.GetChatMemberParams{
-		ChatID: telegoutil.ID(chatID),
-		UserID: b.self.ID,
-	})
-	if err != nil {
-		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToCheckBotAdminStatus, err))
-		return false
-	}
-
-	status := member.MemberStatus()
-	return status == "creator" || status == "administrator"
-}
-
-// getTopicIDForEvent returns the topic ID for a given event type.
-// Returns 0 if no topic is configured (sends to general).
-//
-// Возвращает ID темы для указанного типа события.
-// Возвращает 0, если тема не настроена (отправка в общий чат).
-func (b *Bot) getTopicIDForEvent(chatID int64, eventType string) int {
-	return b.store.GetTopicByEvent(chatID, eventType)
-}
-
-// SendMessageToTopic sends a message to a specific forum topic.
-// If topicID is 0, sends to the main chat.
-//
-// Отправляет сообщение в определённую тему форума.
-// Если topicID равен 0, отправляет в общий чат.
+// SendMessageToTopic sends an HTML message to a forum topic.
+// If topicID is 0, the message goes to the main (General) chat.
 func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) error {
 	params := &telego.SendMessageParams{
 		ChatID:    telegoutil.ID(chatID),
 		Text:      text,
 		ParseMode: telego.ModeHTML,
+		LinkPreviewOptions: &telego.LinkPreviewOptions{
+			IsDisabled: true,
+		},
 	}
-
 	if topicID > 0 {
 		params.MessageThreadID = topicID
 	}
@@ -447,16 +228,22 @@ func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) error {
 	return err
 }
 
-// SendMessage sends a text message with HTML parse mode to the specified chat.
-//
-// Отправляет текстовое сообщение с HTML-разметкой в указанный чат.
-func (b *Bot) SendMessage(chatID int64, text string) {
-	_, err := b.api.SendMessage(context.Background(), &telego.SendMessageParams{
-		ChatID:    telegoutil.ID(chatID),
-		Text:      text,
-		ParseMode: telego.ModeHTML,
+// SendMessage sends an HTML message to the main chat.
+func (b *Bot) SendMessage(chatID int64, text string) error {
+	return b.SendMessageToTopic(chatID, 0, text)
+}
+
+// isBotAdmin checks if the bot is an administrator in the given chat.
+func (b *Bot) isBotAdmin(chatID int64) bool {
+	member, err := b.api.GetChatMember(context.Background(), &telego.GetChatMemberParams{
+		ChatID: telegoutil.ID(chatID),
+		UserID: b.self.ID,
 	})
 	if err != nil {
-		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
+		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToCheckBotAdminStatus, err))
+		return false
 	}
+
+	status := member.MemberStatus()
+	return status == telego.MemberStatusCreator || status == telego.MemberStatusAdministrator
 }
