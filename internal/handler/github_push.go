@@ -22,6 +22,10 @@ type GitHubPushDto struct {
 	Compare    string             `json:"compare"`
 	Commits    []GitHubPushCommit `json:"commits"`
 	HeadCommit *GitHubPushCommit  `json:"head_commit"`
+
+	// TotalCommits is the real number of pushed commits when the payload
+	// lists only some of them (GitLab sends at most 20).
+	TotalCommits int `json:"-"`
 }
 
 type GitHubPushSender struct {
@@ -87,51 +91,63 @@ type GitHubPushCommitter struct {
 }
 
 func (d *GitHubPushDto) Branch() string {
-	return strings.TrimPrefix(d.Ref, "refs/heads/")
+	return branchName(d.Ref)
 }
 
 func (d *GitHubPushDto) CommitCount() int {
-	return len(d.Commits)
+	return max(len(d.Commits), d.TotalCommits)
 }
 
+// maxListedCommits is the number of commits shown in a push notification.
+const maxListedCommits = 5
+
 // GitHubPushHandler handles GitHub push events.
-type GitHubPushHandler struct {
-	Lang i18n.Lang
-}
+type GitHubPushHandler struct{}
 
 func (h *GitHubPushHandler) GetEventType() platform.EventType {
 	return platform.GitHubPush
 }
 
-func (h *GitHubPushHandler) Handle(rawJSON string) (string, error) {
+func (h *GitHubPushHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
 	var dto GitHubPushDto
-	if err := json.Unmarshal([]byte(rawJSON), &dto); err != nil {
-		return "", fmt.Errorf(i18n.T(h.Lang, i18n.MsgFailedToParsePushEvent), err)
+	if err := json.Unmarshal(payload, &dto); err != nil {
+		return "", fmt.Errorf(i18n.T(lang, i18n.MsgFailedToParsePushEvent), err)
 	}
-	return h.formatMessage(&dto), nil
+	return formatPushMessage(lang, &dto), nil
 }
 
-func (h *GitHubPushHandler) formatMessage(dto *GitHubPushDto) string {
-	var sb strings.Builder
-
-	emoji := getEmoji(dto)
-	action := getActionText(h.Lang, dto)
-	repoName := dto.Repository.FullName
-
-	sb.WriteString(i18n.Tf(h.Lang, i18n.MsgPushHeader,
-		emoji, repoName, action, dto.Branch()))
-
-	sb.WriteString(fmt.Sprintf("%s\n", formatPusher(h.Lang, dto)))
-
-	sb.WriteString(formatCommits(h.Lang, dto))
-
-	sb.WriteString(formatFiles(h.Lang, dto))
-
-	if dto.Compare != "" {
-		sb.WriteString(i18n.Tf(h.Lang, i18n.MsgViewChanges, dto.Compare))
+func formatPushMessage(lang i18n.Lang, dto *GitHubPushDto) string {
+	if strings.HasPrefix(dto.Ref, "refs/tags/") {
+		tag := dto.Branch()
+		return formatTag(lang, tagView{
+			Repo:     dto.Repository.FullName,
+			RepoURL:  dto.Repository.HTMLURL,
+			Tag:      tag,
+			URL:      dto.Repository.HTMLURL + "/releases/tag/" + tag,
+			Deleted:  dto.Deleted,
+			Actor:    firstNonEmpty(dto.Sender.Login, dto.Pusher.Name),
+			ActorURL: dto.Sender.HTMLURL,
+		})
 	}
 
-	return sb.String()
+	var sb strings.Builder
+
+	sb.WriteString(i18n.Tf(lang, i18n.MsgPushHeader,
+		getEmoji(dto), esc(dto.Repository.FullName), getActionText(lang, dto), esc(dto.Branch())))
+
+	sb.WriteString(formatPusher(lang, dto))
+	sb.WriteString("\n")
+
+	if !dto.Deleted {
+		sb.WriteString(formatCommits(lang, dto))
+		sb.WriteString(formatFiles(lang, dto))
+	}
+
+	if dto.Compare != "" && !dto.Deleted {
+		sb.WriteString(i18n.Tf(lang, i18n.MsgViewChanges, esc(dto.Compare)))
+	}
+
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 // ─── Helpers ───
@@ -163,12 +179,14 @@ func getActionText(lang i18n.Lang, dto *GitHubPushDto) string {
 }
 
 func formatPusher(lang i18n.Lang, dto *GitHubPushDto) string {
-	sender := dto.Sender
-	pusher := dto.Pusher
+	login := dto.Sender.Login
+	if login == "" {
+		login = dto.Pusher.Name
+	}
 
-	result := i18n.Tf(lang, i18n.MsgPusher, sender.HTMLURL, sender.Login)
-	if pusher.Email != "" {
-		result += i18n.Tf(lang, i18n.MsgPusherEmail, pusher.Email)
+	result := i18n.Tf(lang, i18n.MsgPusher, esc(dto.Sender.HTMLURL), esc(login))
+	if dto.Pusher.Email != "" {
+		result += i18n.Tf(lang, i18n.MsgPusherEmail, esc(dto.Pusher.Email))
 	}
 	return result
 }
@@ -182,34 +200,34 @@ func formatCommits(lang i18n.Lang, dto *GitHubPushDto) string {
 	}
 	sb.WriteString("\n\n")
 
-	if len(dto.Commits) > 0 {
-		sb.WriteString(i18n.T(lang, i18n.MsgCommitsHeader))
-		max := len(dto.Commits)
-		if max > 5 {
-			max = 5
-		}
-		for i := 0; i < max; i++ {
-			c := dto.Commits[i]
-			shortID := c.ID[:7]
-			msg := strings.Split(c.Message, "\n")[0]
-			if len(msg) > 70 {
-				msg = msg[:67] + "..."
-			}
-			authorName := c.Author.Name
-			if authorName == "" {
-				authorName = "unknown"
-			}
-			sb.WriteString(fmt.Sprintf("  <a href=\"%s\">%s</a> %s — <i><a href=\"https://github.com/%s\">%s</a></i>\n",
-				c.URL, shortID, msg, c.Author.Username, authorName))
-		}
-		if len(dto.Commits) > max {
-			sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsMore, len(dto.Commits)-max))
-		}
-		sb.WriteString("\n")
+	if len(dto.Commits) == 0 {
+		return sb.String()
 	}
+
+	sb.WriteString(i18n.T(lang, i18n.MsgCommitsHeader))
+	shown := min(len(dto.Commits), maxListedCommits)
+	for _, c := range dto.Commits[:shown] {
+		author := c.Author.Name
+		if author == "" {
+			author = "unknown"
+		}
+		authorText := "<i>" + esc(author) + "</i>"
+		if c.Author.Username != "" {
+			authorText = "<i>" + link("https://github.com/"+c.Author.Username, author) + "</i>"
+		}
+		sb.WriteString(fmt.Sprintf("  %s %s — %s\n",
+			link(c.URL, shortSHA(c.ID)), esc(truncate(firstLine(c.Message), 70)), authorText))
+	}
+	if dto.CommitCount() > shown {
+		sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsMore, dto.CommitCount()-shown))
+	}
+	sb.WriteString("\n")
 
 	return sb.String()
 }
+
+// maxListedFiles limits each changed-files line to keep messages short.
+const maxListedFiles = 10
 
 func formatFiles(lang i18n.Lang, dto *GitHubPushDto) string {
 	if dto.HeadCommit == nil {
@@ -228,26 +246,57 @@ func formatFiles(lang i18n.Lang, dto *GitHubPushDto) string {
 	sb.WriteString(i18n.T(lang, i18n.MsgFilesHeader))
 
 	if len(added) > 0 {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesAdded,
-			strings.Join(wrapWithCode(added), ", ")))
+		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesAdded, joinFiles(added)))
 	}
 	if len(modified) > 0 {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesModified,
-			strings.Join(wrapWithCode(modified), ", ")))
+		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesModified, joinFiles(modified)))
 	}
 	if len(removed) > 0 {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesRemoved,
-			strings.Join(wrapWithCode(removed), ", ")))
+		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesRemoved, joinFiles(removed)))
 	}
 	sb.WriteString("\n")
 
 	return sb.String()
 }
 
-func wrapWithCode(items []string) []string {
-	result := make([]string, len(items))
-	for i, item := range items {
-		result[i] = "<code>" + item + "</code>"
+// joinFiles renders a comma-separated list of <code> file names,
+// collapsing the tail into "+N" when the list is long.
+func joinFiles(items []string) string {
+	shown := min(len(items), maxListedFiles)
+	result := make([]string, 0, shown+1)
+	for _, item := range items[:shown] {
+		result = append(result, "<code>"+esc(item)+"</code>")
 	}
-	return result
+	if len(items) > shown {
+		result = append(result, fmt.Sprintf("+%d", len(items)-shown))
+	}
+	return strings.Join(result, ", ")
+}
+
+// tagView describes a created or deleted git tag.
+type tagView struct {
+	Repo     string
+	RepoURL  string
+	Tag      string
+	URL      string
+	Deleted  bool
+	Actor    string
+	ActorURL string
+}
+
+// formatTag renders a tag push notification (shared by GitHub and GitLab).
+func formatTag(lang i18n.Lang, v tagView) string {
+	header, url := i18n.T(lang, i18n.MsgTagCreated), v.URL
+	if v.Deleted {
+		header, url = i18n.T(lang, i18n.MsgTagDeleted), ""
+	}
+	return formatItem(lang, itemView{
+		Header:   header,
+		Repo:     v.Repo,
+		RepoURL:  v.RepoURL,
+		Ref:      v.Tag,
+		URL:      url,
+		Actor:    v.Actor,
+		ActorURL: v.ActorURL,
+	})
 }

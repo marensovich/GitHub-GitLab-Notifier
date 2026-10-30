@@ -1,0 +1,12 @@
+{
+  "action": "closed",
+  "issue": {
+    "number": 10,
+    "title": "App crashes on start",
+    "state_reason": "not_planned",
+    "html_url": "https://github.com/octo/hello/issues/10",
+    "user": {"login": "user1", "html_url": "https://github.com/user1"}
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"},
+  "sender": {"login": "maintainer", "html_url": "https://github.com/maintainer"}
+}

@@ -1,0 +1,16 @@
+{
+  "object_kind": "merge_request",
+  "event_type": "merge_request",
+  "user": {"name": "Dev One", "username": "dev1"},
+  "project": {"path_with_namespace": "group/app", "web_url": "https://gitlab.example.com/group/app"},
+  "object_attributes": {
+    "iid": 3,
+    "title": "MS-Viewer update",
+    "description": "Adds a <viewer> & fixes bugs",
+    "url": "https://gitlab.example.com/group/app/-/merge_requests/3",
+    "source_branch": "ms-viewer",
+    "target_branch": "master",
+    "action": "merge",
+    "draft": false
+  }
+}

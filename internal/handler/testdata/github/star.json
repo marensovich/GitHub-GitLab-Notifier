@@ -1,0 +1,6 @@
+{
+  "action": "created",
+  "starred_at": "2026-10-30T10:00:00Z",
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello", "stargazers_count": 42},
+  "sender": {"login": "fan", "html_url": "https://github.com/fan"}
+}

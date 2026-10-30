@@ -1,0 +1,21 @@
+{
+  "action": "closed",
+  "number": 12,
+  "pull_request": {
+    "number": 12,
+    "title": "Add <dark> mode",
+    "body": "This PR adds dark mode.\r\n\r\nCloses #10",
+    "html_url": "https://github.com/octo/hello/pull/12",
+    "draft": false,
+    "merged": true,
+    "user": {"login": "dev", "html_url": "https://github.com/dev"},
+    "additions": 120,
+    "deletions": 8,
+    "changed_files": 5,
+    "commits": 3,
+    "head": {"ref": "feature/dark-mode"},
+    "base": {"ref": "main"}
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"},
+  "sender": {"login": "maintainer", "html_url": "https://github.com/maintainer"}
+}

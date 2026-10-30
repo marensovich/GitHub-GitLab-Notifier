@@ -1,0 +1,12 @@
+{
+  "object_kind": "issue",
+  "user": {"name": "Dev One", "username": "dev1"},
+  "project": {"path_with_namespace": "group/app", "web_url": "https://gitlab.example.com/group/app"},
+  "object_attributes": {
+    "iid": 23,
+    "title": "New API: create/update/delete file",
+    "description": "Create new API for manipulations with repository",
+    "url": "https://gitlab.example.com/group/app/-/issues/23",
+    "action": "open"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "action": "submitted",
+  "review": {
+    "state": "approved",
+    "body": "LGTM!",
+    "html_url": "https://github.com/octo/hello/pull/12#pullrequestreview-1",
+    "user": {"login": "reviewer", "html_url": "https://github.com/reviewer"}
+  },
+  "pull_request": {"number": 12, "title": "Add dark mode", "html_url": "https://github.com/octo/hello/pull/12"},
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"}
+}

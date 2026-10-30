@@ -1,0 +1,15 @@
+{
+  "action": "created",
+  "issue": {
+    "number": 12,
+    "title": "Add dark mode",
+    "html_url": "https://github.com/octo/hello/pull/12",
+    "pull_request": {"url": "https://api.github.com/repos/octo/hello/pulls/12"}
+  },
+  "comment": {
+    "body": "Could you add a test?",
+    "html_url": "https://github.com/octo/hello/pull/12#issuecomment-1",
+    "user": {"login": "reviewer", "html_url": "https://github.com/reviewer"}
+  },
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello"}
+}

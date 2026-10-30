@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.vscode
+build
+data
+images
+*.db
+.env
+GitHub-GitLab-Notifier
+GitHub-GitLab-Notifier.exe
+coverage.out

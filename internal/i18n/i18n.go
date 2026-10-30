@@ -3,7 +3,9 @@ package i18n
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"slices"
 	"sync"
 )
 
@@ -29,7 +31,6 @@ const (
 	MsgTopicAlreadyExists          = "topic_already_exists"
 	MsgWelcome                     = "welcome"
 	MsgHelp                        = "help"
-	MsgConnectDev                  = "connect_dev"
 	MsgUnknownCmd                  = "unknown_command"
 	MsgBotRegistered               = "bot_registered"
 	MsgBotStarted                  = "bot_started"
@@ -57,6 +58,26 @@ const (
 	MsgWebhookReceived             = "webhook_received"
 	MsgNoChatsConfigured           = "no_chats_configured"
 	MsgWebhookNotificationSent     = "webhook_notification_sent"
+	MsgSetCommandsFailed           = "set_commands_failed"
+	MsgVersion                     = "version"
+	MsgFailedToSaveRepo            = "failed_to_save_repo"
+	MsgConnectSecret               = "connect_secret"
+	MsgDisconnectUsage             = "disconnect_usage"
+	MsgDisconnectNotFound          = "disconnect_not_found"
+	MsgDisconnectSuccess           = "disconnect_success"
+	MsgStatusHeader                = "status_header"
+	MsgStatusYes                   = "status_yes"
+	MsgStatusNo                    = "status_no"
+	MsgStatusTopicsHeader          = "status_topics_header"
+	MsgStatusTopicLine             = "status_topic_line"
+	MsgStatusNoTopics              = "status_no_topics"
+	MsgStatusReposHeader           = "status_repos_header"
+	MsgStatusRepoLine              = "status_repo_line"
+	MsgStatusNoRepos               = "status_no_repos"
+	MsgStatusVersion               = "status_version"
+	MsgLangUsage                   = "lang_usage"
+	MsgLangInvalid                 = "lang_invalid"
+	MsgLangChanged                 = "lang_changed"
 
 	// Push
 	MsgPushNew                = "push_new"
@@ -83,6 +104,63 @@ const (
 	MsgStarVerbCreated        = "star_verb_created"
 	MsgStarVerbDeleted        = "star_verb_deleted"
 	MsgFailedToParseStarEvent = "failed_to_parse_star_event"
+	MsgStarTotal              = "star_total"
+
+	// Generic event handler messages
+	MsgFailedToParseEvent = "failed_to_parse_event"
+	MsgEventHeader        = "event_header"
+	MsgItemTitle          = "item_title"
+	MsgItemBranches       = "item_branches"
+	MsgItemActor          = "item_actor"
+	MsgItemBody           = "item_body"
+
+	// Ping / fork / tags
+	MsgPing       = "ping"
+	MsgPingZen    = "ping_zen"
+	MsgFork       = "fork"
+	MsgForkTotal  = "fork_total"
+	MsgTagCreated = "tag_created"
+	MsgTagDeleted = "tag_deleted"
+
+	// Pull / merge requests
+	MsgPROpened               = "pr_opened"
+	MsgPROpenedDraft          = "pr_opened_draft"
+	MsgPRClosed               = "pr_closed"
+	MsgPRMerged               = "pr_merged"
+	MsgPRReopened             = "pr_reopened"
+	MsgPRReady                = "pr_ready"
+	MsgPRStats                = "pr_stats"
+	MsgReviewApproved         = "review_approved"
+	MsgReviewChangesRequested = "review_changes_requested"
+	MsgReviewCommented        = "review_commented"
+	MsgMROpened               = "mr_opened"
+	MsgMROpenedDraft          = "mr_opened_draft"
+	MsgMRClosed               = "mr_closed"
+	MsgMRMerged               = "mr_merged"
+	MsgMRReopened             = "mr_reopened"
+	MsgMRApproved             = "mr_approved"
+
+	// Issues and comments
+	MsgIssueOpened           = "issue_opened"
+	MsgIssueClosed           = "issue_closed"
+	MsgIssueClosedNotPlanned = "issue_closed_not_planned"
+	MsgIssueReopened         = "issue_reopened"
+	MsgCommentIssue          = "comment_issue"
+	MsgCommentPR             = "comment_pr"
+	MsgCommentMR             = "comment_mr"
+	MsgCommentCommit         = "comment_commit"
+
+	// Releases
+	MsgReleasePublished  = "release_published"
+	MsgReleasePrerelease = "release_prerelease"
+
+	// CI/CD
+	MsgCISuccess   = "ci_success"
+	MsgCIFailed    = "ci_failed"
+	MsgCICancelled = "ci_cancelled"
+	MsgCIBranch    = "ci_branch"
+	MsgCICommit    = "ci_commit"
+	MsgCIDuration  = "ci_duration"
 
 	// Dispatcher
 	MsgDispatcherInit  = "dispatcher_init"
@@ -93,19 +171,21 @@ const (
 	MsgErrorEvent      = "error_event"
 
 	// Server
-	MsgServerStarted      = "server_started"
-	MsgServerFailed       = "server_failed"
-	MsgMethodNotAllowed   = "method_not_allowed"
-	MsgFailedToReadBody   = "failed_to_read_body"
-	MsgBadRequest         = "bad_request"
-	MsgUnknownPlatform    = "unknown_platform"
-	MsgEnvFileNotFound    = "env_file_not_found"
-	MsgBotTokenIsNotSet   = "bot_token_is_not_set"
-	MsgBotChatIdIsNotSet  = "bot_chat_id_is_not_set"
-	MsgInvalidBotChatId   = "invalid_bot_chat_id"
-	MsgFailedToCreateBot  = "failed_to_create_bot"
-	MsgFailedToGetBotInfo = "failed_to_get_bot_info"
-	MsgInvalidProxyUrl    = "invalid_proxy_url"
+	MsgServerStarted       = "server_started"
+	MsgServerFailed        = "server_failed"
+	MsgShuttingDown        = "shutting_down"
+	MsgWebhookUnauthorized = "webhook_unauthorized"
+	MsgMethodNotAllowed    = "method_not_allowed"
+	MsgFailedToReadBody    = "failed_to_read_body"
+	MsgBadRequest          = "bad_request"
+	MsgUnknownPlatform     = "unknown_platform"
+	MsgEnvFileNotFound     = "env_file_not_found"
+	MsgBotTokenIsNotSet    = "bot_token_is_not_set"
+	MsgBotChatIdIsNotSet   = "bot_chat_id_is_not_set"
+	MsgInvalidBotChatId    = "invalid_bot_chat_id"
+	MsgFailedToCreateBot   = "failed_to_create_bot"
+	MsgFailedToGetBotInfo  = "failed_to_get_bot_info"
+	MsgInvalidProxyUrl     = "invalid_proxy_url"
 )
 
 var (
@@ -114,39 +194,48 @@ var (
 	loaded   bool
 )
 
+// Supported lists all available languages.
+var Supported = []Lang{EN, RU}
+
+// Load reads translations from JSON files in a directory on disk.
 func Load(dir string) error {
-	mu.Lock()
-	defer mu.Unlock()
+	return LoadFS(os.DirFS(dir))
+}
 
-	messages = make(map[Lang]map[string]string)
+// LoadFS reads translations (<lang>.json) from a file system,
+// e.g. locales embedded into the binary.
+func LoadFS(fsys fs.FS) error {
+	loadedMessages := make(map[Lang]map[string]string, len(Supported))
 
-	for _, l := range []struct {
-		lang Lang
-		file string
-	}{
-		{RU, "ru.json"},
-		{EN, "en.json"},
-	} {
-		if err := loadFile(dir, l.file, l.lang); err != nil {
+	for _, lang := range Supported {
+		data, err := fs.ReadFile(fsys, string(lang)+".json")
+		if err != nil {
 			return fmt.Errorf("i18n: %w", err)
 		}
+		var msgs map[string]string
+		if err := json.Unmarshal(data, &msgs); err != nil {
+			return fmt.Errorf("i18n: %s.json: %w", lang, err)
+		}
+		loadedMessages[lang] = msgs
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
+	messages = loadedMessages
 	loaded = true
 	return nil
 }
 
-func loadFile(dir, filename string, lang Lang) error {
-	data, err := os.ReadFile(dir + "/" + filename)
-	if err != nil {
-		return err
+// Keys returns all translation keys defined for a language.
+func Keys(lang Lang) []string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	keys := make([]string, 0, len(messages[lang]))
+	for k := range messages[lang] {
+		keys = append(keys, k)
 	}
-	var msgs map[string]string
-	if err := json.Unmarshal(data, &msgs); err != nil {
-		return err
-	}
-	messages[lang] = msgs
-	return nil
+	return keys
 }
 
 func T(lang Lang, key string) string {
@@ -175,5 +264,5 @@ func Tf(lang Lang, key string, args ...interface{}) string {
 }
 
 func Valid(lang Lang) bool {
-	return lang == RU || lang == EN
+	return slices.Contains(Supported, lang)
 }

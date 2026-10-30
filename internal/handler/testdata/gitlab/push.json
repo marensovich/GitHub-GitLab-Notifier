@@ -1,0 +1,28 @@
+{
+  "object_kind": "push",
+  "before": "95790bf891e76fee5e1747ab589903a6a1f80f22",
+  "after": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+  "ref": "refs/heads/master",
+  "checkout_sha": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+  "user_name": "Dev One",
+  "user_username": "dev1",
+  "user_email": "dev1@example.com",
+  "project": {"path_with_namespace": "group/app", "web_url": "https://gitlab.example.com/group/app"},
+  "commits": [
+    {
+      "id": "b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
+      "message": "Update Catalan translation\n\nmore",
+      "url": "https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
+      "author": {"name": "Jordi", "email": "jordi@example.com"},
+      "added": [], "modified": ["locale/ca.po"], "removed": []
+    },
+    {
+      "id": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+      "message": "fixed readme",
+      "url": "https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+      "author": {"name": "Dev One", "email": "dev1@example.com"},
+      "added": ["CHANGELOG"], "modified": ["README.md"], "removed": []
+    }
+  ],
+  "total_commits_count": 25
+}

@@ -42,53 +42,38 @@ type GitHubStarSender struct {
 	HTMLURL   string `json:"html_url"`
 }
 
-type GitHubStarHandler struct {
-	Lang i18n.Lang
-}
+type GitHubStarHandler struct{}
 
 func (h *GitHubStarHandler) GetEventType() platform.EventType {
 	return platform.GitHubStar
 }
 
-func (h *GitHubStarHandler) Handle(rawJSON string) (string, error) {
+func (h *GitHubStarHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
 	var dto GitHubStarDto
-	if err := json.Unmarshal([]byte(rawJSON), &dto); err != nil {
-		return "", fmt.Errorf(i18n.T(h.Lang, i18n.MsgFailedToParseStarEvent), err)
+	if err := json.Unmarshal(payload, &dto); err != nil {
+		return "", fmt.Errorf(i18n.T(lang, i18n.MsgFailedToParseStarEvent), err)
 	}
-	return h.formatMessage(&dto), nil
+	return formatStarMessage(lang, &dto), nil
 }
 
-func (h *GitHubStarHandler) formatMessage(dto *GitHubStarDto) string {
-	action := dto.StarAction()
-	repoName := dto.Repository.FullName
-	senderLogin := dto.Sender.Login
-	senderURL := dto.Sender.HTMLURL
+func formatStarMessage(lang i18n.Lang, dto *GitHubStarDto) string {
 	repoURL := dto.Repository.HTMLURL
-	stargazersURL := repoURL + "/stargazers"
 
-	var verbKey string
-	var msgKey string
-
-	switch action {
-	case StarCreated:
-		msgKey = i18n.MsgStarCreated
-		verbKey = i18n.MsgStarVerbCreated
-	case StarDeleted:
-		msgKey = i18n.MsgStarDeleted
-		verbKey = i18n.MsgStarVerbDeleted
-	default:
-		msgKey = i18n.MsgStarCreated
-		verbKey = i18n.MsgStarVerbCreated
+	msgKey, verbKey := i18n.MsgStarCreated, i18n.MsgStarVerbCreated
+	if dto.StarAction() == StarDeleted {
+		msgKey, verbKey = i18n.MsgStarDeleted, i18n.MsgStarVerbDeleted
 	}
 
-	verb := i18n.T(h.Lang, verbKey)
-
-	return i18n.Tf(h.Lang, msgKey,
-		repoName,
-		senderURL,
-		"@"+senderLogin,
-		verb,
-		repoURL,
-		stargazersURL,
+	msg := i18n.Tf(lang, msgKey,
+		esc(dto.Repository.FullName),
+		esc(dto.Sender.HTMLURL),
+		"@"+esc(dto.Sender.Login),
+		i18n.T(lang, verbKey),
+		esc(repoURL),
+		esc(repoURL+"/stargazers"),
 	)
+	if dto.Repository.StargazersCount > 0 {
+		msg += i18n.Tf(lang, i18n.MsgStarTotal, dto.Repository.StargazersCount)
+	}
+	return msg
 }

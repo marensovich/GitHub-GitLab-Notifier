@@ -1,0 +1,5 @@
+{
+  "forkee": {"full_name": "fan/hello", "html_url": "https://github.com/fan/hello"},
+  "repository": {"full_name": "octo/hello", "html_url": "https://github.com/octo/hello", "forks_count": 7},
+  "sender": {"login": "fan", "html_url": "https://github.com/fan"}
+}

@@ -9,64 +9,70 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [ linux, darwin, windows, freebsd ]
-        goarch: [ amd64, arm64 ]
-        exclude:
-          - goos: windows
-            goarch: arm64
-          - goos: darwin
-            goarch: arm64
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -count=1 ./...
 
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          BINARY="GitHub-GitLab-Notifier-${{ matrix.goos }}-${{ matrix.goarch }}"
-          if [ "$GOOS" = "windows" ]; then
-            BINARY="$BINARY.exe"
-          fi
-          go build -ldflags "-X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o "$BINARY" main.go
-          echo "BINARY=$BINARY" >> $GITHUB_ENV
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.goos }}-${{ matrix.goarch }}
-          path: GitHub-GitLab-Notifier-*
+  build:
+    needs: test
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ github.ref_name }}
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Create archives
+        # Archive names are used by scripts/install.sh:
+        # GitHub-GitLab-Notifier-<os>-<arch>.tar.gz with the binary at the root.
         run: |
           mkdir -p release
-          find . -name "GitHub-GitLab-Notifier-*" -type f | while read f; do
+          cd artifacts
+          for f in GitHub-GitLab-Notifier-*; do
+            chmod +x "$f"
             if [[ "$f" == *.exe ]]; then
-              zip "release/$(basename $f).zip" "$f"
+              zip -j "../release/${f%.exe}.zip" "$f" ../LICENSE ../README.md
             else
-              tar -czf "release/$(basename $f).tar.gz" "$f"
+              tar -czf "../release/$f.tar.gz" "$f" -C .. LICENSE README.md
             fi
           done
+          cd ../release
+          cp ../scripts/install.sh .
+          sha256sum * > checksums.txt
+          ls -lh
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/      { exit }
+            found                  { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "See [CHANGELOG.md](CHANGELOG.md)." > release-notes.md
+          fi
+          cat release-notes.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: release/*
+          body_path: release-notes.md
           generate_release_notes: true
           name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}

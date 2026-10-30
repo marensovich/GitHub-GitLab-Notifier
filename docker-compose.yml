@@ -1,0 +1,21 @@
+# Run with: docker compose up -d
+# Configuration is read from .env (copy .env.example and fill it in).
+services:
+  notifier:
+    build:
+      context: .
+    image: github-gitlab-notifier:latest
+    container_name: github-gitlab-notifier
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Inside the container the database lives on the "data" volume.
+      DB_PATH: /data/notifier.db
+      SERVER_ADDRESS: 0.0.0.0
+    ports:
+      - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
+    volumes:
+      - data:/data
+
+volumes:
+  data:

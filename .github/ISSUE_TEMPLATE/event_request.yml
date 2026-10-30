@@ -1,0 +1,44 @@
+name: 🔔 New webhook event
+description: Request support for a GitHub or GitLab webhook event
+title: "[Event]: "
+labels: ["enhancement", "event-handler", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [supported events](https://github.com/marensovich/GitHub-GitLab-Notifier#-supported-events) first.
+        Adding a handler is described in [CONTRIBUTING.md](https://github.com/marensovich/GitHub-GitLab-Notifier/blob/master/CONTRIBUTING.md#adding-a-new-event-handler).
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - GitHub
+        - GitLab
+    validations:
+      required: true
+
+  - type: input
+    id: event
+    attributes:
+      label: Event name
+      description: Value of the X-GitHub-Event / X-Gitlab-Event header
+      placeholder: discussion / Deployment Hook
+    validations:
+      required: true
+
+  - type: textarea
+    id: actions
+    attributes:
+      label: Which actions should produce a notification?
+      placeholder: created, answered
+    validations:
+      required: true
+
+  - type: textarea
+    id: payload
+    attributes:
+      label: Example payload
+      description: From "Recent Deliveries" in the webhook settings. Remove private data.
+      render: json
