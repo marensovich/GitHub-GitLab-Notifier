@@ -36,7 +36,13 @@ func NewBot(lang i18n.Lang, store *storage.Store, version string) (*Bot, error) 
 		return nil, errors.New(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
 	}
 
-	api, err := telego.NewBot(token, telego.WithHTTPClient(newHTTPClient(lang)))
+	options := []telego.BotOption{telego.WithHTTPClient(newHTTPClient(lang))}
+	if apiURL := strings.TrimRight(os.Getenv("TELEGRAM_API_URL"), "/"); apiURL != "" {
+		// Self-hosted Telegram Bot API server (https://github.com/tdlib/telegram-bot-api).
+		options = append(options, telego.WithAPIServer(apiURL))
+	}
+
+	api, err := telego.NewBot(token, options...)
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgFailedToCreateBot), err)
 	}

@@ -78,7 +78,7 @@ func main() {
 
 	b, err := bot.NewBot(lang, store, Version)
 	if err != nil {
-		log.Fatalf("❌ %v", err)
+		log.Fatal(err)
 	}
 	b.Start(ctx)
 
