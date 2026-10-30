@@ -34,12 +34,15 @@ build: ## Build a static binary for the current platform
 build-all: ## Cross-compile for all supported platforms into build/
 	@echo "🔨 Building for all platforms..."
 	@mkdir -p build
-	GOOS=linux   GOARCH=amd64 $(GOBUILD) -o build/$(BINARY_NAME)-linux-amd64 .
-	GOOS=linux   GOARCH=arm64 $(GOBUILD) -o build/$(BINARY_NAME)-linux-arm64 .
-	GOOS=darwin  GOARCH=amd64 $(GOBUILD) -o build/$(BINARY_NAME)-darwin-amd64 .
-	GOOS=darwin  GOARCH=arm64 $(GOBUILD) -o build/$(BINARY_NAME)-darwin-arm64 .
-	GOOS=windows GOARCH=amd64 $(GOBUILD) -o build/$(BINARY_NAME)-windows-amd64.exe .
-	GOOS=freebsd GOARCH=amd64 $(GOBUILD) -o build/$(BINARY_NAME)-freebsd-amd64 .
+	GOOS=linux   GOARCH=amd64         $(GOBUILD) -o build/$(BINARY_NAME)-linux-amd64 .
+	GOOS=linux   GOARCH=arm64         $(GOBUILD) -o build/$(BINARY_NAME)-linux-arm64 .
+	GOOS=linux   GOARCH=arm   GOARM=7 $(GOBUILD) -o build/$(BINARY_NAME)-linux-armv7 .
+	GOOS=darwin  GOARCH=amd64         $(GOBUILD) -o build/$(BINARY_NAME)-darwin-amd64 .
+	GOOS=darwin  GOARCH=arm64         $(GOBUILD) -o build/$(BINARY_NAME)-darwin-arm64 .
+	GOOS=windows GOARCH=amd64         $(GOBUILD) -o build/$(BINARY_NAME)-windows-amd64.exe .
+	GOOS=windows GOARCH=arm64         $(GOBUILD) -o build/$(BINARY_NAME)-windows-arm64.exe .
+	GOOS=freebsd GOARCH=amd64         $(GOBUILD) -o build/$(BINARY_NAME)-freebsd-amd64 .
+	GOOS=freebsd GOARCH=arm64         $(GOBUILD) -o build/$(BINARY_NAME)-freebsd-arm64 .
 	@echo "✅ Done! Files in build/:"
 	@ls -lh build/
 

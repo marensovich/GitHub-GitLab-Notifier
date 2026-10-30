@@ -21,42 +21,9 @@ jobs:
 
   build:
     needs: test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [ linux, darwin, windows, freebsd ]
-        goarch: [ amd64, arm64 ]
-        exclude:
-          - goos: windows
-            goarch: arm64
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: '0'
-        run: |
-          BINARY="GitHub-GitLab-Notifier-${GOOS}-${GOARCH}"
-          if [ "$GOOS" = "windows" ]; then
-            BINARY="$BINARY.exe"
-          fi
-          go build -trimpath \
-            -ldflags "-s -w -X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
-            -o "dist/$BINARY" .
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/*
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ github.ref_name }}
 
   release:
     needs: build
@@ -84,12 +51,28 @@ jobs:
             fi
           done
           cd ../release
-          sha256sum * > checksums.txt
           cp ../scripts/install.sh .
+          sha256sum * > checksums.txt
+          ls -lh
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/      { exit }
+            found                  { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "See [CHANGELOG.md](CHANGELOG.md)." > release-notes.md
+          fi
+          cat release-notes.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: release/*
+          body_path: release-notes.md
           generate_release_notes: true
           name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}

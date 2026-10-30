@@ -1,0 +1,77 @@
+name: Build
+
+# Cross-compiles the bot for every supported platform.
+# - Runs on every push to master and on pull requests into master, and can be
+#   started manually; the binaries are available as workflow artifacts.
+# - Reused by release.yml to build release binaries.
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Version embedded into the binaries
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.goos }}/${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux,   goarch: amd64, name: amd64 }
+          - { goos: linux,   goarch: arm64, name: arm64 }
+          - { goos: linux,   goarch: arm,   name: armv7, goarm: '7' }
+          - { goos: darwin,  goarch: amd64, name: amd64 }
+          - { goos: darwin,  goarch: arm64, name: arm64 }
+          - { goos: windows, goarch: amd64, name: amd64 }
+          - { goos: windows, goarch: arm64, name: arm64 }
+          - { goos: freebsd, goarch: amd64, name: amd64 }
+          - { goos: freebsd, goarch: arm64, name: arm64 }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: '0'
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            VERSION="$(git describe --tags --always)"
+          fi
+          BINARY="GitHub-GitLab-Notifier-${GOOS}-${{ matrix.name }}"
+          if [ "$GOOS" = "windows" ]; then
+            BINARY="$BINARY.exe"
+          fi
+          go build -trimpath \
+            -ldflags "-s -w -X main.Version=${VERSION} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
+            -o "dist/$BINARY" .
+          ls -lh dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.name }}
+          path: dist/*
+          retention-days: 30

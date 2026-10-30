@@ -140,6 +140,7 @@ detect_arch() {
     case "$(uname -m)" in
         x86_64|amd64)   echo "amd64" ;;
         aarch64|arm64)  echo "arm64" ;;
+        armv7l|armv7*|armhf) echo "armv7" ;;
         *) die "Unsupported architecture: $(uname -m). Build from source with --from-source" ;;
     esac
 }

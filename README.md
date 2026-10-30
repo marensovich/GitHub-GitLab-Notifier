@@ -155,7 +155,7 @@ GitHub immediately sends a `ping` event — a "Webhook connected" message appear
 
 `scripts/install.sh` installs the bot as a systemd service that starts on boot and restarts automatically on failure.
 It works on any systemd-based distribution (Debian, Ubuntu, Fedora, RHEL/Rocky/Alma, Arch, openSUSE, Raspberry Pi OS)
-on **amd64** and **arm64**.
+on **amd64**, **arm64** and **armv7** (32-bit Raspberry Pi).
 
 ### Install
 
