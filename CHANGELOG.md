@@ -6,6 +6,12 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- Update `github.com/klauspost/compress` to 1.18.7 (indirect dependency of the Telegram client) to fix
+  [GHSA-259r-337f-4rfw](https://github.com/advisories/GHSA-259r-337f-4rfw) / CVE-2026-63209
+  (integer overflow and out-of-bounds write, severity high).
+
 ## [1.0.0] — 2026-10-30
 
 First stable release: complete GitHub and GitLab support, one-command Linux installation and Docker image.
