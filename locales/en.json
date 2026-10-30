@@ -80,5 +80,7 @@
   "connect_no_domain": "❌ DOMAIN is not set in .env file. Set it to your server's public IP or domain.\n\nExample: DOMAIN=IP/DOMAIN:PORT",
   "webhook_received": "Webhook | platform=%s | event=%s",
   "no_chats_configured": "No chats configured, sending to default chat",
-  "webhook_notification_sent": "Notification sent to chat %d"
+  "webhook_notification_sent": "Notification sent to chat %d",
+  "star_total": "\n🌟 Total stars: <b>%d</b>",
+  "failed_to_parse_event": "Failed to parse %s event: %w"
 }

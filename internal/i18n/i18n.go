@@ -3,7 +3,9 @@ package i18n
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"slices"
 	"sync"
 )
 
@@ -83,6 +85,10 @@ const (
 	MsgStarVerbCreated        = "star_verb_created"
 	MsgStarVerbDeleted        = "star_verb_deleted"
 	MsgFailedToParseStarEvent = "failed_to_parse_star_event"
+	MsgStarTotal              = "star_total"
+
+	// Generic event handler messages
+	MsgFailedToParseEvent = "failed_to_parse_event"
 
 	// Dispatcher
 	MsgDispatcherInit  = "dispatcher_init"
@@ -114,39 +120,48 @@ var (
 	loaded   bool
 )
 
+// Supported lists all available languages.
+var Supported = []Lang{EN, RU}
+
+// Load reads translations from JSON files in a directory on disk.
 func Load(dir string) error {
-	mu.Lock()
-	defer mu.Unlock()
+	return LoadFS(os.DirFS(dir))
+}
 
-	messages = make(map[Lang]map[string]string)
+// LoadFS reads translations (<lang>.json) from a file system,
+// e.g. locales embedded into the binary.
+func LoadFS(fsys fs.FS) error {
+	loadedMessages := make(map[Lang]map[string]string, len(Supported))
 
-	for _, l := range []struct {
-		lang Lang
-		file string
-	}{
-		{RU, "ru.json"},
-		{EN, "en.json"},
-	} {
-		if err := loadFile(dir, l.file, l.lang); err != nil {
+	for _, lang := range Supported {
+		data, err := fs.ReadFile(fsys, string(lang)+".json")
+		if err != nil {
 			return fmt.Errorf("i18n: %w", err)
 		}
+		var msgs map[string]string
+		if err := json.Unmarshal(data, &msgs); err != nil {
+			return fmt.Errorf("i18n: %s.json: %w", lang, err)
+		}
+		loadedMessages[lang] = msgs
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
+	messages = loadedMessages
 	loaded = true
 	return nil
 }
 
-func loadFile(dir, filename string, lang Lang) error {
-	data, err := os.ReadFile(dir + "/" + filename)
-	if err != nil {
-		return err
+// Keys returns all translation keys defined for a language.
+func Keys(lang Lang) []string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	keys := make([]string, 0, len(messages[lang]))
+	for k := range messages[lang] {
+		keys = append(keys, k)
 	}
-	var msgs map[string]string
-	if err := json.Unmarshal(data, &msgs); err != nil {
-		return err
-	}
-	messages[lang] = msgs
-	return nil
+	return keys
 }
 
 func T(lang Lang, key string) string {
@@ -175,5 +190,5 @@ func Tf(lang Lang, key string, args ...interface{}) string {
 }
 
 func Valid(lang Lang) bool {
-	return lang == RU || lang == EN
+	return slices.Contains(Supported, lang)
 }

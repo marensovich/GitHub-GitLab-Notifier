@@ -80,5 +80,7 @@
   "connect_no_domain": "❌ DOMAIN не установлен в .env файле. Установите его.\n\nПример: DOMAIN=IP/DOMAIN:PORT",
   "webhook_received": "Вебхук | платформа=%s | событие=%s",
   "no_chats_configured": "Нет настроенных чатов, отправляю в чат по умолчанию",
-  "webhook_notification_sent": "Уведомление отправлено в чат %d"
+  "webhook_notification_sent": "Уведомление отправлено в чат %d",
+  "star_total": "\n🌟 Всего звёзд: <b>%d</b>",
+  "failed_to_parse_event": "Не удалось разобрать событие %s: %w"
 }

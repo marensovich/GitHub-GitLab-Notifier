@@ -6,9 +6,11 @@ import (
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
+	"embed"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +18,9 @@ import (
 
 	"github.com/joho/godotenv"
 )
+
+//go:embed locales/*.json
+var embeddedLocales embed.FS
 
 var (
 	Version           = "dev-0.0.1"
@@ -43,7 +48,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := i18n.Load("locales"); err != nil {
+	locales, _ := fs.Sub(embeddedLocales, "locales")
+	if err := i18n.LoadFS(locales); err != nil {
 		log.Fatalf("❌ %v", err)
 	}
 
@@ -72,7 +78,7 @@ func main() {
 	}
 	b.Start()
 
-	dispatcherService = dispatcher.NewDispatcher(lang)
+	dispatcherService = dispatcher.NewDispatcher(lang, false)
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
@@ -102,8 +108,6 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	payload := string(body)
-
 	var eventType string
 	var p platform.Platform
 
@@ -124,7 +128,12 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Print(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventType))
 
-	message := dispatcherService.Dispatch(p, eventType, payload)
+	result := dispatcherService.Dispatch(lang, p, eventType, body)
+	if result.Skip {
+		w.Write([]byte("OK"))
+		return
+	}
+	message := result.Message
 
 	chats := store.GetAllChats()
 	if len(chats) == 0 {
@@ -132,7 +141,10 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		b.SendMessage(chatID, message)
 	} else {
 		for _, chat := range chats {
-			topicID := store.GetTopicByEvent(chat.ChatID, eventType)
+			topicID := 0
+			if result.Topic != platform.TopicGeneral {
+				topicID = store.GetTopicByEvent(chat.ChatID, string(result.Topic))
+			}
 			b.SendMessageToTopic(chat.ChatID, topicID, message)
 			log.Print(i18n.Tf(lang, i18n.MsgWebhookNotificationSent, chat.ChatID))
 		}
