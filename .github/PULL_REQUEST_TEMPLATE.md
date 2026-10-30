@@ -1,61 +1,26 @@
-## 📝 Description
+## Description
 
-Brief description of the changes.
+What does this PR change and why?
 
-## 🔗 Related Issue
+Closes #
 
-Closes #(issue number)
+## Type of change
 
-## 🛠️ Changes Made
+- [ ] New event handler / feature
+- [ ] Bug fix
+- [ ] Refactoring
+- [ ] Documentation
+- [ ] CI / build / installer
 
-- [ ] Added new feature
-- [ ] Fixed bug
-- [ ] Updated documentation
-- [ ] Refactored code
-- [ ] Added tests
+## Testing
 
-## 🧪 Testing
+How did you test it? (unit tests, fixtures, manual test with a bot, installer run, ...)
 
-Describe how you tested your changes:
+## Checklist
 
-```bash
-# Commands to test
-go fmt ./...
-go vet ./...
-make build
-./GitHub-GitLab-Notifier --lang=en
-```
-
-## 📸 Screenshots
-
-If applicable, add screenshots.
-
-## ✅ Checklist
-
-- [ ] Code formatted (`go fmt ./...`)
-- [ ] No lint errors (`go vet ./...`)
-- [ ] Build succeeds (`make build`)
-- [ ] Tested with `--lang=en` and `--lang=ru`
-- [ ] Database migrations work (delete `data/` and test fresh start)
-- [ ] New i18n keys added to both `locales/en.json` and `locales/ru.json`
-- [ ] Documentation updated (if needed)
-- [ ] CHANGELOG updated (if significant change)
-
-## 🚀 How to Test
-
-```bash
-# Clone the branch
-git clone -b feature/your-branch https://github.com/marensovich/github-gitlab-notifier.git
-
-# Setup
-cp .env.example .env
-# Edit .env
-
-# Run
-make run
-```
-
-## 💬 Additional Notes
-
-Any other information reviewers should know.
-
+- [ ] The PR targets the `development` branch
+- [ ] `make lint` and `make test` pass
+- [ ] New i18n keys are added to every file in `locales/`
+- [ ] New events have a payload fixture and a test case
+- [ ] README / CHANGELOG updated if needed
+- [ ] No tokens, secrets or private data in code, fixtures or logs
