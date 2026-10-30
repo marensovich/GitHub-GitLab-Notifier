@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,7 +36,7 @@ type Bot struct {
 func NewBot(lang i18n.Lang, store *storage.Store) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
+		return nil, errors.New(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
 	}
 
 	httpClient := newHTTPClient(lang)
@@ -261,7 +262,7 @@ func (b *Bot) handleConnect(update telego.Update) {
 
 	b.SendMessage(chatID, response.String())
 
-	log.Printf(i18n.Tf(b.lang, i18n.MsgConnectLogged, chatID, repoURL, webhookURL))
+	log.Print(i18n.Tf(b.lang, i18n.MsgConnectLogged, chatID, repoURL, webhookURL))
 }
 
 // generateSecret creates a random secret for webhook verification.
@@ -279,7 +280,7 @@ func (b *Bot) generateSecret() string {
 func (b *Bot) getExistingTopicNames(chatID int64) (map[string]bool, error) {
 	existingTopics, err := b.store.GetTopicsByChat(chatID)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
+		return nil, errors.New(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
 	}
 
 	names := make(map[string]bool, len(existingTopics))
@@ -314,12 +315,12 @@ func (b *Bot) configureChat(update telego.Update) {
 		IsForum:  true,
 	})
 	if err != nil {
-		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
+		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 	}
 
 	existingNames, err := b.getExistingTopicNames(chatID)
 	if err != nil {
-		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
+		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
 		b.SendMessage(chatID, i18n.T(b.lang, i18n.MsgFailedToGetTopics))
 		return
 	}
@@ -340,7 +341,7 @@ func (b *Bot) configureChat(update telego.Update) {
 	for _, t := range topics {
 		if existingNames[t.name] {
 			skippedTopics = append(skippedTopics, t.name)
-			log.Printf(i18n.Tf(b.lang, i18n.MsgTopicAlreadyExists, t.name))
+			log.Print(i18n.Tf(b.lang, i18n.MsgTopicAlreadyExists, t.name))
 			continue
 		}
 
@@ -349,7 +350,7 @@ func (b *Bot) configureChat(update telego.Update) {
 			Name:   t.name,
 		})
 		if err != nil {
-			log.Printf(i18n.Tf(b.lang, i18n.MsgFailedTopicCreate, t.name, err))
+			log.Print(i18n.Tf(b.lang, i18n.MsgFailedTopicCreate, t.name, err))
 			b.SendMessage(chatID, i18n.Tf(b.lang, i18n.MsgTopicCreateFailed, t.name, err.Error()))
 			return
 		}
@@ -361,18 +362,18 @@ func (b *Bot) configureChat(update telego.Update) {
 			EventType: t.eventType,
 		})
 		if err != nil {
-			log.Printf(i18n.Tf(b.lang, i18n.MsgFailedSaveTopicToStorage, t.name, err))
+			log.Print(i18n.Tf(b.lang, i18n.MsgFailedSaveTopicToStorage, t.name, err))
 		}
 
 		err = b.store.SetEventTopic(chatID, t.eventType, topic.MessageThreadID)
 		if err != nil {
-			log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToMapEventToStorage, t.eventType, topic.MessageThreadID, err))
+			log.Print(i18n.Tf(b.lang, i18n.MsgFailedToMapEventToStorage, t.eventType, topic.MessageThreadID, err))
 		}
 
 		createdTopics = append(createdTopics,
 			fmt.Sprintf("  • %s — ID: <code>%d</code>", t.name, topic.MessageThreadID))
 
-		log.Printf(i18n.Tf(b.lang, i18n.MsgTopicCreated, t.name, topic.MessageThreadID))
+		log.Print(i18n.Tf(b.lang, i18n.MsgTopicCreated, t.name, topic.MessageThreadID))
 	}
 
 	var response strings.Builder
@@ -408,7 +409,7 @@ func (b *Bot) isBotAdmin(chatID int64) bool {
 		UserID: b.self.ID,
 	})
 	if err != nil {
-		log.Printf(i18n.Tf(b.lang, i18n.MsgFailedToCheckBotAdminStatus, err))
+		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToCheckBotAdminStatus, err))
 		return false
 	}
 

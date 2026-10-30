@@ -122,7 +122,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventType))
+	log.Print(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventType))
 
 	message := dispatcherService.Dispatch(p, eventType, payload)
 
@@ -134,7 +134,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		for _, chat := range chats {
 			topicID := store.GetTopicByEvent(chat.ChatID, eventType)
 			b.SendMessageToTopic(chat.ChatID, topicID, message)
-			log.Printf(i18n.Tf(lang, i18n.MsgWebhookNotificationSent, chat.ChatID))
+			log.Print(i18n.Tf(lang, i18n.MsgWebhookNotificationSent, chat.ChatID))
 		}
 	}
 
