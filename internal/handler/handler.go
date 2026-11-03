@@ -16,7 +16,7 @@ type EventHandler interface {
 	GetEventType() platform.EventType
 
 	// Handle parses the JSON payload and returns a formatted notification
-	// message (Telegram HTML) in the requested language.
+	// message (MAX HTML) in the requested language.
 	Handle(lang i18n.Lang, payload []byte) (string, error)
 }
 

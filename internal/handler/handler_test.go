@@ -61,7 +61,7 @@ func runHandlerCases(t *testing.T, cases []handlerCase) {
 				if err != nil {
 					t.Fatalf("%s: unexpected error: %v", lang, err)
 				}
-				assertTelegramHTML(t, msg)
+				assertMaxHTML(t, msg)
 				if strings.Contains(msg, "???") || strings.Contains(msg, "%!") {
 					t.Errorf("%s: message has missing translation or bad format verb:\n%s", lang, msg)
 				}
@@ -85,18 +85,18 @@ func runHandlerCases(t *testing.T, cases []handlerCase) {
 
 var tagRe = regexp.MustCompile(`<(/?)([a-z]+)[^>]*>`)
 
-// telegramTags are the HTML tags used by the bot and supported by Telegram.
-var telegramTags = map[string]bool{"b": true, "i": true, "a": true, "code": true, "pre": true, "blockquote": true}
+// maxTags are the HTML tags used by the bot and supported by MAX (format=html).
+var maxTags = map[string]bool{"b": true, "i": true, "a": true, "code": true, "pre": true, "blockquote": true}
 
-// assertTelegramHTML checks that a message only uses Telegram-supported tags,
+// assertMaxHTML checks that a message only uses MAX-supported tags,
 // that tags are balanced, and that no raw "<" from user input leaked through.
-func assertTelegramHTML(t *testing.T, msg string) {
+func assertMaxHTML(t *testing.T, msg string) {
 	t.Helper()
 
 	var stack []string
 	for _, m := range tagRe.FindAllStringSubmatch(msg, -1) {
 		closing, name := m[1] == "/", m[2]
-		if !telegramTags[name] {
+		if !maxTags[name] {
 			t.Errorf("unsupported tag <%s> in message:\n%s", name, msg)
 			return
 		}

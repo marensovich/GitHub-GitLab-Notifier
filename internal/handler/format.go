@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// esc escapes text for Telegram HTML parse mode.
+// esc escapes text for MAX HTML format.
 func esc(s string) string {
 	return html.EscapeString(s)
 }

@@ -1,31 +1,35 @@
-# GitHub-GitLab Notifier
+# GitHub-GitLab Notifier for MAX
 
-[![CI](https://github.com/marensovich/GitHub-GitLab-Notifier/actions/workflows/ci.yml/badge.svg)](https://github.com/marensovich/GitHub-GitLab-Notifier/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/marensovich/GitHub-GitLab-Notifier?sort=semver)](https://github.com/marensovich/GitHub-GitLab-Notifier/releases)
 ![Go](https://img.shields.io/badge/go-%2300ADD8.svg?logo=go&logoColor=white)
-![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?logo=telegram&logoColor=white)
+![MAX](https://img.shields.io/badge/messenger-MAX-0077FF)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-A lightweight, self-hosted Telegram bot that delivers real-time notifications from your **GitHub** and **GitLab**
-repositories to a Telegram **forum** chat — every kind of event in its own topic.
+A lightweight, self-hosted bot for the **MAX** messenger that delivers real-time notifications from your **GitHub**
+and **GitLab** repositories to a MAX chat.
 
-**Why?** Because sometimes you don't want to check email or open an app — you just want a message when something
-happens in your repo.
+> **Fork note.** This is a port of [marensovich/GitHub-GitLab-Notifier](https://github.com/marensovich/GitHub-GitLab-Notifier)
+> (Telegram) to the [MAX Bot API](https://dev.max.ru/docs-api). Event handlers, formatting, storage and webhook
+> verification are unchanged; only the messenger side (`internal/bot`, new `internal/maxapi`) was rewritten.
+> MAX has no forum topics, so `/configure` is gone and every notification goes to the chat itself.
+>
+> **Форк под MAX.** Порт Telegram-бота на Bot API мессенджера MAX. Обработчики событий GitHub/GitLab, форматирование,
+> SQLite и проверка подписей вебхуков — без изменений; переписана только часть, которая общается с мессенджером.
+> Тем форума в MAX нет, поэтому `/configure` убран, все уведомления приходят в сам чат.
 
 - 🔔 **19 event types** from GitHub and GitLab: pushes, tags, pull/merge requests, reviews, issues, comments,
   releases, CI pipelines, stars, forks
-- 🗂 **Forum topics**: Stars, Pushes, Pull Requests, Issues, Releases and CI/CD are created automatically
 - 🔐 **Signed webhooks**: GitHub HMAC-SHA256 signatures and GitLab secret tokens are verified
 - 🌍 **Per-chat language**: English and Russian, switchable with `/lang`
-- 🧩 **Single static binary**: embedded translations, pure-Go SQLite, no runtime dependencies
+- 🧩 **Single static binary**: embedded translations, pure-Go SQLite, no runtime dependencies, no SDK —
+  the MAX API client is ~200 lines of standard library code
+- 🚦 **Respects MAX limits**: 2 messages/s per chat, 4000 characters per message
 - 🐧 **One-command Linux install** as a hardened systemd service, or run it with Docker
-- 🏠 **Self-hosted GitLab** and self-hosted Telegram Bot API server supported
+- 🏠 **Self-hosted GitLab** supported
 
 ---
 
 ## Table of contents
 
-- [Screenshots](#-screenshots)
 - [Supported events](#-supported-events)
 - [Quick start](#-quick-start)
 - [Installation on Linux (systemd)](#-installation-on-linux-systemd)
@@ -42,23 +46,11 @@ happens in your repo.
 
 ---
 
-## 📸 Screenshots
-
-| New commits                   | New star                        |
-|:------------------------------|:--------------------------------|
-| ![New commit](images/img.png) | ![New star](images/img_1.png)   |
-
-| Automatic forum setup             | Connecting a repository             |
-|:----------------------------------|:------------------------------------|
-| ![Forum setup](images/img_2.png)  | ![Connect repo](images/img_3.png)   |
-
----
-
 ## 🔔 Supported events
 
 ### GitHub (`X-GitHub-Event`)
 
-| Event                 | Reported actions                                                     | Topic            |
+| Event                 | Reported actions                                                     | Category         |
 |:----------------------|:---------------------------------------------------------------------|:-----------------|
 | `push`                | new commits, force push, branch created/deleted, tag created/deleted | 🚀 Pushes        |
 | `pull_request`        | opened (incl. draft), closed, merged, reopened, ready for review     | 🔀 Pull Requests |
@@ -73,7 +65,7 @@ happens in your repo.
 
 ### GitLab (`X-Gitlab-Event`)
 
-| Event                                         | Reported actions                                  | Topic            |
+| Event                                         | Reported actions                                  | Category         |
 |:----------------------------------------------|:--------------------------------------------------|:-----------------|
 | `Push Hook`                                   | new commits, branch created/deleted               | 🚀 Pushes        |
 | `Tag Push Hook`                               | tag created/deleted                               | 🚀 Pushes        |
@@ -91,42 +83,40 @@ Events the bot does not know (e.g. `check_suite`, `deployment`) are ignored, so 
 
 ## 🚀 Quick start
 
-### 1. Create a Telegram bot
+### 1. Create a MAX bot
 
-1. Open [@BotFather](https://t.me/BotFather) and send `/newbot`
-2. Choose a name and a username
-3. Copy the **token**
+1. Register the bot on the MAX business platform (*Chat bots*)
+2. Copy the **token**: *Chat bots* → ⋮ → *Settings*, or the «MAX для бизнеса» bot → *Получить токен*
 
-### 2. Create a forum group
+### 2. Add the bot to a chat
 
-1. Create a Telegram group and enable **Topics** (group settings → *Topics*)
-2. Add your bot to the group
-3. **Make the bot an administrator** with the *Manage topics* right
-
-> Regular groups and private chats work too, but all notifications then arrive in one chat without topics.
+Add the bot to a MAX **group chat** (or just open a dialog with it). No admin rights are needed.
 
 ### 3. Install the bot
 
 Pick one:
 
-- **Linux server (recommended):** `curl -fsSL https://raw.githubusercontent.com/marensovich/GitHub-GitLab-Notifier/master/scripts/install.sh | sudo bash`
+- **Linux server (recommended):** `curl -fsSL https://raw.githubusercontent.com/tarnished000/GitHub-GitLab-Notifier/master/scripts/install.sh | sudo bash`
   — see [Installation on Linux](#-installation-on-linux-systemd)
 - **Docker:** see [Running with Docker](#-running-with-docker)
 - **From source:** see [Building from source](#-building-from-source)
 
-The bot must be reachable from the internet (GitHub/GitLab send webhooks to it). Set `DOMAIN` to your public domain
-or IP (with port, if you don't use a reverse proxy).
+The bot must be reachable from GitHub/GitLab (they send webhooks to it) and must reach `platform-api2.max.ru`.
+Set `DOMAIN` to the address GitHub/GitLab will call (with port, if you don't use a reverse proxy).
 
-### 4. Set up the chat
+> `platform-api2.max.ru` uses a certificate issued by the **Russian Trusted Root CA** (Минцифры).
+> If it is not in the system trust store, download the root CA in PEM format and set `MAX_CA_FILE` to its path,
+> otherwise the bot fails at start with `x509: certificate signed by unknown authority`.
 
-In the forum group, send:
+### 4. Connect a repository
+
+In the chat, send:
 
 ```
-/configure
-/connect https://github.com/your-username/your-repo
+/connect https://gitlab.example.local/group/project
 ```
 
-`/configure` creates the topics, `/connect` replies with the **webhook URL** and a **secret**.
+`/connect` replies with the **webhook URL** and a **secret**.
 
 ### 5. Add the webhook
 
@@ -162,13 +152,13 @@ on **amd64**, **arm64** and **armv7** (32-bit Raspberry Pi).
 Latest release, interactive setup:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/marensovich/GitHub-GitLab-Notifier/master/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/tarnished000/GitHub-GitLab-Notifier/master/scripts/install.sh | sudo bash
 ```
 
 From a cloned repository (builds from source, requires Go 1.26+):
 
 ```bash
-git clone https://github.com/marensovich/GitHub-GitLab-Notifier.git
+git clone https://github.com/tarnished000/GitHub-GitLab-Notifier.git
 cd GitHub-GitLab-Notifier
 sudo ./scripts/install.sh install --from-source
 ```
@@ -176,7 +166,7 @@ sudo ./scripts/install.sh install --from-source
 Unattended (e.g. Ansible, cloud-init) — settings come from environment variables:
 
 ```bash
-sudo BOT_TOKEN=123456:ABC... TELEGRAM_BOT_USERNAME=MyGitBot DOMAIN=bot.example.com USE_HTTPS=true \
+sudo BOT_TOKEN=<max_token> MAX_CA_FILE=/etc/ssl/certs/russian_trusted_root_ca.pem DOMAIN=bot.example.com USE_HTTPS=true \
      ./scripts/install.sh install --non-interactive
 ```
 
@@ -239,6 +229,9 @@ docker compose up -d
 The image is built from the included `Dockerfile` (distroless, non-root, ~24 MB). The database is stored in the
 `data` volume. Logs: `docker compose logs -f`.
 
+The distroless image does not trust the Russian Trusted Root CA: mount the PEM file and point `MAX_CA_FILE` to it
+(see the commented lines in `docker-compose.yml`).
+
 ---
 
 ## 🛠 Building from source
@@ -246,7 +239,7 @@ The image is built from the included `Dockerfile` (distroless, non-root, ~24 MB)
 Requires **Go 1.26+**.
 
 ```bash
-git clone https://github.com/marensovich/GitHub-GitLab-Notifier.git
+git clone https://github.com/tarnished000/GitHub-GitLab-Notifier.git
 cd GitHub-GitLab-Notifier
 cp .env.example .env    # edit it
 make build
@@ -274,7 +267,7 @@ Command-line flags:
 | `--version`       | Print version and exit                                     |
 
 Pre-built binaries for Linux, macOS, Windows and FreeBSD are attached to every
-[release](https://github.com/marensovich/GitHub-GitLab-Notifier/releases).
+[release](https://github.com/tarnished000/GitHub-GitLab-Notifier/releases).
 
 ---
 
@@ -284,14 +277,14 @@ Pre-built binaries for Linux, macOS, Windows and FreeBSD are attached to every
 |:----------------------|:------------------------------------------------------------------|
 | `/start`              | Welcome message and quick start                                   |
 | `/help`               | List of commands                                                  |
-| `/configure`          | Create forum topics and map events to them (safe to run again)    |
 | `/connect <url>`      | Connect a repository: returns webhook URL, secret and instructions |
 | `/disconnect <url>`   | Disconnect a repository from this chat                            |
-| `/status`             | Chat settings, topics, connected repositories, version            |
+| `/status`             | Chat ID, language, connected repositories, version               |
 | `/lang en` / `/lang ru` | Change the language of this chat                                |
 | `/version`            | Bot version                                                       |
 
-The commands also appear in Telegram's **Menu** button.
+The commands are registered in the MAX bot menu at start-up (MAX keeps one command list per bot, in `BOT_LANG`).
+`/configure` from the Telegram version only explains that topics are not used.
 
 ---
 
@@ -299,22 +292,22 @@ The commands also appear in Telegram's **Menu** button.
 
 | Variable                | Required | Default            | Description                                                         |
 |:------------------------|:---------|:-------------------|:--------------------------------------------------------------------|
-| `BOT_TOKEN`             | **Yes**  | —                  | Telegram bot token from [@BotFather](https://t.me/BotFather)        |
-| `TELEGRAM_BOT_USERNAME` | No       | —                  | Bot username without `@` (informational)                            |
+| `BOT_TOKEN`             | **Yes**  | —                  | MAX bot token                                                       |
+| `MAX_API_URL`           | No       | `https://platform-api2.max.ru` | MAX Bot API base URL                                    |
+| `MAX_CA_FILE`           | No       | —                  | Extra trusted CA in PEM (Russian Trusted Root CA)                   |
 | `DOMAIN`                | **Yes**¹ | —                  | Public domain or `IP:port` used in the webhook URL from `/connect`  |
 | `USE_HTTPS`             | No       | `true`             | Use `https://` in the webhook URL                                   |
 | `SERVER_ADDRESS`        | No       | all interfaces     | Listen address (`127.0.0.1` behind a reverse proxy)                 |
 | `SERVER_PORT`           | No       | `8080`             | HTTP port for webhooks                                              |
 | `BOT_LANG`              | No       | `en`               | Default language (`en`, `ru`); each chat can change it with `/lang` |
-| `CHAT_ID`               | No       | —                  | Fallback chat used while no chat is configured                      |
+| `CHAT_ID`               | No       | —                  | Fallback chat used while no chat is configured (see `/status`)      |
 | `WEBHOOK_SECRET`        | No       | —                  | Global secret; when set, unsigned webhooks are rejected             |
 | `DB_PATH`               | No       | `data/notifier.db` | SQLite database file                                                |
 | `NOTIFY_UNKNOWN_EVENTS` | No       | `false`            | Post a short message for unsupported events                         |
-| `PROXY_ENABLED`         | No       | `false`            | Use a proxy for the Telegram API                                    |
+| `PROXY_ENABLED`         | No       | `false`            | Use a proxy for the MAX API                                         |
 | `PROXY_HOST`            | No       | —                  | Proxy host                                                          |
 | `PROXY_PORT`            | No       | —                  | Proxy port                                                          |
 | `PROXY_TYPE`            | No       | `HTTP`             | `HTTP` or `SOCKS` (SOCKS5)                                          |
-| `TELEGRAM_API_URL`      | No       | —                  | Self-hosted [Telegram Bot API server](https://github.com/tdlib/telegram-bot-api) |
 
 ¹ Required for `/connect` to generate the webhook URL.
 
@@ -339,8 +332,8 @@ unless you set the global `WEBHOOK_SECRET` — then **every** webhook must be si
 2. If the repository was connected with `/connect`, the message goes **only to that chat**.
    Otherwise it goes to every configured chat, or to `CHAT_ID` if there are none.
 3. The event is formatted in each chat's language.
-4. The message is posted to the topic mapped to the event category; if the topic was deleted, it falls back to the
-   General topic.
+4. The message is sent to the chat with `format=html` and link previews disabled, at most 2 messages per second
+   per chat (MAX limit); on HTTP 429 it is retried once.
 
 ---
 
@@ -382,12 +375,13 @@ Then set `SERVER_ADDRESS=127.0.0.1`, `DOMAIN=bot.example.com` and `USE_HTTPS=tru
 ├── main.go                    # entry point: config, wiring, graceful shutdown
 ├── locales/                   # translations (embedded into the binary)
 ├── internal/
-│   ├── bot/                   # Telegram bot: commands, /configure, sending
+│   ├── bot/                   # MAX bot: commands, long polling, sending
+│   ├── maxapi/                # minimal MAX Bot API client (net/http)
 │   ├── dispatcher/            # routes an event to its handler
 │   ├── handler/               # one handler per GitHub/GitLab event + formatting
 │   │   └── testdata/          # real-world webhook payloads used by tests
 │   ├── i18n/                  # translation loading and lookup
-│   ├── platform/              # platforms, event types, topics
+│   ├── platform/              # platforms, event types
 │   └── server/                # HTTP webhook endpoint, signatures, routing
 ├── storage/                   # SQLite: chats, topics, repos, event mapping
 ├── scripts/install.sh         # Linux systemd installer
@@ -402,9 +396,9 @@ SQLite file (`DB_PATH`, default `data/notifier.db`):
 | Table           | Description                          |
 |:----------------|:-------------------------------------|
 | `chats`         | Configured chats and their language  |
-| `topics`        | Created forum topics                 |
+| `topics`        | Unused in MAX (kept for compatibility) |
 | `repos`         | Connected repositories and secrets   |
-| `event_mapping` | Event category → topic, per chat     |
+| `event_mapping` | Unused in MAX (kept for compatibility) |
 
 ---
 
@@ -425,14 +419,14 @@ Want another event? Adding a handler takes about 50 lines of Go — see [CONTRIB
 
 | Problem                                   | Solution                                                                    |
 |:------------------------------------------|:----------------------------------------------------------------------------|
-| Topics are not created                    | The bot must be an **administrator** with the *Manage topics* right          |
-| "This chat is not a forum"                | Enable **Topics** in the group settings                                     |
-| Webhook shows a delivery error on GitHub  | The URL must be reachable from the internet — check `DOMAIN`, port, firewall |
+| `x509: certificate signed by unknown authority` at start | Trust the Russian Trusted Root CA or set `MAX_CA_FILE`       |
+| `HTTP 401` at start                       | Wrong `BOT_TOKEN`                                                           |
+| Bot does not answer commands              | Check that the bot is in the chat; look for `Failed to get updates` in logs |
+| Webhook shows a delivery error            | The URL must be reachable from GitHub/GitLab — check `DOMAIN`, port, firewall |
 | GitHub shows `401 Unauthorized`           | The webhook secret does not match the one from `/connect` (or `WEBHOOK_SECRET`) |
-| Notifications go to the General topic     | Run `/configure` again — it creates missing topics and restores the mapping |
 | No message for an event                   | Check that the event is [supported](#-supported-events) and selected in the webhook settings |
 | Wrong address in `/connect` output        | Set `DOMAIN` (and `USE_HTTPS`) in the configuration                          |
-| Bot can't connect to Telegram             | Configure `PROXY_*` or `TELEGRAM_API_URL`                                   |
+| Bot can't reach MAX                       | Allow egress to `platform-api2.max.ru:443` or configure `PROXY_*`           |
 | Service does not start                    | `sudo journalctl -u github-gitlab-notifier -n 50`                           |
 
 ---
@@ -440,10 +434,10 @@ Want another event? Adding a handler takes about 50 lines of Go — see [CONTRIB
 ## Tech stack
 
 - **Go** — single static binary, cross-compiled for every platform
-- **[telego](https://github.com/mymmrac/telego)** — Telegram Bot API client
+- **[MAX Bot API](https://dev.max.ru/docs-api)** — called directly with `net/http`, no SDK
 - **[modernc.org/sqlite](https://modernc.org/sqlite)** — pure Go SQLite, no CGO
 - **[godotenv](https://github.com/joho/godotenv)** — `.env` configuration
 
 ## License
 
-MIT © [marensovich](https://github.com/marensovich)
+MIT © [marensovich](https://github.com/marensovich) (original Telegram bot). MAX port: same license.

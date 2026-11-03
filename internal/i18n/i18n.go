@@ -43,6 +43,8 @@ const (
 	MsgConfigureChatNotAdmin       = "configure_chat_not_admin"
 	MsgConfigureChatSuccess        = "configure_chat_success"
 	MsgConfigureChatHowToUse       = "configure_chat_how_to_use"
+	MsgConfigureNotSupported       = "configure_not_supported"
+	MsgPollFailed                  = "poll_failed"
 	MsgTopicCreateFailed           = "topic_create_failed"
 	MsgConnectUsage                = "connect_usage"
 	MsgConnectInvalidURL           = "connect_invalid_url"

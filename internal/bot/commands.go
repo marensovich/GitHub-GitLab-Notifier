@@ -11,17 +11,15 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
-	"github.com/mymmrac/telego"
 )
 
-// commandNames lists the commands shown in the Telegram menu, in order.
+// commandNames lists the commands shown in the MAX bot menu, in order.
 // Each has a "cmd_<name>" translation used as its description.
-var commandNames = []string{"start", "help", "configure", "connect", "disconnect", "status", "lang", "version"}
+var commandNames = []string{"start", "help", "connect", "disconnect", "status", "lang", "version"}
 
 // handleCommand executes a parsed bot command.
-func (b *Bot) handleCommand(msg *telego.Message, command string, args []string) {
-	lang := b.chatLang(msg.Chat.ID)
+func (b *Bot) handleCommand(msg incoming, command string, args []string) {
+	lang := b.chatLang(msg.ChatID)
 
 	switch command {
 	case "start":
@@ -29,7 +27,8 @@ func (b *Bot) handleCommand(msg *telego.Message, command string, args []string) 
 	case "help":
 		b.reply(msg, i18n.T(lang, i18n.MsgHelp))
 	case "configure":
-		b.configureChat(msg)
+		// Kept for users coming from the Telegram version: MAX has no forum topics.
+		b.reply(msg, i18n.T(lang, i18n.MsgConfigureNotSupported))
 	case "connect":
 		b.handleConnect(msg, args)
 	case "disconnect":
@@ -89,8 +88,8 @@ func webhookURL() (string, bool) {
 
 // handleConnect registers a repository for the chat and explains how to
 // create the webhook on GitHub/GitLab.
-func (b *Bot) handleConnect(msg *telego.Message, args []string) {
-	chatID := msg.Chat.ID
+func (b *Bot) handleConnect(msg incoming, args []string) {
+	chatID := msg.ChatID
 	lang := b.chatLang(chatID)
 
 	if len(args) < 1 {
@@ -110,7 +109,7 @@ func (b *Bot) handleConnect(msg *telego.Message, args []string) {
 		return
 	}
 
-	if err := b.ensureChat(msg.Chat); err != nil {
+	if err := b.ensureChat(chatID); err != nil {
 		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 		b.reply(msg, i18n.T(lang, i18n.MsgConnectFailed))
 		return
@@ -158,15 +157,15 @@ func (b *Bot) handleConnect(msg *telego.Message, args []string) {
 }
 
 // handleDisconnect removes a repository from the chat.
-func (b *Bot) handleDisconnect(msg *telego.Message, args []string) {
-	lang := b.chatLang(msg.Chat.ID)
+func (b *Bot) handleDisconnect(msg incoming, args []string) {
+	lang := b.chatLang(msg.ChatID)
 
 	if len(args) < 1 {
 		b.reply(msg, i18n.T(lang, i18n.MsgDisconnectUsage))
 		return
 	}
 
-	deleted, err := b.store.DeleteRepo(msg.Chat.ID, args[0])
+	deleted, err := b.store.DeleteRepo(msg.ChatID, args[0])
 	switch {
 	case err != nil:
 		log.Printf(i18n.T(b.lang, i18n.MsgFailedToSaveRepo), err)
@@ -178,29 +177,13 @@ func (b *Bot) handleDisconnect(msg *telego.Message, args []string) {
 	}
 }
 
-// handleStatus shows the chat configuration: language, topics and repositories.
-func (b *Bot) handleStatus(msg *telego.Message) {
-	chatID := msg.Chat.ID
+// handleStatus shows the chat configuration: language and repositories.
+func (b *Bot) handleStatus(msg incoming) {
+	chatID := msg.ChatID
 	lang := b.chatLang(chatID)
 
-	forum := i18n.T(lang, i18n.MsgStatusNo)
-	if msg.Chat.IsForum {
-		forum = i18n.T(lang, i18n.MsgStatusYes)
-	}
-
 	var sb strings.Builder
-	sb.WriteString(i18n.Tf(lang, i18n.MsgStatusHeader, chatID, lang, forum))
-
-	topics, err := b.store.GetTopicsByChat(chatID)
-	if err == nil && len(topics) > 0 {
-		sb.WriteString(i18n.T(lang, i18n.MsgStatusTopicsHeader))
-		for _, t := range topics {
-			sb.WriteString(i18n.Tf(lang, i18n.MsgStatusTopicLine,
-				html.EscapeString(t.Name), html.EscapeString(t.EventType), t.TopicID))
-		}
-	} else {
-		sb.WriteString(i18n.T(lang, i18n.MsgStatusNoTopics))
-	}
+	sb.WriteString(i18n.Tf(lang, i18n.MsgStatusHeader, chatID, lang))
 
 	repos, err := b.store.GetReposByChat(chatID)
 	if err == nil && len(repos) > 0 {
@@ -218,8 +201,8 @@ func (b *Bot) handleStatus(msg *telego.Message) {
 }
 
 // handleLang shows or changes the notification language of the chat.
-func (b *Bot) handleLang(msg *telego.Message, args []string) {
-	chatID := msg.Chat.ID
+func (b *Bot) handleLang(msg incoming, args []string) {
+	chatID := msg.ChatID
 	current := b.chatLang(chatID)
 
 	if len(args) < 1 {
@@ -233,7 +216,7 @@ func (b *Bot) handleLang(msg *telego.Message, args []string) {
 		return
 	}
 
-	if err := b.store.SetChatLanguage(chatID, string(newLang), msg.Chat.IsForum); err != nil {
+	if err := b.store.SetChatLanguage(chatID, string(newLang), false); err != nil {
 		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 		b.reply(msg, i18n.T(current, i18n.MsgConnectFailed))
 		return
