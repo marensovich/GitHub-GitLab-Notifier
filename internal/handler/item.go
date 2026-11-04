@@ -35,7 +35,7 @@ type itemView struct {
 	Body string
 }
 
-// formatItem renders an itemView as Telegram HTML.
+// formatItem renders an itemView as MAX HTML.
 func formatItem(lang i18n.Lang, v itemView) string {
 	var sb strings.Builder
 

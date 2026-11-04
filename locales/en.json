@@ -1,6 +1,6 @@
 {
-  "welcome": "👋 Hi! I'm a notification bot for GitHub and GitLab.\n\n<b>Quick start:</b>\n1. Enable <i>Topics</i> in the group and make me an admin\n2. /configure — create topics for notifications\n3. /connect &lt;repo_url&gt; — get the webhook URL and secret\n\n/help — list of commands",
-  "help": "📚 <b>Available commands:</b>\n\n/start — getting started\n/configure — create forum topics for notifications\n/connect &lt;url&gt; — connect a GitHub/GitLab repository\n/disconnect &lt;url&gt; — disconnect a repository\n/status — chat settings, topics and repositories\n/lang en|ru — change the notification language\n/version — bot version\n/help — this help",
+  "welcome": "👋 Hi! I'm a notification bot for GitHub and GitLab in MAX.\n\n<b>Quick start:</b>\n1. Add me to a group chat (or write to me directly)\n2. /connect &lt;repo_url&gt; — get the webhook URL and secret\n3. Paste them into the repository webhook settings\n\n/help — list of commands",
+  "help": "📚 <b>Available commands:</b>\n\n/start — getting started\n/connect &lt;url&gt; — connect a GitHub/GitLab repository\n/disconnect &lt;url&gt; — disconnect a repository\n/status — chat settings and repositories\n/lang en|ru — change the notification language\n/version — bot version\n/help — this help",
   "unknown_command": "Sorry, I only understand commands. Type /help",
   "bot_registered": "✅ Bot @%s registered. Session active",
   "bot_started": "🚀 Bot @%s started, listening for commands...",
@@ -37,7 +37,7 @@
   "error_event": "❌ Error processing event <code>%s</code>",
   "server_started": "🚀 Server listening on %s (version %s)",
   "server_failed": "❌ Server failed: %v",
-  "bot_token_is_not_set": "❌ BOT_TOKEN is not set",
+  "bot_token_is_not_set": "❌ BOT_TOKEN is not set (get it in MAX for business → Chat bots → Settings)",
   "failed_to_create_bot": "❌ Failed to create bot: %w",
   "failed_to_get_bot_info": "❌ Failed to get bot info: %w",
   "invalid_proxy_url": "⚠ Invalid proxy URL: %v",
@@ -132,7 +132,7 @@
   "cmd_configure": "Create forum topics for notifications",
   "cmd_connect": "Connect a GitHub/GitLab repository",
   "cmd_disconnect": "Disconnect a repository",
-  "cmd_status": "Chat settings, topics and repositories",
+  "cmd_status": "Chat settings and repositories",
   "cmd_lang": "Change the notification language (en, ru)",
   "cmd_version": "Bot version",
   "set_commands_failed": "⚠ Failed to register bot commands: %v",
@@ -142,7 +142,7 @@
   "disconnect_usage": "❌ Usage: /disconnect &lt;repository_url&gt;",
   "disconnect_not_found": "❌ Repository is not connected to this chat: %s",
   "disconnect_success": "✅ Repository disconnected: %s\n\nDon't forget to delete the webhook on GitHub/GitLab.",
-  "status_header": "📊 <b>Chat status</b>\n\n🆔 Chat ID: <code>%d</code>\n🌐 Language: <code>%s</code>\n💬 Forum: %s\n",
+  "status_header": "📊 <b>Chat status</b>\n\n🆔 Chat ID: <code>%d</code>\n🌐 Language: <code>%s</code>\n",
   "status_yes": "yes",
   "status_no": "no",
   "status_topics_header": "\n🗂 <b>Topics:</b>\n",
@@ -154,5 +154,7 @@
   "status_version": "\n🤖 Version: <code>%s</code>",
   "lang_usage": "🌐 Current language: <code>%s</code>\n\nUsage: <code>/lang en</code> or <code>/lang ru</code>",
   "lang_invalid": "❌ Unsupported language: %s. Available: en, ru",
-  "lang_changed": "✅ Language switched to English"
+  "lang_changed": "✅ Language switched to English",
+  "configure_not_supported": "ℹ️ MAX has no forum topics, so /configure is not needed: all notifications are posted to this chat. Use /connect &lt;url&gt; to add a repository.",
+  "poll_failed": "⚠ Failed to get updates from MAX: %v"
 }

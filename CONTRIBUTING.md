@@ -21,7 +21,7 @@ Write them in English and explain *why* in the body.
 ## Development setup
 
 - Go **1.26+**
-- A Telegram bot token for manual testing (create a separate test bot with [@BotFather](https://t.me/BotFather))
+- A MAX bot token for manual testing (create a separate test bot on the MAX business platform)
 - Optional: `shellcheck`, Docker
 
 ```bash
@@ -87,7 +87,7 @@ Example: GitHub `discussion` events.
 
 5. **Add a test**: put a real payload into `internal/handler/testdata/<platform>/` (GitHub shows recent deliveries
    under *Settings → Webhooks → Recent Deliveries*; remove private data) and add a case to `github_test.go` /
-   `gitlab_test.go`. The shared test runner also checks that the message is valid Telegram HTML.
+   `gitlab_test.go`. The shared test runner also checks that the message only uses HTML tags supported by MAX.
 
 6. Update the *Supported events* table in `README.md` and `CHANGELOG.md`.
 

@@ -1,5 +1,5 @@
 // Package server implements the HTTP endpoint that receives GitHub and
-// GitLab webhooks and forwards them as Telegram notifications.
+// GitLab webhooks and forwards them as MAX messenger notifications.
 package server
 
 import (
@@ -24,7 +24,8 @@ import (
 // but notification-relevant events are far smaller).
 const maxPayloadSize = 10 << 20
 
-// Sender delivers a notification to a Telegram chat (optionally to a forum topic).
+// Sender delivers a notification to a chat. topicID is kept for storage
+// compatibility with the Telegram version; the MAX sender ignores it.
 type Sender interface {
 	SendMessageToTopic(chatID int64, topicID int, text string) error
 }

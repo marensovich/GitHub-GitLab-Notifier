@@ -10,7 +10,7 @@ import (
 
 // Result is the outcome of dispatching a webhook event.
 type Result struct {
-	// Message is the formatted Telegram HTML notification.
+	// Message is the formatted MAX HTML notification.
 	Message string
 	// Topic is the forum topic the notification belongs to.
 	Topic platform.Topic

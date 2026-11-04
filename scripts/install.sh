@@ -27,14 +27,15 @@
 #   -h, --help           Show this help
 #
 # Non-interactive install example:
-#   sudo BOT_TOKEN=123:abc TELEGRAM_BOT_USERNAME=MyGitBot DOMAIN=bot.example.com \
+#   sudo BOT_TOKEN=<max_token> MAX_CA_FILE=/etc/ssl/certs/russian_trusted_root_ca.pem DOMAIN=bot.example.com \
 #        ./scripts/install.sh install --non-interactive
 #
 set -euo pipefail
 
 # ─── Settings ────────────────────────────────────────────────────────────────
 
-REPO="marensovich/GitHub-GitLab-Notifier"
+# MAX fork. Override with NOTIFIER_REPO=<owner>/<repo> if the fork lives elsewhere.
+REPO="${NOTIFIER_REPO:-tarnished000/GitHub-GitLab-Notifier}"
 SERVICE_NAME="github-gitlab-notifier"
 SERVICE_USER="notifier"
 BINARY_NAME="github-gitlab-notifier"
@@ -301,8 +302,8 @@ write_config() {
     info "Configuring the bot"
     [[ ${INTERACTIVE} -eq 1 ]] && echo "  Press Enter to accept the value in [brackets]."
 
-    ask BOT_TOKEN "Telegram bot token from @BotFather" "" secret
-    ask TELEGRAM_BOT_USERNAME "Bot username (without @)" ""
+    ask BOT_TOKEN "MAX bot token (MAX for business -> Chat bots -> Settings)" "" secret
+    ask MAX_CA_FILE "Path to the Russian Trusted Root CA PEM (Enter to skip if already trusted)" "" optional
     ask SERVER_ADDRESS "Listen address" "0.0.0.0"
     ask SERVER_PORT "Listen port" "8080"
     ask USE_HTTPS "Is the bot behind an HTTPS reverse proxy (nginx, Caddy, ...)? true/false" "false"
@@ -331,9 +332,10 @@ write_config() {
 # After editing run: sudo systemctl restart ${SERVICE_NAME}
 # All options: https://github.com/${REPO}#environment-variables
 
-# --- Telegram ---
+# --- MAX ---
 BOT_TOKEN=${BOT_TOKEN:-}
-TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-}
+MAX_API_URL=${MAX_API_URL:-}
+MAX_CA_FILE=${MAX_CA_FILE:-}
 CHAT_ID=${CHAT_ID:-}
 BOT_LANG=${BOT_LANG:-en}
 
@@ -348,14 +350,11 @@ USE_HTTPS=${USE_HTTPS:-true}
 # --- Security ---
 WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
 
-# --- Proxy for Telegram API (optional) ---
+# --- Proxy for MAX API (optional) ---
 PROXY_ENABLED=${PROXY_ENABLED:-false}
 PROXY_HOST=${PROXY_HOST:-}
 PROXY_PORT=${PROXY_PORT:-}
 PROXY_TYPE=${PROXY_TYPE:-HTTP}
-
-# Self-hosted Telegram Bot API server (optional, default api.telegram.org)
-TELEGRAM_API_URL=${TELEGRAM_API_URL:-}
 
 # --- Storage ---
 DB_PATH=${DATA_DIR}/notifier.db
@@ -386,7 +385,7 @@ write_unit() {
 
     cat > "${UNIT_FILE}" <<EOF
 [Unit]
-Description=GitHub-GitLab Notifier (Telegram bot for repository webhooks)
+Description=GitHub-GitLab Notifier (MAX bot for repository webhooks)
 Documentation=https://github.com/${REPO}
 After=network-online.target
 Wants=network-online.target
@@ -488,8 +487,8 @@ ${C_BOLD}GitHub-GitLab Notifier is installed.${C_RESET}
   Webhook:  ${proto}://${domain:-<DOMAIN>}/webhook
 
 ${C_BOLD}Next steps${C_RESET}
-  1. Add the bot to a Telegram group with Topics enabled and make it an admin.
-  2. Send /configure in the group, then /connect <repository_url>.
+  1. Add the bot to a MAX group chat (or open a dialog with it).
+  2. Send /connect <repository_url> in that chat.
   3. Create the webhook on GitHub/GitLab with the URL and secret from /connect.
 
 ${C_BOLD}Manage the service${C_RESET}

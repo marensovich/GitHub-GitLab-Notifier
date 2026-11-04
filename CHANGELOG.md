@@ -6,6 +6,17 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed — MAX messenger port
+
+- The bot now works with the [MAX Bot API](https://dev.max.ru/docs-api) instead of Telegram:
+  new `internal/maxapi` client (GET /me, POST /messages, GET /updates long polling, PATCH /me/commands),
+  `internal/bot` rewritten on top of it. The Telegram client dependency (`telego`) was removed.
+- Notifications are sent with `format=html` (same tags as before) and link previews disabled;
+  the MAX limits of 2 messages per second per chat and 4000 characters per message are respected.
+- MAX has no forum topics: `/configure` was removed from the menu and only explains this; `/status` no longer shows topics.
+- New settings: `MAX_API_URL`, `MAX_CA_FILE` (Russian Trusted Root CA for `platform-api2.max.ru`).
+  Removed: `TELEGRAM_BOT_USERNAME`, `TELEGRAM_API_URL`.
+
 ## [1.0.1] — 2026-10-30
 
 ### Security

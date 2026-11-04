@@ -1,6 +1,6 @@
 {
-  "welcome": "👋 Привет! Я бот для уведомлений из GitHub и GitLab.\n\n<b>Быстрый старт:</b>\n1. Включите <i>Темы</i> в группе и сделайте меня администратором\n2. /configure — создать темы для уведомлений\n3. /connect &lt;url_репозитория&gt; — получить URL вебхука и секрет\n\n/help — список команд",
-  "help": "📚 <b>Доступные команды:</b>\n\n/start — начало работы\n/configure — создать темы форума для уведомлений\n/connect &lt;url&gt; — подключить репозиторий GitHub/GitLab\n/disconnect &lt;url&gt; — отключить репозиторий\n/status — настройки чата, темы и репозитории\n/lang en|ru — сменить язык уведомлений\n/version — версия бота\n/help — эта справка",
+  "welcome": "👋 Привет! Я бот для уведомлений из GitHub и GitLab в MAX.\n\n<b>Быстрый старт:</b>\n1. Добавьте меня в групповой чат (или напишите мне в личку)\n2. /connect &lt;url_репозитория&gt; — получить URL вебхука и секрет\n3. Укажите их в настройках вебхука репозитория\n\n/help — список команд",
+  "help": "📚 <b>Доступные команды:</b>\n\n/start — начало работы\n/connect &lt;url&gt; — подключить репозиторий GitHub/GitLab\n/disconnect &lt;url&gt; — отключить репозиторий\n/status — настройки чата и репозитории\n/lang en|ru — сменить язык уведомлений\n/version — версия бота\n/help — эта справка",
   "unknown_command": "Извини, я пока понимаю только команды. Напиши /help",
   "bot_registered": "✅ Бот @%s зарегистрирован. Сессия активна",
   "bot_started": "🚀 Бот @%s запущен, слушаю команды...",
@@ -37,7 +37,7 @@
   "error_event": "❌ Ошибка обработки события <code>%s</code>",
   "server_started": "🚀 Сервер слушает %s (версия %s)",
   "server_failed": "❌ Ошибка запуска сервера: %v",
-  "bot_token_is_not_set": "❌ BOT_TOKEN не задан",
+  "bot_token_is_not_set": "❌ BOT_TOKEN не задан (его выдаёт MAX для бизнеса → Чат-боты → Настройки)",
   "failed_to_create_bot": "❌ Не удалось создать бота: %w",
   "failed_to_get_bot_info": "❌ Не удалось получить информацию о боте: %w",
   "invalid_proxy_url": "⚠️ Неверный URL прокси: %v",
@@ -132,7 +132,7 @@
   "cmd_configure": "Создать темы форума для уведомлений",
   "cmd_connect": "Подключить репозиторий GitHub/GitLab",
   "cmd_disconnect": "Отключить репозиторий",
-  "cmd_status": "Настройки чата, темы и репозитории",
+  "cmd_status": "Настройки чата и репозитории",
   "cmd_lang": "Сменить язык уведомлений (en, ru)",
   "cmd_version": "Версия бота",
   "set_commands_failed": "⚠ Не удалось зарегистрировать команды бота: %v",
@@ -142,7 +142,7 @@
   "disconnect_usage": "❌ Использование: /disconnect &lt;url_репозитория&gt;",
   "disconnect_not_found": "❌ Репозиторий не подключён к этому чату: %s",
   "disconnect_success": "✅ Репозиторий отключён: %s\n\nНе забудьте удалить вебхук на GitHub/GitLab.",
-  "status_header": "📊 <b>Статус чата</b>\n\n🆔 ID чата: <code>%d</code>\n🌐 Язык: <code>%s</code>\n💬 Форум: %s\n",
+  "status_header": "📊 <b>Статус чата</b>\n\n🆔 ID чата: <code>%d</code>\n🌐 Язык: <code>%s</code>\n",
   "status_yes": "да",
   "status_no": "нет",
   "status_topics_header": "\n🗂 <b>Темы:</b>\n",
@@ -154,5 +154,7 @@
   "status_version": "\n🤖 Версия: <code>%s</code>",
   "lang_usage": "🌐 Текущий язык: <code>%s</code>\n\nИспользование: <code>/lang en</code> или <code>/lang ru</code>",
   "lang_invalid": "❌ Неподдерживаемый язык: %s. Доступны: en, ru",
-  "lang_changed": "✅ Язык переключён на русский"
+  "lang_changed": "✅ Язык переключён на русский",
+  "configure_not_supported": "ℹ️ В MAX нет тем форума, поэтому /configure не нужен: все уведомления приходят в этот чат. Чтобы добавить репозиторий, используйте /connect &lt;url&gt;.",
+  "poll_failed": "⚠ Не удалось получить обновления из MAX: %v"
 }

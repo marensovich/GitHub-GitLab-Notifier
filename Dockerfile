@@ -1,11 +1,10 @@
-# syntax=docker/dockerfile:1
+﻿# syntax=docker/dockerfile:1
 
-# ─── Build stage ───
+# в”Ђв”Ђв”Ђ Build stage в”Ђв”Ђв”Ђ
 FROM golang:1.26-alpine AS build
 
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
 
 COPY . .
 ARG VERSION=docker
@@ -14,7 +13,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
       -o /out/notifier . \
  && mkdir -p /out/data
 
-# ─── Runtime stage ───
+# в”Ђв”Ђв”Ђ Runtime stage в”Ђв”Ђв”Ђ
 # Static binary (pure Go SQLite), CA certificates and tzdata only.
 FROM gcr.io/distroless/static-debian12:nonroot
 

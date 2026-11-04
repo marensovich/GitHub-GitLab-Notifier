@@ -4,18 +4,21 @@ services:
   notifier:
     build:
       context: .
-    image: github-gitlab-notifier:latest
-    container_name: github-gitlab-notifier
+    image: github-gitlab-notifier-max:latest
+    container_name: github-gitlab-notifier-max
     restart: unless-stopped
     env_file: .env
     environment:
       # Inside the container the database lives on the "data" volume.
       DB_PATH: /data/notifier.db
       SERVER_ADDRESS: 0.0.0.0
+      # Trust the Russian Trusted Root CA used by platform-api2.max.ru:
+      # MAX_CA_FILE: /certs/russian_trusted_root_ca.pem
     ports:
       - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
     volumes:
       - data:/data
+      # - ./certs/russian_trusted_root_ca.pem:/certs/russian_trusted_root_ca.pem:ro
 
 volumes:
   data:
