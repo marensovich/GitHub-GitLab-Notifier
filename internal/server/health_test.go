@@ -55,9 +55,9 @@ func TestHealthz(t *testing.T) {
 	if rec := getPath(e, http.MethodPost, "/healthz"); rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("POST /healthz: %d", rec.Code)
 	}
-	// The old liveness endpoint is unchanged.
-	if rec := getPath(e, http.MethodGet, "/health"); rec.Body.String() != "pong" {
-		t.Errorf("/health: %q", rec.Body.String())
+	// /health gives the same report, failures included.
+	if rec := getPath(e, http.MethodGet, "/health"); rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "api down") {
+		t.Errorf("/health: %d %q", rec.Code, rec.Body.String())
 	}
 }
 

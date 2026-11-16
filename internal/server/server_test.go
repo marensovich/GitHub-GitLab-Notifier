@@ -106,11 +106,11 @@ func TestRejectsWrongMethodAndUnknownPlatform(t *testing.T) {
 }
 
 func TestHealth(t *testing.T) {
-	e := newEnv(t, Config{})
-	for _, path := range []string{"/health", "/webhook/health"} {
+	e := newEnv(t, Config{Version: "v9"})
+	for _, path := range []string{"/health", "/healthz", "/webhook/health"} {
 		rec := httptest.NewRecorder()
 		e.srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
-		if rec.Code != http.StatusOK || rec.Body.String() != "pong" {
+		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"version":"v9"`) {
 			t.Errorf("%s: got %d %q", path, rec.Code, rec.Body.String())
 		}
 	}

@@ -357,8 +357,8 @@ then go to <http://localhost:8081>.
 
 ## 📈 Monitoring
 
-**Health.** `GET /healthz` on the webhook port returns JSON and `200` when everything works, `503` when a check
-fails:
+**Health.** `GET /health` (also `/healthz` and `/webhook/health`) on the webhook port returns JSON and `200` when
+everything works, `503` when a check fails:
 
 ```json
 {"status":"ok","version":"v1.1.0","uptime_seconds":3600,
@@ -366,8 +366,13 @@ fails:
 ```
 
 `db` pings SQLite; `telegram` is healthy while the bot has had a successful Telegram API call in the last
-3 minutes (it calls `getMe` once a minute, and every sent message counts), so `/healthz` itself never calls
-Telegram. The old `GET /health` still answers `pong` and only says the process is up.
+3 minutes (it calls `getMe` once a minute, and every sent message counts), so the endpoint itself never calls
+Telegram. A failing check carries its error, for example:
+
+```json
+{"status":"fail","version":"v1.1.0","uptime_seconds":900,
+ "checks":{"db":{"ok":true},"telegram":{"ok":false,"error":"no successful Telegram API call for 4m0s: ..."}}}
+```
 
 **Metrics.** `GET /metrics` serves Prometheus metrics (turn off with `METRICS_ENABLED=false`):
 
