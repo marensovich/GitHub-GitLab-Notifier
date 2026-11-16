@@ -6,6 +6,8 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-17
+
 ### Added
 
 - Local read-only web panel (`PANEL_ADDRESS`, e.g. `127.0.0.1:8081`): overview with warnings for repositories
@@ -157,7 +159,8 @@ FreeBSD (amd64, arm64).
 - Wrong IP from VPN in `/connect` output
 - HTML parsing error in `/help` (unsupported `<url>` tag)
 
-[Unreleased]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v.0.0.1...v1.0.0
 [0.0.1]: https://github.com/marensovich/GitHub-GitLab-Notifier/releases/tag/v.0.0.1
