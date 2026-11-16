@@ -129,7 +129,14 @@ In the forum group, send:
 /connect https://github.com/your-username/your-repo
 ```
 
-`/configure` creates the topics, `/connect` replies with the **webhook URL** and a **secret**.
+`/configure` asks two questions with buttons — whether to create a topic per event type (forum chats only) and
+which look to use — and `/connect` replies with the **webhook URL** and a **secret**.
+
+**Message look.** The new look uses Telegram *rich messages*: a heading, a compact table of details, collapsible
+commit and file lists and coloured buttons. It needs an up-to-date official Telegram app; old and third-party
+clients show it as an unsupported message. If your chat reads notifications there, pick **Classic** in
+`/configure` — the same information as plain formatted text with inline buttons. `RICH_MESSAGES=false` sends every
+chat the classic look.
 
 ### 5. Add the webhook
 
@@ -306,7 +313,7 @@ Pre-built binaries for Linux, macOS, Windows and FreeBSD are attached to every
 |:----------------------|:------------------------------------------------------------------|
 | `/start`              | Welcome message and quick start                                   |
 | `/help`               | List of commands                                                  |
-| `/configure`          | Create forum topics and map events to them (safe to run again)    |
+| `/configure`          | Set up topics (forums) and the message look with buttons; run again to change |
 | `/connect <url>`      | Connect a repository: returns webhook URL, secret and instructions |
 | `/disconnect <url>`   | Disconnect a repository from this chat                            |
 | `/status`             | Chat settings, topics, connected repositories, version            |
@@ -332,6 +339,7 @@ The commands also appear in Telegram's **Menu** button.
 | `WEBHOOK_SECRET`        | No       | —                  | Global secret; when set, unsigned webhooks are rejected             |
 | `DB_PATH`               | No       | `data/notifier.db` | SQLite database file                                                |
 | `NOTIFY_UNKNOWN_EVENTS` | No       | `false`            | Post a short message for unsupported events                         |
+| `RICH_MESSAGES`         | No       | `true`             | Allow Telegram rich messages; `false` sends every chat the classic look |
 | `DELIVERIES_RETENTION_DAYS` | No   | `14`               | Days to keep the webhook delivery log; `0` keeps it forever         |
 | `PROXY_ENABLED`         | No       | `false`            | Use a proxy for the Telegram API                                    |
 | `PROXY_HOST`            | No       | —                  | Proxy host                                                          |
@@ -400,7 +408,8 @@ Telegram. A failing check carries its error, for example:
 |:-----------------------------------------------------------|:----------|:----------------------------------------------------------------|
 | `notifier_webhooks_total{platform,event,status}`           | counter   | Webhooks by result: `delivered`, `ignored`, `rejected`, `failed`, `duplicate` |
 | `notifier_webhook_duration_seconds`                        | histogram | Time to handle a webhook, sending included                      |
-| `notifier_messages_sent_total{messenger,result}`           | counter   | Send attempts, `ok` / `error`                                   |
+| `notifier_messages_sent_total{messenger,format,result}`    | counter   | Send attempts by format (`rich` / `classic`), `ok` / `error`    |
+| `notifier_rich_fallbacks_total`                            | counter   | Rich messages rejected by Telegram and sent as classic ones     |
 | `notifier_build_info{version}`, `notifier_start_time_seconds` | gauge  | Version and start time                                          |
 
 Repository URLs are never used as labels. Event names that do not look like real ones, and new ones beyond
@@ -453,8 +462,11 @@ dropped. The log is pruned after `DELIVERIES_RETENTION_DAYS` (14 by default).
 2. If the repository was connected with `/connect`, the message goes **only to that chat**.
    Otherwise it goes to every configured chat, or to `CHAT_ID` if there are none.
 3. The event is formatted in each chat's language.
-4. The message is posted to the topic mapped to the event category; if the topic was deleted, it falls back to the
-   General topic.
+4. If the chat uses topics, the message is posted to the topic mapped to the event category; if the topic was
+   deleted, it falls back to the General topic. A chat that chose "no topics" in `/configure` gets everything in the
+   main chat.
+5. The message is sent in the look the chat chose. A rich message that Telegram rejects is sent again in the
+   classic look.
 
 ---
 
@@ -516,7 +528,7 @@ SQLite file (`DB_PATH`, default `data/notifier.db`):
 
 | Table           | Description                          |
 |:----------------|:-------------------------------------|
-| `chats`         | Configured chats and their language  |
+| `chats`         | Configured chats: language, look, topics on/off |
 | `topics`        | Created forum topics                 |
 | `repos`         | Connected repositories and secrets   |
 | `event_mapping` | Event category → topic, per chat     |
@@ -542,10 +554,11 @@ Want another event? Adding a handler takes about 50 lines of Go — see [CONTRIB
 | Problem                                   | Solution                                                                    |
 |:------------------------------------------|:----------------------------------------------------------------------------|
 | Topics are not created                    | The bot must be an **administrator** with the *Manage topics* right          |
-| "This chat is not a forum"                | Enable **Topics** in the group settings                                     |
+| `/configure` does not offer topics        | Enable **Topics** in the group settings, then run `/configure` again         |
+| Messages show as "unsupported"            | The client is old or third-party: pick **Classic** in `/configure`           |
 | Webhook shows a delivery error on GitHub  | The URL must be reachable from the internet — check `DOMAIN`, port, firewall |
 | GitHub shows `401 Unauthorized`           | The webhook secret does not match the one from `/connect` (or `WEBHOOK_SECRET`) |
-| Notifications go to the General topic     | Run `/configure` again — it creates missing topics and restores the mapping |
+| Notifications go to the General topic     | Run `/configure` again and choose *Create topics* — it creates missing topics and restores the mapping |
 | No message for an event                   | Check that the event is [supported](#-supported-events) and selected in the webhook settings |
 | Wrong address in `/connect` output        | Set `DOMAIN` (and `USE_HTTPS`) in the configuration                          |
 | Bot can't connect to Telegram             | Configure `PROXY_*` or `TELEGRAM_API_URL`                                   |
