@@ -99,9 +99,11 @@ func New(cfg Config, d *dispatcher.Dispatcher, store *storage.Store, sender Send
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/webhook", s.handleWebhook)
-	mux.HandleFunc("/webhook/health", s.handleHealth)
-	mux.HandleFunc("/health", s.handleHealth)
+	// All three paths return the same report; /health and /webhook/health
+	// are kept for existing monitors and the installer.
+	mux.HandleFunc("/health", s.handleHealthz)
 	mux.HandleFunc("/healthz", s.handleHealthz)
+	mux.HandleFunc("/webhook/health", s.handleHealthz)
 	if s.cfg.ServeMetrics {
 		mux.Handle("/metrics", s.cfg.Metrics.Handler())
 	}
@@ -120,11 +122,6 @@ func (s *Server) ListenAndServe() error {
 // Shutdown gracefully stops the server, waiting for in-flight webhooks.
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.http.Shutdown(ctx)
-}
-
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte("pong"))
 }
 
 // checkResult is one entry of the /healthz response.

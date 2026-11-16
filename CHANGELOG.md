@@ -17,14 +17,17 @@ and the project follows [Semantic Versioning](https://semver.org/).
   `delivered`, `ignored`, `rejected`, `failed` or `duplicate`. A redelivery of an already delivered webhook
   (`X-GitHub-Delivery`, GitLab `Idempotency-Key` / `X-Gitlab-Event-UUID`) is answered with `200 DUPLICATE` and
   not posted again. The log is pruned hourly after `DELIVERIES_RETENTION_DAYS` (default 14, `0` keeps it).
-- `GET /healthz`: JSON with version, uptime and `db` / `telegram` checks; `503` when one fails. The Telegram
-  check uses a `getMe` probe once a minute and successful sends, never a call per request. `/health` is unchanged.
+- Health report: JSON with version, uptime and `db` / `telegram` checks; `503` when one fails, with the error.
+  The Telegram check uses a `getMe` probe once a minute and successful sends, never a call per request.
 - Prometheus metrics at `/metrics` (`METRICS_ENABLED`, default on): webhooks by platform/event/status, webhook
   handling time, send attempts by result, build info and start time. `METRICS_ADDR` serves them on a separate
   address such as `127.0.0.1:9090`. No new dependencies. Grafana dashboard in `docs/grafana-dashboard.json`.
 
 ### Changed
 
+- `GET /health` and `/webhook/health` return the health report (same as the new `/healthz`) instead of `pong`,
+  and answer `503` when the database or Telegram is not working. Monitors that compared the body with `pong`
+  need to check the status code instead. The installer prints the report when the check fails.
 - The database schema is now versioned (`schema_version` table, numbered SQL files in `storage/migrations/`).
   Pending migrations run at start-up, each in its own transaction; a failed one is rolled back and the bot stops
   with the name of the migration. Databases from 1.0.x are recognised and marked as version 1 without changes.
