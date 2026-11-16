@@ -78,6 +78,14 @@ func Open(path string) (*Store, error) {
 	return &Store{db: db}, nil
 }
 
+// Ping checks that the database answers.
+//
+// Проверяет, что база данных отвечает.
+func (s *Store) Ping(ctx context.Context) error {
+	var one int
+	return s.db.QueryRowContext(ctx, "SELECT 1").Scan(&one)
+}
+
 // Close closes the database.
 //
 // Закрывает базу данных.

@@ -4,16 +4,19 @@ import (
 	"GitHub-GitLab-Notifier/internal/bot"
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/server"
 	"GitHub-GitLab-Notifier/internal/web"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -86,6 +89,9 @@ func main() {
 	notifyUnknown, _ := strconv.ParseBool(os.Getenv("NOTIFY_UNKNOWN_EVENTS"))
 	d := dispatcher.NewDispatcher(lang, notifyUnknown)
 
+	m := metrics.New(Version)
+	metricsEnabled, metricsAddr := metricsConfig()
+
 	srv := server.New(server.Config{
 		Addr:                net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
 		DefaultChatID:       chatID,
@@ -93,7 +99,14 @@ func main() {
 		WebhookSecret:       os.Getenv("WEBHOOK_SECRET"),
 		Version:             Version,
 		DeliveriesRetention: deliveriesRetention(lang),
+		Metrics:             m,
+		ServeMetrics:        metricsEnabled && metricsAddr == "",
+		Checks: map[string]server.Check{
+			"db":       store.Ping,
+			"telegram": b.CheckTelegram,
+		},
 	}, d, store, b)
+	metricsSrv := startMetrics(lang, m, metricsEnabled, metricsAddr)
 	go srv.PruneDeliveries(ctx)
 
 	panel := startPanel(lang, store)
@@ -112,6 +125,9 @@ func main() {
 		defer cancel()
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			log.Printf(i18n.T(lang, i18n.MsgServerFailed), err)
+		}
+		if metricsSrv != nil {
+			metricsSrv.Shutdown(shutdownCtx)
 		}
 		if panel != nil {
 			if err := panel.Shutdown(shutdownCtx); err != nil {
@@ -149,6 +165,33 @@ func startPanel(lang i18n.Lang, store *storage.Store) *web.Server {
 		}
 	}()
 	return panel
+}
+
+// metricsConfig reads METRICS_ENABLED (default true) and METRICS_ADDR.
+func metricsConfig() (enabled bool, addr string) {
+	enabled = true
+	if v := os.Getenv("METRICS_ENABLED"); v != "" {
+		enabled, _ = strconv.ParseBool(v)
+	}
+	return enabled, os.Getenv("METRICS_ADDR")
+}
+
+// startMetrics serves /metrics on its own address when METRICS_ADDR is set,
+// so the metrics need not be public together with the webhook port.
+func startMetrics(lang i18n.Lang, m *metrics.Metrics, enabled bool, addr string) *http.Server {
+	if !enabled || addr == "" {
+		return nil
+	}
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", m.Handler())
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		log.Printf(i18n.T(lang, i18n.MsgMetricsStarted), addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf(i18n.T(lang, i18n.MsgMetricsFailed), err)
+		}
+	}()
+	return srv
 }
 
 // deliveriesRetention reads DELIVERIES_RETENTION_DAYS (default 14, 0 = keep forever).
