@@ -114,6 +114,8 @@ const (
 	MsgItemActor          = "item_actor"
 	MsgItemBody           = "item_body"
 	MsgItemConfidential   = "item_confidential"
+	MsgFieldRepo          = "field_repo"
+	MsgSectionMore        = "section_more"
 
 	// Ping / fork / tags
 	MsgPing       = "ping"

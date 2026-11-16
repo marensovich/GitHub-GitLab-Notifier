@@ -95,6 +95,8 @@
   "item_actor": "👤 %s\n",
   "item_body": "\n<blockquote>%s</blockquote>\n",
   "item_confidential": "🔒 <b>Confidential</b> — visible only to project members in GitLab\n",
+  "field_repo": "Repository",
+  "section_more": "…and %d more",
   "ping_zen": "\n\n<i>%s</i>",
   "ci_branch": "🌿 <code>%s</code> · %s\n",
   "ci_commit": "📝 %s\n",
