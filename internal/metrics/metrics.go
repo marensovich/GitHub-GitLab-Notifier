@@ -31,7 +31,8 @@ type Metrics struct {
 	version   string
 	started   time.Time
 	webhooks  map[[3]string]uint64 // platform, event, status
-	messages  map[[2]string]uint64 // messenger, result
+	messages  map[[3]string]uint64 // messenger, format, result
+	fallbacks uint64               // rich messages replaced by classic ones
 	durCounts []uint64             // per bucket, not cumulative; last = above all buckets
 	durSum    float64
 	durCount  uint64
@@ -43,7 +44,7 @@ func New(version string) *Metrics {
 		version:   version,
 		started:   time.Now(),
 		webhooks:  map[[3]string]uint64{},
-		messages:  map[[2]string]uint64{},
+		messages:  map[[3]string]uint64{},
 		durCounts: make([]uint64, len(durationBuckets)+1),
 	}
 }
@@ -65,14 +66,23 @@ func (m *Metrics) ObserveWebhook(platform, event, status string, d time.Duration
 	m.durCount++
 }
 
-// MessageSent counts one attempt to send a message through a messenger.
-func (m *Metrics) MessageSent(messenger string, err error) {
+// MessageSent counts one attempt to send a message through a messenger in
+// a format ("rich" or "classic").
+func (m *Metrics) MessageSent(messenger, format string, err error) {
 	result := "ok"
 	if err != nil {
 		result = "error"
 	}
 	m.mu.Lock()
-	m.messages[[2]string{messenger, result}]++
+	m.messages[[3]string{messenger, format, result}]++
+	m.mu.Unlock()
+}
+
+// RichFallback counts one rich message that Telegram rejected and that was
+// sent in the classic format instead.
+func (m *Metrics) RichFallback() {
+	m.mu.Lock()
+	m.fallbacks++
 	m.mu.Unlock()
 }
 
@@ -126,15 +136,19 @@ func (m *Metrics) WriteTo(w io.Writer) (int64, error) {
 	fmt.Fprintf(&b, "notifier_webhook_duration_seconds_sum %s\n", strconv.FormatFloat(m.durSum, 'g', -1, 64))
 	fmt.Fprintf(&b, "notifier_webhook_duration_seconds_count %d\n", m.durCount)
 
-	b.WriteString("# HELP notifier_messages_sent_total Send attempts to messengers, by result.\n# TYPE notifier_messages_sent_total counter\n")
-	messageKeys := make([][2]string, 0, len(m.messages))
+	b.WriteString("# HELP notifier_messages_sent_total Send attempts to messengers, by format and result.\n# TYPE notifier_messages_sent_total counter\n")
+	messageKeys := make([][3]string, 0, len(m.messages))
 	for k := range m.messages {
 		messageKeys = append(messageKeys, k)
 	}
 	sort.Slice(messageKeys, func(i, j int) bool { return joinKey(messageKeys[i][:]) < joinKey(messageKeys[j][:]) })
 	for _, k := range messageKeys {
-		fmt.Fprintf(&b, "notifier_messages_sent_total{messenger=%s,result=%s} %d\n", quote(k[0]), quote(k[1]), m.messages[k])
+		fmt.Fprintf(&b, "notifier_messages_sent_total{messenger=%s,format=%s,result=%s} %d\n",
+			quote(k[0]), quote(k[1]), quote(k[2]), m.messages[k])
 	}
+
+	b.WriteString("# HELP notifier_rich_fallbacks_total Rich messages rejected by Telegram and sent as classic ones.\n# TYPE notifier_rich_fallbacks_total counter\n")
+	fmt.Fprintf(&b, "notifier_rich_fallbacks_total %d\n", m.fallbacks)
 
 	n, err := io.WriteString(w, b.String())
 	return int64(n), err

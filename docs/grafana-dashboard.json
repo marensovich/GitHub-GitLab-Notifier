@@ -95,8 +95,24 @@
       "title": "Messages sent",
       "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "sum by (messenger, result) (rate(notifier_messages_sent_total[5m]))", "legendFormat": "{{messenger}} {{result}}" }],
+      "targets": [{ "expr": "sum by (messenger, format, result) (rate(notifier_messages_sent_total[5m]))", "legendFormat": "{{messenger}} {{format}} {{result}}" }],
       "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Rich fallbacks, 24h",
+      "description": "Rich messages Telegram rejected and the bot sent in the classic format instead.",
+      "gridPos": { "x": 0, "y": 20, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "sum(increase(notifier_rich_fallbacks_total[24h]))", "instant": true }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }] }
+        }
+      }
     }
   ]
 }
