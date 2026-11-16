@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mymmrac/telego"
@@ -31,6 +32,9 @@ type Bot struct {
 	version string
 	// rich enables rich messages for notifications (RICH_MESSAGES).
 	rich bool
+	// richMissing is set when the Bot API server has no sendRichMessage
+	// (an older self-hosted server); classic messages are sent from then on.
+	richMissing atomic.Bool
 
 	// Last successful call to the Telegram API and the last error, for /healthz.
 	healthMu    sync.Mutex

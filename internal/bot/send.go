@@ -5,6 +5,8 @@ import (
 	"GitHub-GitLab-Notifier/internal/notify"
 	"context"
 	"errors"
+	"fmt"
+	"html"
 	"log"
 	"strings"
 	"sync"
@@ -27,23 +29,34 @@ import (
 func (b *Bot) SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
 	var attempts []notify.Attempt
 
-	if b.rich && format != notify.FormatClassic {
+	if b.rich && format != notify.FormatClassic && !b.richMissing.Load() {
 		err := b.sendRich(chatID, topicID, notify.Rich(lang, n))
 		attempts = append(attempts, notify.Attempt{Format: notify.FormatRich, Err: err})
-		if err == nil {
+		switch {
+		case err == nil:
 			b.contact(nil)
 			return attempts, nil
-		}
-		if !richRejected(err) {
+		case richUnsupported(err):
+			if !b.richMissing.Swap(true) {
+				log.Printf("⚠️ The Bot API server has no sendRichMessage, sending classic messages from now on: %v", err)
+			}
+		case richRejected(err):
+			logFallbackOnce(err)
+		default:
 			log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
 			return attempts, err
 		}
-		logFallbackOnce(err)
 	}
 
 	text, keyboard := notify.Classic(lang, n)
 	err := b.sendClassic(chatID, topicID, text, keyboard)
 	attempts = append(attempts, notify.Attempt{Format: notify.FormatClassic, Err: err})
+	if err != nil && len(keyboard) > 0 && buttonURLRefused(err) {
+		// Telegram refuses some button URLs (e.g. an internal GitLab host);
+		// the links still work as text.
+		err = b.sendClassic(chatID, topicID, text+buttonLinks(keyboard), nil)
+		attempts = append(attempts, notify.Attempt{Format: notify.FormatClassic, Err: err})
+	}
 	if err != nil {
 		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
 		return attempts, err
@@ -99,6 +112,38 @@ func richRejected(err error) bool {
 	return !isTopicOrChatError(apiErr.Description)
 }
 
+// richUnsupported reports whether the Bot API server does not know
+// sendRichMessage (a self-hosted server older than Bot API 10).
+func richUnsupported(err error) bool {
+	var apiErr *telegoapi.Error
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	return apiErr.ErrorCode == 404 || strings.Contains(strings.ToLower(apiErr.Description), "method not found")
+}
+
+// buttonURLRefused reports whether Telegram refused a URL of an inline button.
+func buttonURLRefused(err error) bool {
+	var apiErr *telegoapi.Error
+	if !errors.As(err, &apiErr) || apiErr.ErrorCode != 400 {
+		return false
+	}
+	d := strings.ToLower(apiErr.Description)
+	return strings.Contains(d, "button") && strings.Contains(d, "url")
+}
+
+// buttonLinks renders the buttons as text links, for a message sent
+// without its keyboard.
+func buttonLinks(keyboard [][]notify.Button) string {
+	var links []string
+	for _, row := range keyboard {
+		for _, btn := range row {
+			links = append(links, fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(btn.URL), html.EscapeString(btn.Label)))
+		}
+	}
+	return "\n\n" + strings.Join(links, " · ")
+}
+
 // topicOrChatErrors are parts of 400 descriptions about where the message
 // goes rather than what it contains; sending the classic rendering to the
 // same place would fail the same way.
@@ -109,6 +154,7 @@ var topicOrChatErrors = []string{
 	"topic_deleted",
 	"chat not found",
 	"not enough rights",
+	"have no rights",
 }
 
 func isTopicOrChatError(description string) bool {

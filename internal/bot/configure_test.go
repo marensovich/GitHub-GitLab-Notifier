@@ -211,3 +211,13 @@ func TestConfigureRerunMarksCurrent(t *testing.T) {
 		t.Errorf("format step marks %v, want [cfg1:format:classic]", got)
 	}
 }
+
+func TestConfigurePrivateChatOwnerMayPress(t *testing.T) {
+	b, _ := newConfigureBot(t, map[string][]string{"getChatMember": {chatMember}})
+	private := telego.Chat{ID: 6, Type: telego.ChatTypePrivate}
+	runConfigure(b, private)
+	press(b, private, 6, "cfg1:format:classic")
+	if got, _ := b.store.GetChat(6); got == nil || got.Format != storage.FormatClassic {
+		t.Errorf("private chat owner could not choose classic: %+v", got)
+	}
+}

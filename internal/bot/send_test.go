@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"testing"
 
@@ -213,15 +214,60 @@ func TestSendRichDisabled(t *testing.T) {
 
 func TestIsTopicOrChatError(t *testing.T) {
 	for desc, want := range map[string]bool{
-		"Bad Request: message thread not found":  true,
-		"Bad Request: TOPIC_CLOSED":              true,
-		"Bad Request: TOPIC_DELETED":             true,
-		"Bad Request: chat not found":            true,
-		"Bad Request: not enough rights to send": true,
-		"Bad Request: can't parse rich message":  false,
+		"Bad Request: message thread not found":         true,
+		"Bad Request: TOPIC_CLOSED":                     true,
+		"Bad Request: TOPIC_DELETED":                    true,
+		"Bad Request: chat not found":                   true,
+		"Bad Request: not enough rights to send":        true,
+		"Bad Request: have no rights to send a message": true,
+		"Bad Request: can't parse rich message":         false,
 	} {
 		if got := isTopicOrChatError(desc); got != want {
 			t.Errorf("isTopicOrChatError(%q) = %v, want %v", desc, got, want)
 		}
+	}
+}
+
+func TestSendRichMethodMissingFallsBackAndStops(t *testing.T) {
+	b, fake := newSendBot(t, true, map[string][]string{
+		"sendRichMessage": {apiError(404, "Not Found: method not found")},
+	})
+	attempts, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample())
+	if err != nil {
+		t.Fatalf("want the classic fallback, got %v", err)
+	}
+	if got := formats(attempts); len(got) != 2 || got[0] != "rich:err" || got[1] != "classic" {
+		t.Errorf("attempts = %v", got)
+	}
+	if _, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample()); err != nil {
+		t.Fatal(err)
+	}
+	if got := methods(fake); len(got) != 3 || got[2] != "sendMessage" {
+		t.Errorf("calls = %v, want rich tried once, then classic only", got)
+	}
+}
+
+func TestSendButtonURLRefusedResendsAsLinks(t *testing.T) {
+	refused := apiError(400, "Bad Request: inline keyboard button URL 'http://gitlab/x' is invalid: Wrong HTTP URL")
+	b, fake := newSendBot(t, true, map[string][]string{
+		"sendRichMessage": {refused},
+		"sendMessage":     {refused, okMessage},
+	})
+	attempts, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample())
+	if err != nil {
+		t.Fatalf("want delivery without buttons, got %v", err)
+	}
+	if got := methods(fake); len(got) != 3 {
+		t.Fatalf("calls = %v, want rich, classic, classic without buttons", got)
+	}
+	last := fake.calls[2].body
+	if _, ok := last["reply_markup"]; ok {
+		t.Error("the last attempt must have no keyboard")
+	}
+	if text, _ := last["text"].(string); !strings.Contains(text, `<a href="https://github.com/octo/hello/pull/12">Open PR</a>`) {
+		t.Errorf("button links must move into the text, got %q", text)
+	}
+	if got := formats(attempts); len(got) != 3 || got[2] != "classic" {
+		t.Errorf("attempts = %v", got)
 	}
 }

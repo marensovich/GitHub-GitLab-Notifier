@@ -146,9 +146,14 @@ func (b *Bot) handleCallback(q *telego.CallbackQuery) {
 }
 
 // canConfigure reports whether the user who pressed a button may change the
-// chat settings: a chat administrator, or, when the bot cannot read the
-// member list, the user who sent /configure.
+// chat settings: a chat administrator, the owner of a private chat, or,
+// when the bot cannot read the member list, the user who sent /configure.
 func (b *Bot) canConfigure(chatID int64, q *telego.CallbackQuery) bool {
+	if q.Message.GetChat().Type == telego.ChatTypePrivate {
+		// Only the owner of a private chat can press its buttons, and
+		// getChatMember reports them as a plain member.
+		return true
+	}
 	member, err := b.api.GetChatMember(context.Background(), &telego.GetChatMemberParams{
 		ChatID: telegoutil.ID(chatID),
 		UserID: q.From.ID,
