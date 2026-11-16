@@ -125,7 +125,8 @@ func (b *Bot) Start(ctx context.Context) {
 	b.registerCommands(ctx)
 
 	updates, err := b.api.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{
-		Timeout: 60,
+		Timeout:        60,
+		AllowedUpdates: []string{"message", "callback_query"},
 	})
 	if err != nil {
 		log.Fatalf(i18n.T(b.lang, i18n.MsgBotStartFailed), err)
@@ -209,6 +210,11 @@ func (b *Bot) registerCommands(ctx context.Context) {
 
 // consume processes a single Telegram update.
 func (b *Bot) consume(update telego.Update) {
+	if update.CallbackQuery != nil {
+		b.handleCallback(update.CallbackQuery)
+		return
+	}
+
 	msg := update.Message
 	if msg == nil || msg.Text == "" || !strings.HasPrefix(msg.Text, "/") {
 		return
