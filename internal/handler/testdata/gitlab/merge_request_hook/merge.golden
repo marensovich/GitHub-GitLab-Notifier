@@ -1,0 +1,17 @@
+topic: pull_request
+
+--- en ---
+🟣 Merge request merged
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>MS-Viewer update</b>
+🌿 <code>ms-viewer</code> → <code>master</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+--- ru ---
+🟣 Merge request влит
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>MS-Viewer update</b>
+🌿 <code>ms-viewer</code> → <code>master</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>

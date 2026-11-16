@@ -1,0 +1,23 @@
+topic: issues
+
+--- en ---
+🐛 New issue
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/issues/10">#10</a> <b>App crashes on start</b>
+👤 <a href="https://github.com/user1">@user1</a>
+
+<blockquote>Steps:
+1. Open the app
+2. &lt;crash&gt;</blockquote>
+
+--- ru ---
+🐛 Новый issue
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/issues/10">#10</a> <b>App crashes on start</b>
+👤 <a href="https://github.com/user1">@user1</a>
+
+<blockquote>Steps:
+1. Open the app
+2. &lt;crash&gt;</blockquote>

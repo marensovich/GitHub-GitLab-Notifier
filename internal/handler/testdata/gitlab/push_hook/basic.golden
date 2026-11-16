@@ -1,0 +1,37 @@
+topic: push
+
+--- en ---
+🚀 <b>group/app</b>
+New push to branch <code>master</code>
+
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a> (<code>dev1@example.com</code>)
+📦 Commits: <b>25</b>
+
+<b>📝 Commits:</b>
+  <a href="https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327">b6568db</a> Update Catalan translation — <i>Jordi</i>
+  <a href="https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7">da15608</a> fixed readme — <i>Dev One</i>
+  <i>...and 23 more commits</i>
+
+<b>📁 Changed files:</b>
+  ➕ Added: <code>CHANGELOG</code>
+  ✏️ Modified: <code>README.md</code>
+
+🔗 <a href="https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7">View changes</a>
+
+--- ru ---
+🚀 <b>group/app</b>
+Новый пуш в ветку <code>master</code>
+
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a> (<code>dev1@example.com</code>)
+📦 Коммитов: <b>25</b>
+
+<b>📝 Коммиты:</b>
+  <a href="https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327">b6568db</a> Update Catalan translation — <i>Jordi</i>
+  <a href="https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7">da15608</a> fixed readme — <i>Dev One</i>
+  <i>...и ещё 23 коммитов</i>
+
+<b>📁 Изменённые файлы:</b>
+  ➕ Добавлено: <code>CHANGELOG</code>
+  ✏️ Изменено: <code>README.md</code>
+
+🔗 <a href="https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7">Смотреть изменения</a>

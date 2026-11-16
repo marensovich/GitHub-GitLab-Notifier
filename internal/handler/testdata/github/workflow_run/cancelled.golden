@@ -1,0 +1,21 @@
+topic: ci
+
+--- en ---
+⏹️ CI cancelled
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/actions/runs/1">#57</a> <b>CI</b>
+👤 <a href="https://github.com/octocat">@octocat</a>
+🌿 <code>main</code> · <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a>
+📝 fix: handle nil values
+⏱ 2m 5s
+
+--- ru ---
+⏹️ CI отменён
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/actions/runs/1">#57</a> <b>CI</b>
+👤 <a href="https://github.com/octocat">@octocat</a>
+🌿 <code>main</code> · <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a>
+📝 fix: handle nil values
+⏱ 2m 5s

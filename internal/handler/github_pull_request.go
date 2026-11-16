@@ -4,6 +4,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"fmt"
+	"strings"
 )
 
 // GitHubPullRequest is the pull_request object of GitHub payloads.
@@ -21,6 +22,12 @@ type GitHubPullRequest struct {
 	Commits      int        `json:"commits"`
 	Head         struct {
 		Ref string `json:"ref"`
+		// Label is "owner:branch"; it is shown for pull requests from forks,
+		// where the branch name alone is ambiguous (often "main" → "main").
+		Label string `json:"label"`
+		Repo  *struct {
+			FullName string `json:"full_name"`
+		} `json:"repo"`
 	} `json:"head"`
 	Base struct {
 		Ref string `json:"ref"`
@@ -80,7 +87,7 @@ func (h *GitHubPullRequestHandler) Handle(lang i18n.Lang, payload []byte) (strin
 		Ref:      fmt.Sprintf("#%d", pr.Number),
 		URL:      pr.HTMLURL,
 		Title:    pr.Title,
-		Source:   pr.Head.Ref,
+		Source:   prSource(pr, dto.Repository.FullName),
 		Target:   pr.Base.Ref,
 		Actor:    dto.Sender.Login,
 		ActorURL: dto.Sender.HTMLURL,
@@ -163,4 +170,13 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// prSource is the source branch of a pull request: "branch" when it comes from
+// the same repository, "owner:branch" when it comes from a fork.
+func prSource(pr GitHubPullRequest, repo string) string {
+	if pr.Head.Repo != nil && pr.Head.Label != "" && !strings.EqualFold(pr.Head.Repo.FullName, repo) {
+		return pr.Head.Label
+	}
+	return pr.Head.Ref
 }

@@ -1,0 +1,19 @@
+topic: issues
+
+--- en ---
+💬 New comment on pull request
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12#issuecomment-1">#12</a> <b>Add dark mode</b>
+👤 <a href="https://github.com/reviewer">@reviewer</a>
+
+<blockquote>Could you add a test?</blockquote>
+
+--- ru ---
+💬 Новый комментарий к pull request
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12#issuecomment-1">#12</a> <b>Add dark mode</b>
+👤 <a href="https://github.com/reviewer">@reviewer</a>
+
+<blockquote>Could you add a test?</blockquote>

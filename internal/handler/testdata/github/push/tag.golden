@@ -1,0 +1,15 @@
+topic: push
+
+--- en ---
+🏷 New tag
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0</a>
+👤 <a href="https://github.com/octocat">@octocat</a>
+
+--- ru ---
+🏷 Новый тег
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0</a>
+👤 <a href="https://github.com/octocat">@octocat</a>

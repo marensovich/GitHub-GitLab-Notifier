@@ -1,0 +1,15 @@
+topic: issues
+
+--- en ---
+✅ Issue closed
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/issues/23">#23</a> <b>New API: create/update/delete file</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+--- ru ---
+✅ Issue закрыт
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/issues/23">#23</a> <b>New API: create/update/delete file</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>

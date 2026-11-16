@@ -35,7 +35,7 @@ To send a test webhook locally:
 curl -X POST http://localhost:8080/webhook \
   -H "Content-Type: application/json" \
   -H "X-GitHub-Event: push" \
-  --data-binary @internal/handler/testdata/github/push.json
+  --data-binary @internal/handler/testdata/github/push/branch.json
 ```
 
 ## Adding a new event handler
@@ -85,9 +85,24 @@ Example: GitHub `discussion` events.
 4. **Add translations**: a `Msg...` constant in `internal/i18n/i18n.go` and the key in **every** file in `locales/`.
    The i18n tests fail if a key or a `%s`/`%d` placeholder is missing in one of the languages.
 
-5. **Add a test**: put a real payload into `internal/handler/testdata/<platform>/` (GitHub shows recent deliveries
-   under *Settings → Webhooks → Recent Deliveries*; remove private data) and add a case to `github_test.go` /
-   `gitlab_test.go`. The shared test runner also checks that the message is valid Telegram HTML.
+5. **Add a fixture and its golden file** — a new event is not done without them. Put the payload into
+   `internal/handler/testdata/<platform>/<event>/<case>.json`, where `<event>` is the event name in lower case with
+   spaces replaced by `_` (`github/discussion/created.json`, `gitlab/note_hook/issue.json`). Take a real delivery
+   (GitHub: *Settings → Webhooks → Recent Deliveries*, GitLab: *Webhooks → Edit → Recent events*) and clean it:
+   ```bash
+   scripts/scrub-fixture.sh payload.json > internal/handler/testdata/github/discussion/created.json
+   ```
+   The script replaces e-mails and drops avatar/node IDs and installation data; check the rest by hand. Add one
+   fixture per interesting case (skipped actions too). Then generate the expected messages and **read them**:
+   ```bash
+   go test ./internal/handler -run TestGolden -update
+   git diff internal/handler/testdata
+   ```
+   `TestGolden` renders every fixture in every language and compares it with `<case>.golden` (the topic or
+   `skip: true`, then the message per language). It fails if a registered handler has no fixtures, and on any change
+   of a template, translation or parser — rerun with `-update` and review the diff when the change is intended.
+   For specific assertions you can still add a case to `github_test.go` / `gitlab_test.go`. Both runners check that
+   the message is valid Telegram HTML.
 
 6. Update the *Supported events* table in `README.md` and `CHANGELOG.md`.
 

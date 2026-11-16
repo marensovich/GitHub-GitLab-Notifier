@@ -27,6 +27,13 @@ and the project follows [Semantic Versioning](https://semver.org/).
   `edge` (every push to `development`). `docker-compose.yml` now pulls this image; `--build` still builds locally.
   The Dockerfile cross-compiles in the build stage instead of emulating the target platform.
 
+- Golden tests for notifications: every handler is rendered from payload fixtures in
+  `internal/handler/testdata/<platform>/<event>/` in every language and compared with `.golden` files
+  (`go test ./internal/handler -run TestGolden -update` regenerates them). All 19 events are covered, including
+  force pushes, branch creation/deletion, 50-commit pushes, pull requests from forks, drafts, pre-releases,
+  confidential GitLab issues and notes, notes on issues and skipped actions. `scripts/scrub-fixture.sh` cleans a
+  real payload before it becomes a fixture.
+
 ### Changed
 
 - `GET /health` and `/webhook/health` return the health report (same as the new `/healthz`) instead of `pong`,
@@ -36,6 +43,13 @@ and the project follows [Semantic Versioning](https://semver.org/).
   Pending migrations run at start-up, each in its own transaction; a failed one is rolled back and the bot stops
   with the name of the migration. Databases from 1.0.x are recognised and marked as version 1 without changes.
   A database written by a newer version is refused instead of being opened by an older binary.
+
+### Fixed
+
+- Push notifications for created and deleted branches read "Branch deleted to branch …" / "Удалена ветка в ветку …";
+  they now say "Deleted branch …" / "Удалена ветка …".
+- Pull requests from forks showed the source branch without its owner (often `main` → `main`); they now show
+  `owner:branch`.
 
 ## [1.0.1] — 2026-10-30
 

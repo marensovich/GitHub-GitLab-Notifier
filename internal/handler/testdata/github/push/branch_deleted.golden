@@ -1,0 +1,13 @@
+topic: push
+
+--- en ---
+🗑️ <b>octo/hello</b>
+Deleted branch <code>feature/old</code>
+
+👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
+
+--- ru ---
+🗑️ <b>octo/hello</b>
+Удалена ветка <code>feature/old</code>
+
+👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)

@@ -1,0 +1,33 @@
+topic: push
+
+--- en ---
+🆕 <b>octo/hello</b>
+New branch <code>feature/new</code>
+
+👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
+📦 Commits: <b>1</b>
+
+<b>📝 Commits:</b>
+  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <i><a href="https://github.com/octocat">Octo Cat</a></i>
+
+<b>📁 Changed files:</b>
+  ➕ Added: <code>new.go</code>
+  ✏️ Modified: <code>main.go</code>
+
+🔗 <a href="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">View changes</a>
+
+--- ru ---
+🆕 <b>octo/hello</b>
+Создана ветка <code>feature/new</code>
+
+👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
+📦 Коммитов: <b>1</b>
+
+<b>📝 Коммиты:</b>
+  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <i><a href="https://github.com/octocat">Octo Cat</a></i>
+
+<b>📁 Изменённые файлы:</b>
+  ➕ Добавлено: <code>new.go</code>
+  ✏️ Изменено: <code>main.go</code>
+
+🔗 <a href="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Смотреть изменения</a>

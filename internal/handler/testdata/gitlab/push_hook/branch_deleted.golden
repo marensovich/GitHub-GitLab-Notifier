@@ -1,0 +1,13 @@
+topic: push
+
+--- en ---
+🗑️ <b>group/app</b>
+Deleted branch <code>feature/old</code>
+
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a> (<code>dev1@example.com</code>)
+
+--- ru ---
+🗑️ <b>group/app</b>
+Удалена ветка <code>feature/old</code>
+
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a> (<code>dev1@example.com</code>)

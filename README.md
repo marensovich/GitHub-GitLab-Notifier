@@ -499,7 +499,7 @@ Then set `SERVER_ADDRESS=127.0.0.1`, `DOMAIN=bot.example.com` and `USE_HTTPS=tru
 │   ├── bot/                   # Telegram bot: commands, /configure, sending
 │   ├── dispatcher/            # routes an event to its handler
 │   ├── handler/               # one handler per GitHub/GitLab event + formatting
-│   │   └── testdata/          # real-world webhook payloads used by tests
+│   │   └── testdata/          # payload fixtures + .golden messages (<platform>/<event>/<case>)
 │   ├── i18n/                  # translation loading and lookup
 │   ├── platform/              # platforms, event types, topics
 │   ├── server/                # HTTP webhook endpoint, signatures, routing
@@ -528,6 +528,7 @@ SQLite file (`DB_PATH`, default `data/notifier.db`):
 ```bash
 make help     # list all targets
 make test     # run tests
+make golden   # regenerate handler golden files after an intended message change
 make lint     # gofmt + go vet + shellcheck
 make run      # run locally with .env
 ```

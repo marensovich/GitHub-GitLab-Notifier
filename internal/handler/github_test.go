@@ -11,7 +11,7 @@ var parseDuration = time.ParseDuration
 func TestGitHubHandlers(t *testing.T) {
 	runHandlerCases(t, []handlerCase{
 		{
-			fixture: "github/push.json",
+			fixture: "github/push/branch.json",
 			event:   platform.GitHubPush,
 			contains: []string{
 				"<b>octo/hello</b>",
@@ -24,28 +24,28 @@ func TestGitHubHandlers(t *testing.T) {
 			absent: []string{"Longer description"},
 		},
 		{
-			fixture:  "github/push_tag.json",
+			fixture:  "github/push/tag.json",
 			event:    platform.GitHubPush,
 			contains: []string{"New tag", `<a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0</a>`},
 			absent:   []string{"to branch"},
 		},
 		{
-			fixture:  "github/star.json",
+			fixture:  "github/star/created.json",
 			event:    platform.GitHubStar,
 			contains: []string{"new star", "@fan", "<b>42</b>"},
 		},
 		{
-			fixture:  "github/ping.json",
+			fixture:  "github/ping/basic.json",
 			event:    platform.GitHubPing,
 			contains: []string{"Webhook connected", "octo/hello", "Keep it logically awesome."},
 		},
 		{
-			fixture:  "github/fork.json",
+			fixture:  "github/fork/basic.json",
 			event:    platform.GitHubFork,
 			contains: []string{"new fork", "@fan", "fan/hello", "<b>7</b>"},
 		},
 		{
-			fixture: "github/pull_request_opened.json",
+			fixture: "github/pull_request/opened.json",
 			event:   platform.GitHubPullRequest,
 			contains: []string{
 				"New pull request",
@@ -56,43 +56,43 @@ func TestGitHubHandlers(t *testing.T) {
 			},
 		},
 		{
-			fixture:  "github/pull_request_merged.json",
+			fixture:  "github/pull_request/merged.json",
 			event:    platform.GitHubPullRequest,
 			contains: []string{"Pull request merged", "@maintainer"},
 			absent:   []string{"blockquote"},
 		},
 		{
-			fixture: "github/pull_request_labeled.json",
+			fixture: "github/pull_request/labeled.json",
 			event:   platform.GitHubPullRequest,
 			skip:    true,
 		},
 		{
-			fixture:  "github/pull_request_review.json",
+			fixture:  "github/pull_request_review/approved.json",
 			event:    platform.GitHubPullRequestReview,
 			contains: []string{"Pull request approved", "@reviewer", "LGTM!"},
 		},
 		{
-			fixture:  "github/issues_opened.json",
+			fixture:  "github/issues/opened.json",
 			event:    platform.GitHubIssues,
 			contains: []string{"New issue", "#10", "App crashes on start", "2. &lt;crash&gt;"},
 		},
 		{
-			fixture:  "github/issues_closed.json",
+			fixture:  "github/issues/closed.json",
 			event:    platform.GitHubIssues,
 			contains: []string{"not planned", "@maintainer"},
 		},
 		{
-			fixture:  "github/issue_comment_pr.json",
+			fixture:  "github/issue_comment/on_pull_request.json",
 			event:    platform.GitHubIssueComment,
 			contains: []string{"New comment on pull request", "Could you add a test?", "issuecomment-1"},
 		},
 		{
-			fixture:  "github/release.json",
+			fixture:  "github/release/published.json",
 			event:    platform.GitHubRelease,
 			contains: []string{"New release", "v1.2.0 — Dark mode", "@maintainer"},
 		},
 		{
-			fixture: "github/workflow_run.json",
+			fixture: "github/workflow_run/failed.json",
 			event:   platform.GitHubWorkflowRun,
 			contains: []string{
 				"CI failed",
@@ -103,7 +103,7 @@ func TestGitHubHandlers(t *testing.T) {
 			},
 		},
 		{
-			fixture: "github/workflow_run_requested.json",
+			fixture: "github/workflow_run/requested.json",
 			event:   platform.GitHubWorkflowRun,
 			skip:    true,
 		},

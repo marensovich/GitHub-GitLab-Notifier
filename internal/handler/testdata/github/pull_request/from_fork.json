@@ -1,0 +1,39 @@
+{
+  "action": "opened",
+  "number": 12,
+  "pull_request": {
+    "number": 12,
+    "title": "Add <dark> mode",
+    "body": "This PR adds dark mode.\r\n\r\nCloses #10",
+    "html_url": "https://github.com/octo/hello/pull/12",
+    "draft": false,
+    "merged": false,
+    "user": {
+      "login": "contributor",
+      "html_url": "https://github.com/contributor"
+    },
+    "additions": 120,
+    "deletions": 8,
+    "changed_files": 5,
+    "commits": 3,
+    "head": {
+      "ref": "main",
+      "label": "contributor:main",
+      "repo": {
+        "full_name": "contributor/hello",
+        "fork": true
+      }
+    },
+    "base": {
+      "ref": "main"
+    }
+  },
+  "repository": {
+    "full_name": "octo/hello",
+    "html_url": "https://github.com/octo/hello"
+  },
+  "sender": {
+    "login": "contributor",
+    "html_url": "https://github.com/contributor"
+  }
+}

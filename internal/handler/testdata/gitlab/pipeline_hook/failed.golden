@@ -1,0 +1,21 @@
+topic: ci
+
+--- en ---
+❌ CI failed
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/pipelines/31">#3</a> <b>Pipeline for branch: master</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+🌿 <code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a>
+📝 test
+⏱ 1h 2m 5s
+
+--- ru ---
+❌ CI упал
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/pipelines/31">#3</a> <b>Pipeline for branch: master</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+🌿 <code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a>
+📝 test
+⏱ 1h 2m 5s

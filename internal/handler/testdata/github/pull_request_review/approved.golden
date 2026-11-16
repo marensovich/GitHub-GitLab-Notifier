@@ -1,0 +1,19 @@
+topic: pull_request
+
+--- en ---
+✅ Pull request approved
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12#pullrequestreview-1">#12</a> <b>Add dark mode</b>
+👤 <a href="https://github.com/reviewer">@reviewer</a>
+
+<blockquote>LGTM!</blockquote>
+
+--- ru ---
+✅ Pull request одобрен
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12#pullrequestreview-1">#12</a> <b>Add dark mode</b>
+👤 <a href="https://github.com/reviewer">@reviewer</a>
+
+<blockquote>LGTM!</blockquote>

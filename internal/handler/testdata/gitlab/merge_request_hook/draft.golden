@@ -1,0 +1,21 @@
+topic: pull_request
+
+--- en ---
+📝 New draft merge request
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>Draft: MS-Viewer update</b>
+🌿 <code>ms-viewer</code> → <code>master</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+
+--- ru ---
+📝 Новый черновик merge request
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>Draft: MS-Viewer update</b>
+🌿 <code>ms-viewer</code> → <code>master</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
