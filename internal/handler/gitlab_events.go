@@ -91,6 +91,8 @@ type GitLabIssueDto struct {
 		Description string `json:"description"`
 		URL         string `json:"url"`
 		Action      string `json:"action"`
+		// Confidential issues are visible only to project members.
+		Confidential bool `json:"confidential"`
 	} `json:"object_attributes"`
 }
 
@@ -137,6 +139,9 @@ func (h *GitLabIssueHandler) Handle(lang i18n.Lang, payload []byte) (string, err
 	if withBody {
 		v.Body = issue.Description
 	}
+	if h.Event == platform.GitLabConfidentialIssue || issue.Confidential {
+		v.Extra = append(v.Extra, i18n.T(lang, i18n.MsgItemConfidential))
+	}
 	return formatItem(lang, v), nil
 }
 
@@ -150,10 +155,14 @@ type GitLabNoteDto struct {
 		Note         string `json:"note"`
 		NoteableType string `json:"noteable_type"`
 		URL          string `json:"url"`
+		// Confidential (internal) notes are visible only to project members.
+		Confidential bool `json:"confidential"`
+		Internal     bool `json:"internal"`
 	} `json:"object_attributes"`
 	Issue *struct {
-		IID   int    `json:"iid"`
-		Title string `json:"title"`
+		IID          int    `json:"iid"`
+		Title        string `json:"title"`
+		Confidential bool   `json:"confidential"`
 	} `json:"issue"`
 	MergeRequest *struct {
 		IID   int    `json:"iid"`
@@ -206,6 +215,10 @@ func (h *GitLabNoteHandler) Handle(lang i18n.Lang, payload []byte) (string, erro
 		return "", ErrSkip
 	}
 
+	if h.Event == platform.GitLabConfidentialNote || note.Confidential || note.Internal ||
+		(dto.Issue != nil && dto.Issue.Confidential) {
+		v.Extra = append(v.Extra, i18n.T(lang, i18n.MsgItemConfidential))
+	}
 	return formatItem(lang, v), nil
 }
 

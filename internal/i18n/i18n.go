@@ -113,6 +113,7 @@ const (
 	MsgItemBranches       = "item_branches"
 	MsgItemActor          = "item_actor"
 	MsgItemBody           = "item_body"
+	MsgItemConfidential   = "item_confidential"
 
 	// Ping / fork / tags
 	MsgPing       = "ping"

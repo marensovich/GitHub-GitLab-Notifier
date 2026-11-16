@@ -34,6 +34,9 @@ and the project follows [Semantic Versioning](https://semver.org/).
   confidential GitLab issues and notes, notes on issues and skipped actions. `scripts/scrub-fixture.sh` cleans a
   real payload before it becomes a fixture.
 
+- GitLab confidential issues, comments on them and internal notes are marked with 🔒 "Confidential — visible only
+  to project members in GitLab", so the chat sees that the text was not public in the project.
+
 ### Changed
 
 - `GET /health` and `/webhook/health` return the health report (same as the new `/healthz`) instead of `pong`,
