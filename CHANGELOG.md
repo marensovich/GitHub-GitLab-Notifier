@@ -14,6 +14,13 @@ and the project follows [Semantic Versioning](https://semver.org/).
   headers, accepts only `GET`/`HEAD`, never shows secrets, and needs no internet access. Open it through an SSH
   tunnel: `ssh -L 8081:127.0.0.1:8081 user@server`.
 
+### Changed
+
+- The database schema is now versioned (`schema_version` table, numbered SQL files in `storage/migrations/`).
+  Pending migrations run at start-up, each in its own transaction; a failed one is rolled back and the bot stops
+  with the name of the migration. Databases from 1.0.x are recognised and marked as version 1 without changes.
+  A database written by a newer version is refused instead of being opened by an older binary.
+
 ## [1.0.1] — 2026-10-30
 
 ### Security
