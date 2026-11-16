@@ -5,6 +5,7 @@ package server
 import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
@@ -12,6 +13,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -46,7 +48,20 @@ type Config struct {
 	Version string
 	// DeliveriesRetention is how long the delivery log is kept (0 = forever).
 	DeliveriesRetention time.Duration
+	// Metrics receives counters; nil creates a private set.
+	Metrics *metrics.Metrics
+	// ServeMetrics exposes GET /metrics on this server. Leave it false when
+	// the metrics are served on their own address.
+	ServeMetrics bool
+	// Checks are run by GET /healthz, by name ("db", "telegram").
+	Checks map[string]Check
 }
+
+// Check reports whether a dependency works; nil means healthy.
+type Check func(ctx context.Context) error
+
+// checkTimeout bounds each health check.
+const checkTimeout = 2 * time.Second
 
 // Server receives webhooks and delivers notifications.
 type Server struct {
@@ -60,11 +75,16 @@ type Server struct {
 	// of one delivery arriving at the same time are not both sent.
 	mu       sync.Mutex
 	inflight map[string]bool
+
+	started time.Time
 }
 
 // New creates a webhook server.
 func New(cfg Config, d *dispatcher.Dispatcher, store *storage.Store, sender Sender) *Server {
-	s := &Server{cfg: cfg, dispatcher: d, store: store, sender: sender, inflight: map[string]bool{}}
+	if cfg.Metrics == nil {
+		cfg.Metrics = metrics.New(cfg.Version)
+	}
+	s := &Server{cfg: cfg, dispatcher: d, store: store, sender: sender, inflight: map[string]bool{}, started: time.Now()}
 	s.http = &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           s.Handler(),
@@ -81,6 +101,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/webhook", s.handleWebhook)
 	mux.HandleFunc("/webhook/health", s.handleHealth)
 	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/healthz", s.handleHealthz)
+	if s.cfg.ServeMetrics {
+		mux.Handle("/metrics", s.cfg.Metrics.Handler())
+	}
 	return mux
 }
 
@@ -101,6 +125,62 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Write([]byte("pong"))
+}
+
+// checkResult is one entry of the /healthz response.
+type checkResult struct {
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
+// handleHealthz runs every check and answers 200 when all pass, 503 otherwise.
+func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, i18n.T(s.cfg.DefaultLang, i18n.MsgMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	resp := struct {
+		Status  string                 `json:"status"`
+		Version string                 `json:"version"`
+		Uptime  int64                  `json:"uptime_seconds"`
+		Checks  map[string]checkResult `json:"checks"`
+	}{
+		Status:  "ok",
+		Version: s.cfg.Version,
+		Uptime:  int64(time.Since(s.started).Seconds()),
+		Checks:  map[string]checkResult{},
+	}
+
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for name, check := range s.cfg.Checks {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(r.Context(), checkTimeout)
+			defer cancel()
+			res := checkResult{OK: true}
+			if err := check(ctx); err != nil {
+				res = checkResult{Error: err.Error()}
+			}
+			mu.Lock()
+			resp.Checks[name] = res
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+
+	code := http.StatusOK
+	for _, c := range resp.Checks {
+		if !c.OK {
+			resp.Status, code = "fail", http.StatusServiceUnavailable
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +223,7 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	reply := func(status int, text, result, errText string) {
 		entry.Status, entry.HTTPStatus, entry.Error = result, status, errText
 		entry.Duration = time.Since(start)
+		s.cfg.Metrics.ObserveWebhook(entry.Platform, entry.Event, result, entry.Duration)
 		if err := s.store.RecordDelivery(entry); err != nil {
 			log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
 		}
@@ -375,10 +456,10 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 			topicID = s.store.GetTopicByEvent(t.chatID, string(res.Topic))
 		}
 
-		err := s.sender.SendMessageToTopic(t.chatID, topicID, res.Message)
+		err := s.send(t.chatID, topicID, res.Message)
 		if err != nil && topicID != 0 {
 			// The topic may have been deleted or closed: fall back to the general chat.
-			err = s.sender.SendMessageToTopic(t.chatID, 0, res.Message)
+			err = s.send(t.chatID, 0, res.Message)
 		}
 		if err != nil {
 			out.failed++
@@ -389,6 +470,13 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 		log.Print(i18n.Tf(s.cfg.DefaultLang, i18n.MsgWebhookNotificationSent, t.chatID))
 	}
 	return out
+}
+
+// send sends one message and counts the attempt.
+func (s *Server) send(chatID int64, topicID int, text string) error {
+	err := s.sender.SendMessageToTopic(chatID, topicID, text)
+	s.cfg.Metrics.MessageSent("telegram", err)
+	return err
 }
 
 func (s *Server) chatLang(chatID int64) i18n.Lang {

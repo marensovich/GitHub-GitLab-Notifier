@@ -17,6 +17,11 @@ and the project follows [Semantic Versioning](https://semver.org/).
   `delivered`, `ignored`, `rejected`, `failed` or `duplicate`. A redelivery of an already delivered webhook
   (`X-GitHub-Delivery`, GitLab `Idempotency-Key` / `X-Gitlab-Event-UUID`) is answered with `200 DUPLICATE` and
   not posted again. The log is pruned hourly after `DELIVERIES_RETENTION_DAYS` (default 14, `0` keeps it).
+- `GET /healthz`: JSON with version, uptime and `db` / `telegram` checks; `503` when one fails. The Telegram
+  check uses a `getMe` probe once a minute and successful sends, never a call per request. `/health` is unchanged.
+- Prometheus metrics at `/metrics` (`METRICS_ENABLED`, default on): webhooks by platform/event/status, webhook
+  handling time, send attempts by result, build info and start time. `METRICS_ADDR` serves them on a separate
+  address such as `127.0.0.1:9090`. No new dependencies. Grafana dashboard in `docs/grafana-dashboard.json`.
 
 ### Changed
 

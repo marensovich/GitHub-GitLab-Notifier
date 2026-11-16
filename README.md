@@ -34,6 +34,7 @@ happens in your repo.
 - [Bot commands](#-bot-commands)
 - [Environment variables](#environment-variables)
 - [Web panel](#-web-panel)
+- [Monitoring](#-monitoring)
 - [Webhook security](#-webhook-security)
 - [How notifications are routed](#-how-notifications-are-routed)
 - [HTTPS with a reverse proxy](#-https-with-a-reverse-proxy)
@@ -319,6 +320,8 @@ The commands also appear in Telegram's **Menu** button.
 | `TELEGRAM_API_URL`      | No       | —                  | Self-hosted [Telegram Bot API server](https://github.com/tdlib/telegram-bot-api) |
 | `PANEL_ADDRESS`         | No       | — (disabled)       | Local web panel address, e.g. `127.0.0.1:8081` — see [Web panel](#-web-panel) |
 | `PANEL_ALLOW_REMOTE`    | No       | `false`            | Allow the panel on a non-loopback address                           |
+| `METRICS_ENABLED`       | No       | `true`             | Expose Prometheus metrics at `/metrics` — see [Monitoring](#-monitoring) |
+| `METRICS_ADDR`          | No       | webhook port       | Separate address for `/metrics`, e.g. `127.0.0.1:9090`              |
 
 ¹ Required for `/connect` to generate the webhook URL.
 
@@ -349,6 +352,51 @@ then go to <http://localhost:8081>.
 - Requests with a non-loopback `Host` header are rejected, which blocks DNS rebinding.
 - Only `GET`/`HEAD` are accepted; webhook secrets are never displayed, only whether one is set.
 - Everything is embedded in the binary — the panel works without internet access.
+
+---
+
+## 📈 Monitoring
+
+**Health.** `GET /healthz` on the webhook port returns JSON and `200` when everything works, `503` when a check
+fails:
+
+```json
+{"status":"ok","version":"v1.1.0","uptime_seconds":3600,
+ "checks":{"db":{"ok":true},"telegram":{"ok":true}}}
+```
+
+`db` pings SQLite; `telegram` is healthy while the bot has had a successful Telegram API call in the last
+3 minutes (it calls `getMe` once a minute, and every sent message counts), so `/healthz` itself never calls
+Telegram. The old `GET /health` still answers `pong` and only says the process is up.
+
+**Metrics.** `GET /metrics` serves Prometheus metrics (turn off with `METRICS_ENABLED=false`):
+
+| Metric                                                     | Type      | What                                                            |
+|:-----------------------------------------------------------|:----------|:----------------------------------------------------------------|
+| `notifier_webhooks_total{platform,event,status}`           | counter   | Webhooks by result: `delivered`, `ignored`, `rejected`, `failed`, `duplicate` |
+| `notifier_webhook_duration_seconds`                        | histogram | Time to handle a webhook, sending included                      |
+| `notifier_messages_sent_total{messenger,result}`           | counter   | Send attempts, `ok` / `error`                                   |
+| `notifier_build_info{version}`, `notifier_start_time_seconds` | gauge  | Version and start time                                          |
+
+Repository URLs are never used as labels. Event names that do not look like real ones, and new ones beyond
+500 label sets, are counted as `event="other"`.
+
+On a public server, keep the metrics off the webhook port:
+
+```env
+METRICS_ADDR=127.0.0.1:9090
+```
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: notifier
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+```
+
+A ready Grafana dashboard is in [`docs/grafana-dashboard.json`](docs/grafana-dashboard.json)
+(Dashboards → New → Import).
 
 ---
 

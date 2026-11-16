@@ -40,6 +40,8 @@
   "panel_started": "🖥 Web panel listening on http://%s (open it through an SSH tunnel)",
   "panel_failed": "❌ Web panel failed: %v",
   "webhook_duplicate": "♻️ Duplicate webhook already delivered, skipping | platform=%s | event=%s | delivery=%s",
+  "metrics_started": "📈 Metrics listening on http://%s/metrics",
+  "metrics_failed": "❌ Metrics server failed: %v",
   "delivery_log_failed": "⚠️ Failed to update the delivery log: %v",
   "invalid_retention": "❌ Invalid DELIVERIES_RETENTION_DAYS %q: use a whole number of days, 0 keeps the log forever",
   "bot_token_is_not_set": "❌ BOT_TOKEN is not set",

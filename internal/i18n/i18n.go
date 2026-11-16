@@ -180,6 +180,8 @@ const (
 	MsgWebhookDuplicate    = "webhook_duplicate"
 	MsgDeliveryLogFailed   = "delivery_log_failed"
 	MsgInvalidRetention    = "invalid_retention"
+	MsgMetricsStarted      = "metrics_started"
+	MsgMetricsFailed       = "metrics_failed"
 	MsgMethodNotAllowed    = "method_not_allowed"
 	MsgFailedToReadBody    = "failed_to_read_body"
 	MsgBadRequest          = "bad_request"
