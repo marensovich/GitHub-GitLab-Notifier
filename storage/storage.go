@@ -26,6 +26,46 @@ type ChatConfig struct {
 	ChatID   int64  `json:"chat_id"`
 	Language string `json:"language"`
 	IsForum  bool   `json:"is_forum"`
+	// Format is the message look the chat chose: FormatRich or FormatClassic.
+	Format string `json:"format"`
+	// UseTopics routes events to forum topics; off sends all to the general chat.
+	UseTopics bool `json:"use_topics"`
+}
+
+// Message formats a chat can choose.
+const (
+	FormatRich    = "rich"
+	FormatClassic = "classic"
+)
+
+const chatColumns = "chat_id, language, is_forum, format, use_topics"
+
+// scanChat reads one row selected with chatColumns.
+func scanChat(row interface{ Scan(...any) error }) (ChatConfig, error) {
+	var chat ChatConfig
+	var isForum, useTopics int
+	err := row.Scan(&chat.ChatID, &chat.Language, &isForum, &chat.Format, &useTopics)
+	chat.IsForum = intToBool(isForum)
+	chat.UseTopics = intToBool(useTopics)
+	return chat, err
+}
+
+// SetChatSettings stores the message format and topic routing of a chat.
+//
+// Сохраняет формат сообщений и маршрутизацию по темам для чата.
+func (s *Store) SetChatSettings(chatID int64, format string, useTopics bool) error {
+	if format != FormatRich && format != FormatClassic {
+		return fmt.Errorf("unknown message format %q", format)
+	}
+	res, err := s.db.Exec("UPDATE chats SET format = ?, use_topics = ? WHERE chat_id = ?",
+		format, boolToInt(useTopics), chatID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("chat %d not found", chatID)
+	}
+	return nil
 }
 
 // TopicInfo holds information about a created forum topic.
@@ -111,17 +151,13 @@ func (s *Store) SaveChat(chat ChatConfig) error {
 //
 // Получает чат по ID.
 func (s *Store) GetChat(chatID int64) (*ChatConfig, error) {
-	var chat ChatConfig
-	var isForum int
-	err := s.db.QueryRow("SELECT chat_id, language, is_forum FROM chats WHERE chat_id = ?", chatID).
-		Scan(&chat.ChatID, &chat.Language, &isForum)
+	chat, err := scanChat(s.db.QueryRow("SELECT "+chatColumns+" FROM chats WHERE chat_id = ?", chatID))
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("chat %d not found", chatID)
 	}
 	if err != nil {
 		return nil, err
 	}
-	chat.IsForum = intToBool(isForum)
 	return &chat, nil
 }
 
@@ -129,7 +165,7 @@ func (s *Store) GetChat(chatID int64) (*ChatConfig, error) {
 //
 // Возвращает все настроенные чаты.
 func (s *Store) GetAllChats() []ChatConfig {
-	rows, err := s.db.Query("SELECT chat_id, language, is_forum FROM chats")
+	rows, err := s.db.Query("SELECT " + chatColumns + " FROM chats")
 	if err != nil {
 		log.Printf("❌ GetAllChats error: %v", err)
 		return nil
@@ -138,13 +174,11 @@ func (s *Store) GetAllChats() []ChatConfig {
 
 	var chats []ChatConfig
 	for rows.Next() {
-		var chat ChatConfig
-		var isForum int
-		if err := rows.Scan(&chat.ChatID, &chat.Language, &isForum); err != nil {
+		chat, err := scanChat(rows)
+		if err != nil {
 			log.Printf("❌ GetAllChats scan error: %v", err)
 			continue
 		}
-		chat.IsForum = intToBool(isForum)
 		chats = append(chats, chat)
 	}
 	return chats
