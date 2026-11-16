@@ -29,6 +29,8 @@ type Bot struct {
 	lang    i18n.Lang
 	store   *storage.Store
 	version string
+	// rich enables rich messages for notifications (RICH_MESSAGES).
+	rich bool
 
 	// Last successful call to the Telegram API and the last error, for /healthz.
 	healthMu    sync.Mutex
@@ -43,7 +45,7 @@ const probeInterval = time.Minute
 const staleAfter = 3 * probeInterval
 
 // NewBot creates a Bot with an optional proxy configured from environment variables.
-func NewBot(lang i18n.Lang, store *storage.Store, version string) (*Bot, error) {
+func NewBot(lang i18n.Lang, store *storage.Store, version string, rich bool) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
 		return nil, errors.New(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
@@ -72,6 +74,7 @@ func NewBot(lang i18n.Lang, store *storage.Store, version string) (*Bot, error) 
 		lang:    lang,
 		store:   store,
 		version: version,
+		rich:    rich,
 	}
 	bot.contact(nil)
 
@@ -272,36 +275,6 @@ func (b *Bot) reply(msg *telego.Message, text string) {
 		topicID = msg.MessageThreadID
 	}
 	_ = b.SendMessageToTopic(msg.Chat.ID, topicID, text)
-}
-
-// SendMessageToTopic sends an HTML message to a forum topic.
-// If topicID is 0, the message goes to the main (General) chat.
-func (b *Bot) SendMessageToTopic(chatID int64, topicID int, text string) error {
-	params := &telego.SendMessageParams{
-		ChatID:    telegoutil.ID(chatID),
-		Text:      text,
-		ParseMode: telego.ModeHTML,
-		LinkPreviewOptions: &telego.LinkPreviewOptions{
-			IsDisabled: true,
-		},
-	}
-	if topicID > 0 {
-		params.MessageThreadID = topicID
-	}
-
-	_, err := b.api.SendMessage(context.Background(), params)
-	if err == nil {
-		b.contact(nil)
-	}
-	if err != nil {
-		log.Printf(i18n.T(b.lang, i18n.MsgSendFailed), chatID, err)
-	}
-	return err
-}
-
-// SendMessage sends an HTML message to the main chat.
-func (b *Bot) SendMessage(chatID int64, text string) error {
-	return b.SendMessageToTopic(chatID, 0, text)
 }
 
 // isBotAdmin checks if the bot is an administrator in the given chat.
