@@ -192,14 +192,16 @@ func (b *Bot) handleStatus(msg *telego.Message) {
 	sb.WriteString(i18n.Tf(lang, i18n.MsgStatusHeader, chatID, lang, forum))
 
 	// A chat that never ran /configure has the defaults: rich, topics on.
+	// A chat that is not a forum has no topics to route to.
 	format, useTopics := storage.FormatRich, true
 	if chat, err := b.store.GetChat(chatID); err == nil {
 		format, useTopics = chat.Format, chat.UseTopics
 	}
+	useTopics = useTopics && msg.Chat.IsForum
 	look := i18n.T(lang, i18n.MsgCfgFormatClassicShort)
 	if format != storage.FormatClassic {
 		look = i18n.T(lang, i18n.MsgCfgFormatRichShort)
-		if !b.rich || b.richMissing.Load() {
+		if !b.RichAvailable() {
 			look = i18n.Tf(lang, i18n.MsgStatusRichOff, i18n.T(lang, i18n.MsgCfgFormatClassicShort))
 		}
 	}

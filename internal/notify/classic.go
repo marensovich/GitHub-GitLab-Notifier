@@ -7,7 +7,19 @@ import (
 
 // Classic renders n as a classic Telegram HTML message (parse mode HTML) and
 // the inline keyboard that carries its buttons.
+//
+// The text is cut down to Telegram's message limit when needed.
 func Classic(lang i18n.Lang, n Notification) (string, [][]Button) {
+	var kb [][]Button
+	text := fit(n, func(n Notification) string {
+		var t string
+		t, kb = classic(lang, n)
+		return t
+	}, VisibleLen, classicMaxText)
+	return text, kb
+}
+
+func classic(lang i18n.Lang, n Notification) (string, [][]Button) {
 	var sb strings.Builder
 
 	sb.WriteString(esc(strings.TrimSpace(n.Emoji+" "+n.Heading)) + "\n")

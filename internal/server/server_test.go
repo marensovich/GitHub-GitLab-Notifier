@@ -422,9 +422,36 @@ func TestMetricsCountAttemptsByFormat(t *testing.T) {
 	m.WriteTo(&b)
 	out := b.String()
 	for _, want := range []string{
-		`notifier_messages_sent_total{messenger="telegram",format="rich",result="error"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="retried"} 1`,
 		`notifier_messages_sent_total{messenger="telegram",format="classic",result="ok"} 1`,
 		`notifier_rich_fallbacks_total 1`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+// TestMetricsCountFinalFailureOnly checks that "error" counts messages that
+// were not delivered, not attempts that a later attempt replaced.
+func TestMetricsCountFinalFailureOnly(t *testing.T) {
+	m := metrics.New("test")
+	e := newEnv(t, Config{DefaultChatID: 100, Metrics: m})
+	e.sender.reply = []notify.Attempt{
+		{Format: notify.FormatRich, Err: errors.New("can't parse")},
+		{Format: notify.FormatClassic, Err: errors.New("button url")},
+		{Format: notify.FormatClassic, Err: errors.New("chat not found")},
+	}
+
+	e.post(t, ghHeaders("star"), starPayload)
+
+	var b strings.Builder
+	m.WriteTo(&b)
+	out := b.String()
+	for _, want := range []string{
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="retried"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="classic",result="retried"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="classic",result="error"} 1`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)

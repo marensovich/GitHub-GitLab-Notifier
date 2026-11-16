@@ -175,6 +175,12 @@ func (b *Bot) contact(err error) {
 	b.lastContact, b.lastErr = time.Now(), nil
 }
 
+// RichAvailable reports whether rich messages are sent right now: they are
+// switched on (RICH_MESSAGES) and the Bot API server supports them.
+func (b *Bot) RichAvailable() bool {
+	return b.rich && !b.richMissing.Load()
+}
+
 // CheckTelegram reports whether the Telegram API answered recently.
 func (b *Bot) CheckTelegram(context.Context) error {
 	b.healthMu.Lock()

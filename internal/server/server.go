@@ -481,7 +481,11 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 func (s *Server) send(t target, topicID int, n notify.Notification) error {
 	attempts, err := s.sender.SendNotification(t.chatID, topicID, t.format, t.lang, n)
 	for i, a := range attempts {
-		s.cfg.Metrics.MessageSent("telegram", a.Format, a.Err)
+		if a.Err != nil && i < len(attempts)-1 {
+			s.cfg.Metrics.MessageRetried("telegram", a.Format)
+		} else {
+			s.cfg.Metrics.MessageSent("telegram", a.Format, a.Err)
+		}
 		if i > 0 && a.Format == notify.FormatClassic && attempts[i-1].Format == notify.FormatRich {
 			s.cfg.Metrics.RichFallback()
 		}

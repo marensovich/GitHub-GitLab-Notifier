@@ -408,7 +408,7 @@ Telegram. A failing check carries its error, for example:
 |:-----------------------------------------------------------|:----------|:----------------------------------------------------------------|
 | `notifier_webhooks_total{platform,event,status}`           | counter   | Webhooks by result: `delivered`, `ignored`, `rejected`, `failed`, `duplicate` |
 | `notifier_webhook_duration_seconds`                        | histogram | Time to handle a webhook, sending included                      |
-| `notifier_messages_sent_total{messenger,format,result}`    | counter   | Send attempts by format (`rich` / `classic`), `ok` / `error`    |
+| `notifier_messages_sent_total{messenger,format,result}`    | counter   | Send attempts by format (`rich` / `classic`): `ok`, `error` (not delivered) or `retried` (a later attempt replaced it) |
 | `notifier_rich_fallbacks_total`                            | counter   | Rich messages rejected by Telegram and sent as classic ones     |
 | `notifier_build_info{version}`, `notifier_start_time_seconds` | gauge  | Version and start time                                          |
 

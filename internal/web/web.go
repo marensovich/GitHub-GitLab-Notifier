@@ -55,6 +55,10 @@ type Config struct {
 	// Version and StartedAt are shown on the overview page.
 	Version   string
 	StartedAt time.Time
+	// RichAvailable reports whether rich messages can be sent right now
+	// (RICH_MESSAGES is on and the Bot API server supports them); nil
+	// means they can.
+	RichAvailable func() bool
 }
 
 // Server is the panel HTTP server.
@@ -167,6 +171,7 @@ type chatRow struct {
 	Language  string
 	IsForum   bool
 	Format    string
+	RichOff   bool // the chat chose rich, but it gets classic messages
 	UseTopics bool
 	Repos     []string
 	Topics    []topicRow
@@ -241,6 +246,7 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 		reposByChat[repo.ChatID] = append(reposByChat[repo.ChatID], repo.RepoURL)
 	}
 
+	richOff := s.cfg.RichAvailable != nil && !s.cfg.RichAvailable()
 	rows := make([]chatRow, 0, len(chats))
 	for _, c := range chats {
 		format := c.Format
@@ -248,7 +254,8 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 			format = storage.FormatRich
 		}
 		row := chatRow{ChatID: c.ChatID, Language: c.Language, IsForum: c.IsForum,
-			Format: format, UseTopics: c.UseTopics, Repos: reposByChat[c.ChatID]}
+			Format: format, RichOff: richOff && format == storage.FormatRich,
+			UseTopics: c.UseTopics, Repos: reposByChat[c.ChatID]}
 		sort.Strings(row.Repos)
 
 		topics, err := s.src.GetTopicsByChat(c.ChatID)
@@ -270,8 +277,9 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.render(w, http.StatusOK, "chats", map[string]any{
-		"Nav":   nav{Active: "chats", Version: s.cfg.Version},
-		"Chats": rows,
+		"Nav":     nav{Active: "chats", Version: s.cfg.Version},
+		"Chats":   rows,
+		"RichOff": richOff,
 	})
 }
 

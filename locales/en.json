@@ -180,5 +180,6 @@
   "cfg_format_classic_short": "classic",
   "cfg_summary": "✅ <b>Chat set up</b>\n\n🗂 Topics: %s\n🎨 Look: %s\n🌐 Language: %s (change with /lang)\n\nRun /configure again to change these.",
   "cfg_not_admin": "Only chat administrators can change these settings.",
+  "cfg_anonymous": "I can't check who is an administrator here, and /configure was sent anonymously. Send /configure from your own account (turn off \"Remain anonymous\") or make the bot an administrator.",
   "cfg_failed": "❌ Could not save the chat settings. Try again later."
 }

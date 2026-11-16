@@ -6,8 +6,13 @@ import (
 	"strings"
 )
 
-// Rich renders n as the html of a Telegram rich message.
+// Rich renders n as the html of a Telegram rich message, cut down to the
+// rich message limit when needed.
 func Rich(lang i18n.Lang, n Notification) string {
+	return fit(n, func(n Notification) string { return rich(lang, n) }, runeLen, richMaxHTML)
+}
+
+func rich(lang i18n.Lang, n Notification) string {
 	var sb strings.Builder
 
 	sb.WriteString("<h4>" + esc(strings.TrimSpace(n.Emoji+" "+n.Heading)) + "</h4>\n")

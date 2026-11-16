@@ -78,6 +78,15 @@ func (m *Metrics) MessageSent(messenger, format string, err error) {
 	m.mu.Unlock()
 }
 
+// MessageRetried counts one failed attempt that a later attempt replaced
+// (a rich message sent again as classic, a keyboard sent again as links),
+// so result="error" counts only messages that were not delivered.
+func (m *Metrics) MessageRetried(messenger, format string) {
+	m.mu.Lock()
+	m.messages[[3]string{messenger, format, "retried"}]++
+	m.mu.Unlock()
+}
+
 // RichFallback counts one rich message that Telegram rejected and that was
 // sent in the classic format instead.
 func (m *Metrics) RichFallback() {
