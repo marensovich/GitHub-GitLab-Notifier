@@ -8,6 +8,8 @@
     <div class="tags">
       <span class="badge">{{.Language}}</span>
       {{if .IsForum}}<span class="badge">forum</span>{{end}}
+      <span class="badge">look: {{.Format}}</span>
+      {{if and .IsForum (not .UseTopics)}}<span class="badge warn">topics off</span>{{end}}
       <span class="badge">{{len .Repos}} repo{{if ne (len .Repos) 1}}s{{end}}</span>
     </div>
   </div>
@@ -18,6 +20,7 @@
   {{else}}<p class="muted">None.</p>{{end}}
 
   <h3>Topics and routing</h3>
+  {{if and .IsForum (not .UseTopics)}}<p class="muted">Topic routing is off (<code>/configure</code>) — notifications go to the main chat.</p>{{end}}
   {{if .Topics}}
   <div class="table-scroll">
   <table>

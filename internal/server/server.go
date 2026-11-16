@@ -6,6 +6,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/metrics"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
@@ -28,9 +29,10 @@ import (
 // but notification-relevant events are far smaller).
 const maxPayloadSize = 10 << 20
 
-// Sender delivers a notification to a Telegram chat (optionally to a forum topic).
+// Sender delivers a notification to a Telegram chat (optionally to a forum
+// topic) in a format, and reports every attempt it made.
 type Sender interface {
-	SendMessageToTopic(chatID int64, topicID int, text string) error
+	SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error)
 }
 
 // Config holds the server settings.
@@ -404,8 +406,10 @@ func validGitHubSignature(secret string, body []byte, header string) bool {
 
 // target is a chat that should receive a notification.
 type target struct {
-	chatID int64
-	lang   i18n.Lang
+	chatID    int64
+	lang      i18n.Lang
+	format    string
+	useTopics bool
 }
 
 // targets returns the chats that receive notifications for a repository:
@@ -413,16 +417,20 @@ type target struct {
 // otherwise the default CHAT_ID.
 func (s *Server) targets(repo *storage.RepoInfo) []target {
 	if repo != nil {
-		return []target{{repo.ChatID, s.chatLang(repo.ChatID)}}
+		chat, err := s.store.GetChat(repo.ChatID)
+		if err != nil {
+			return []target{s.defaultTarget(repo.ChatID)}
+		}
+		return []target{s.chatTarget(*chat)}
 	}
 
 	var result []target
 	for _, chat := range s.store.GetAllChats() {
-		result = append(result, target{chat.ChatID, s.langOrDefault(chat.Language)})
+		result = append(result, s.chatTarget(chat))
 	}
 	if len(result) == 0 && s.cfg.DefaultChatID != 0 {
 		log.Println(i18n.T(s.cfg.DefaultLang, i18n.MsgNoChatsConfigured))
-		result = append(result, target{s.cfg.DefaultChatID, s.cfg.DefaultLang})
+		result = append(result, s.defaultTarget(s.cfg.DefaultChatID))
 	}
 	return result
 }
@@ -449,14 +457,14 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 		}
 
 		topicID := 0
-		if res.Topic != platform.TopicGeneral {
+		if t.useTopics && res.Topic != platform.TopicGeneral {
 			topicID = s.store.GetTopicByEvent(t.chatID, string(res.Topic))
 		}
 
-		err := s.send(t.chatID, topicID, res.Message)
+		err := s.send(t, topicID, res.Notification)
 		if err != nil && topicID != 0 {
 			// The topic may have been deleted or closed: fall back to the general chat.
-			err = s.send(t.chatID, 0, res.Message)
+			err = s.send(t, 0, res.Notification)
 		}
 		if err != nil {
 			out.failed++
@@ -469,19 +477,31 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 	return out
 }
 
-// send sends one message and counts the attempt.
-func (s *Server) send(chatID int64, topicID int, text string) error {
-	err := s.sender.SendMessageToTopic(chatID, topicID, text)
-	s.cfg.Metrics.MessageSent("telegram", err)
+// send sends one notification and counts every attempt by format.
+func (s *Server) send(t target, topicID int, n notify.Notification) error {
+	attempts, err := s.sender.SendNotification(t.chatID, topicID, t.format, t.lang, n)
+	for i, a := range attempts {
+		s.cfg.Metrics.MessageSent("telegram", a.Format, a.Err)
+		if i > 0 && a.Format == notify.FormatClassic && attempts[i-1].Format == notify.FormatRich {
+			s.cfg.Metrics.RichFallback()
+		}
+	}
 	return err
 }
 
-func (s *Server) chatLang(chatID int64) i18n.Lang {
-	chat, err := s.store.GetChat(chatID)
-	if err != nil {
-		return s.cfg.DefaultLang
+// chatTarget is a configured chat with its own language and settings.
+func (s *Server) chatTarget(chat storage.ChatConfig) target {
+	format := chat.Format
+	if format == "" {
+		format = storage.FormatRich
 	}
-	return s.langOrDefault(chat.Language)
+	return target{chat.ChatID, s.langOrDefault(chat.Language), format, chat.UseTopics}
+}
+
+// defaultTarget is a chat with no stored settings: the default language,
+// rich messages and topic routing (it has no topics mapped anyway).
+func (s *Server) defaultTarget(chatID int64) target {
+	return target{chatID, s.cfg.DefaultLang, storage.FormatRich, true}
 }
 
 func (s *Server) langOrDefault(language string) i18n.Lang {

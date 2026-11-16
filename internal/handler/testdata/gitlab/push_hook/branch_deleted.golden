@@ -1,13 +1,37 @@
 topic: push
 
---- en ---
-🗑️ <b>group/app</b>
-Deleted branch <code>feature/old</code>
+--- en rich ---
+<h4>🗑️ Deleted branch</h4>
+<p><b>feature/old</b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>E-mail</td><td><code>dev1@example.com</code></td></tr>
+</table>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
 
-👤 <a href="https://gitlab.example.com/dev1">@dev1</a> (<code>dev1@example.com</code>)
+--- en classic ---
+🗑️ Deleted branch
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
---- ru ---
-🗑️ <b>group/app</b>
-Удалена ветка <code>feature/old</code>
+<b>feature/old</b>
+E-mail: <code>dev1@example.com</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+buttons: none
 
-👤 <a href="https://gitlab.example.com/dev1">@dev1</a> (<code>dev1@example.com</code>)
+--- ru rich ---
+<h4>🗑️ Удалена ветка</h4>
+<p><b>feature/old</b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>E-mail</td><td><code>dev1@example.com</code></td></tr>
+</table>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
+🗑️ Удалена ветка
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b>feature/old</b>
+E-mail: <code>dev1@example.com</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+buttons: none

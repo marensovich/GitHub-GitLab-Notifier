@@ -1,21 +1,47 @@
 topic: ci
 
---- en ---
+--- en rich ---
+<h4>✅ CI passed</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/pipelines/31">#3 Pipeline for branch: master</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Branch</td><td><code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a></td></tr>
+<tr><td>Commit</td><td>test</td></tr>
+<tr><td>Duration</td><td>1h 2m 5s</td></tr>
+</table>
+<p><tg-button type="url" style="success" url="https://gitlab.example.com/group/app/-/pipelines/31">Open run</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
 ✅ CI passed
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/pipelines/31">#3</a> <b>Pipeline for branch: master</b>
+<b><a href="https://gitlab.example.com/group/app/-/pipelines/31">#3 Pipeline for branch: master</a></b>
+Branch: <code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a>
+Commit: test
+Duration: 1h 2m 5s
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
-🌿 <code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a>
-📝 test
-⏱ 1h 2m 5s
+buttons: [Open run](https://gitlab.example.com/group/app/-/pipelines/31) success
 
---- ru ---
+--- ru rich ---
+<h4>✅ CI успешно</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/pipelines/31">#3 Pipeline for branch: master</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Ветка</td><td><code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a></td></tr>
+<tr><td>Коммит</td><td>test</td></tr>
+<tr><td>Длительность</td><td>1h 2m 5s</td></tr>
+</table>
+<p><tg-button type="url" style="success" url="https://gitlab.example.com/group/app/-/pipelines/31">Открыть запуск</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
 ✅ CI успешно
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/pipelines/31">#3</a> <b>Pipeline for branch: master</b>
+<b><a href="https://gitlab.example.com/group/app/-/pipelines/31">#3 Pipeline for branch: master</a></b>
+Ветка: <code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a>
+Коммит: test
+Длительность: 1h 2m 5s
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
-🌿 <code>master</code> · <a href="https://gitlab.example.com/group/app/-/commit/bcbb5ec396a2c0f828686f14fac9b80b780504f2">bcbb5ec</a>
-📝 test
-⏱ 1h 2m 5s
+buttons: [Открыть запуск](https://gitlab.example.com/group/app/-/pipelines/31) success

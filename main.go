@@ -80,7 +80,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	b, err := bot.NewBot(lang, store, Version)
+	b, err := bot.NewBot(lang, store, Version, richMessages())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,6 +205,22 @@ func deliveriesRetention(lang i18n.Lang) time.Duration {
 		log.Fatal(i18n.Tf(lang, i18n.MsgInvalidRetention, raw))
 	}
 	return time.Duration(days) * 24 * time.Hour
+}
+
+// richMessages reports whether notifications may be sent as Telegram rich
+// messages (RICH_MESSAGES, on by default). Off sends every chat the classic
+// format, whatever it chose.
+func richMessages() bool {
+	v := os.Getenv("RICH_MESSAGES")
+	if v == "" {
+		return true
+	}
+	on, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Printf("⚠️ RICH_MESSAGES=%q is not a boolean, keeping rich messages on", v)
+		return true
+	}
+	return on
 }
 
 func firstNonEmpty(values ...string) string {

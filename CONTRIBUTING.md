@@ -56,16 +56,16 @@ Example: GitHub `discussion` events.
        return platform.GitHubDiscussion
    }
 
-   func (h *GitHubDiscussionHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
+   func (h *GitHubDiscussionHandler) Handle(lang i18n.Lang, payload []byte) (notify.Notification, error) {
        var dto GitHubDiscussionDto
        if err := decode(lang, "discussion", payload, &dto); err != nil {
-           return "", err
+           return notify.Notification{}, err
        }
        if dto.Action != "created" {
-           return "", ErrSkip // don't notify about noisy actions
+           return notify.Notification{}, ErrSkip // don't notify about noisy actions
        }
-       return formatItem(lang, itemView{
-           Header:   i18n.T(lang, i18n.MsgDiscussionCreated),
+       return itemView{
+           Heading:  i18n.T(lang, i18n.MsgDiscussionCreated),
            Repo:     dto.Repository.FullName,
            RepoURL:  dto.Repository.HTMLURL,
            Ref:      fmt.Sprintf("#%d", dto.Discussion.Number),
@@ -74,11 +74,15 @@ Example: GitHub `discussion` events.
            Actor:    dto.Sender.Login,
            ActorURL: dto.Sender.HTMLURL,
            Body:     dto.Discussion.Body,
-       }), nil
+           Buttons:  []notify.Button{button(lang, "btn_open_discussion", dto.Discussion.HTMLURL, notify.StylePrimary)},
+           Time:     dto.Discussion.CreatedAt.Time, // a handler.Timestamp
+       }.notification(), nil
    }
    ```
-   Use `formatItem` / `formatCI` / `formatTag` where possible so messages look consistent.
-   **Always escape user-provided text** (`esc`, `link`, `excerpt` already do it).
+   A handler returns a `notify.Notification` — what to say, not how: the renderers in `internal/notify` turn it
+   into a rich message (`notify.Rich`) and a classic HTML message with inline buttons (`notify.Classic`). Build it
+   with `itemView`, `ciView` or the other helpers in `internal/handler` so messages look consistent, and keep
+   headings and labels as plain text: the renderers escape everything, so never put HTML into a notification.
 
 3. **Register the handler** in `All()` in `internal/handler/handler.go`.
 
@@ -99,10 +103,11 @@ Example: GitHub `discussion` events.
    git diff internal/handler/testdata
    ```
    `TestGolden` renders every fixture in every language and compares it with `<case>.golden` (the topic or
-   `skip: true`, then the message per language). It fails if a registered handler has no fixtures, and on any change
+   `skip: true`, then per language a `--- <lang> rich ---` section and a `--- <lang> classic ---` section ending
+   with its `buttons:` line). It fails if a registered handler has no fixtures, and on any change
    of a template, translation or parser — rerun with `-update` and review the diff when the change is intended.
    For specific assertions you can still add a case to `github_test.go` / `gitlab_test.go`. Both runners check that
-   the message is valid Telegram HTML.
+   the rich and the classic HTML use only tags Telegram accepts.
 
 6. Update the *Supported events* table in `README.md` and `CHANGELOG.md`.
 

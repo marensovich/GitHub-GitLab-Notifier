@@ -79,8 +79,8 @@ func TestMetricsEndpoint(t *testing.T) {
 		`notifier_webhooks_total{platform="GITHUB",event="star",status="delivered"} 1`,
 		`notifier_webhooks_total{platform="GITHUB",event="star",status="failed"} 1`,
 		`notifier_webhooks_total{platform="GITHUB",event="check_suite",status="ignored"} 1`,
-		`notifier_messages_sent_total{messenger="telegram",result="ok"} 1`,
-		`notifier_messages_sent_total{messenger="telegram",result="error"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="ok"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="error"} 1`,
 		`notifier_webhook_duration_seconds_count 3`,
 		`notifier_build_info{version="v9"} 1`,
 	} {

@@ -154,3 +154,26 @@ func TestLoadMigrationsValidates(t *testing.T) {
 		t.Errorf("sorted load: %v %+v", err, list)
 	}
 }
+
+func TestMigration0003Defaults(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "legacy.db")
+	if _, err := rawDB(t, path).Exec(schema101); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	if v, _ := s.SchemaVersion(); v < 3 {
+		t.Errorf("version = %d, want >= 3", v)
+	}
+	chat, err := s.GetChat(-1001)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if chat.Format != FormatRich || !chat.UseTopics {
+		t.Errorf("existing chat got format %q, use_topics %v; want rich, true", chat.Format, chat.UseTopics)
+	}
+}

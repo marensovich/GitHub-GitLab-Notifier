@@ -1,19 +1,41 @@
 topic: issues
 
---- en ---
+--- en rich ---
+<h4>💬 New comment on commit</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf Add submodule</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<blockquote expandable>is this commit ready?</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">Open comment</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
 💬 New comment on commit
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf</a> <b>Add submodule</b>
+<b><a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf Add submodule</a></b>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
 
-<blockquote>is this commit ready?</blockquote>
+<blockquote expandable>is this commit ready?</blockquote>
+buttons: [Open comment](https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243)
 
---- ru ---
+--- ru rich ---
+<h4>💬 Новый комментарий к коммиту</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf Add submodule</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<blockquote expandable>is this commit ready?</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">Открыть комментарий</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
 💬 Новый комментарий к коммиту
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf</a> <b>Add submodule</b>
+<b><a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf Add submodule</a></b>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
 
-<blockquote>is this commit ready?</blockquote>
+<blockquote expandable>is this commit ready?</blockquote>
+buttons: [Открыть комментарий](https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243)

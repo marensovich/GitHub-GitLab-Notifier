@@ -21,9 +21,11 @@ func TestExposition(t *testing.T) {
 	m.ObserveWebhook("GitHub", "push", "delivered", 5*time.Millisecond)
 	m.ObserveWebhook("GitHub", "push", "delivered", 30*time.Millisecond)
 	m.ObserveWebhook("GitLab", "Merge Request Hook", "ignored", 2*time.Second)
-	m.MessageSent("telegram", nil)
-	m.MessageSent("telegram", errors.New("boom"))
-	m.MessageSent("telegram", nil)
+	m.MessageSent("telegram", "rich", nil)
+	m.MessageSent("telegram", "rich", errors.New("boom"))
+	m.MessageSent("telegram", "rich", nil)
+	m.MessageSent("telegram", "classic", nil)
+	m.RichFallback()
 
 	out := render(m)
 	for _, want := range []string{
@@ -36,8 +38,10 @@ func TestExposition(t *testing.T) {
 		`notifier_webhook_duration_seconds_bucket{le="2.5"} 3`,
 		`notifier_webhook_duration_seconds_bucket{le="+Inf"} 3`,
 		`notifier_webhook_duration_seconds_count 3`,
-		`notifier_messages_sent_total{messenger="telegram",result="ok"} 2`,
-		`notifier_messages_sent_total{messenger="telegram",result="error"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="ok"} 2`,
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="error"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="classic",result="ok"} 1`,
+		`notifier_rich_fallbacks_total 1`,
 		"# TYPE notifier_webhook_duration_seconds histogram",
 	} {
 		if !strings.Contains(out, want) {

@@ -163,12 +163,14 @@ type repoRow struct {
 }
 
 type chatRow struct {
-	ChatID   int64
-	Language string
-	IsForum  bool
-	Repos    []string
-	Topics   []topicRow
-	Err      string
+	ChatID    int64
+	Language  string
+	IsForum   bool
+	Format    string
+	UseTopics bool
+	Repos     []string
+	Topics    []topicRow
+	Err       string
 }
 
 type topicRow struct {
@@ -241,7 +243,12 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 
 	rows := make([]chatRow, 0, len(chats))
 	for _, c := range chats {
-		row := chatRow{ChatID: c.ChatID, Language: c.Language, IsForum: c.IsForum, Repos: reposByChat[c.ChatID]}
+		format := c.Format
+		if format == "" {
+			format = storage.FormatRich
+		}
+		row := chatRow{ChatID: c.ChatID, Language: c.Language, IsForum: c.IsForum,
+			Format: format, UseTopics: c.UseTopics, Repos: reposByChat[c.ChatID]}
 		sort.Strings(row.Repos)
 
 		topics, err := s.src.GetTopicsByChat(c.ChatID)

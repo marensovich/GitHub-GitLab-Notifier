@@ -3,6 +3,8 @@ package server
 import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/metrics"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
 	"crypto/hmac"
@@ -28,21 +30,31 @@ func TestMain(m *testing.M) {
 type sentMessage struct {
 	chatID  int64
 	topicID int
+	format  string
 	text    string
 }
 
-// fakeSender records messages and can fail sends to specific topics.
+// fakeSender records notifications and can fail sends to specific topics.
+// When reply is set, every send returns those attempts.
 type fakeSender struct {
 	sent         []sentMessage
+	calls        int
 	failTopicIDs map[int]bool
+	reply        []notify.Attempt
 }
 
-func (f *fakeSender) SendMessageToTopic(chatID int64, topicID int, text string) error {
+func (f *fakeSender) SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
+	f.calls++
 	if f.failTopicIDs[topicID] {
-		return errors.New("topic not found")
+		err := errors.New("topic not found")
+		return []notify.Attempt{{Format: format, Err: err}}, err
 	}
-	f.sent = append(f.sent, sentMessage{chatID, topicID, text})
-	return nil
+	text, _ := notify.Classic(lang, n)
+	f.sent = append(f.sent, sentMessage{chatID, topicID, format, text})
+	if f.reply != nil {
+		return f.reply, f.reply[len(f.reply)-1].Err
+	}
+	return []notify.Attempt{{Format: format}}, nil
 }
 
 type env struct {
@@ -147,7 +159,7 @@ func TestRoutesConnectedRepoToItsChatTopicAndLanguage(t *testing.T) {
 	if msg.chatID != 200 || msg.topicID != 55 {
 		t.Errorf("sent to chat %d topic %d, want chat 200 topic 55", msg.chatID, msg.topicID)
 	}
-	if !strings.Contains(msg.text, "поставил(а) звезду") {
+	if !strings.Contains(msg.text, "Новая звезда") {
 		t.Errorf("message is not in Russian: %s", msg.text)
 	}
 }
@@ -357,5 +369,65 @@ func TestPruneDeliveriesStopsWithContext(t *testing.T) {
 
 	if list, _ := e.store.RecentDeliveries(10); len(list) != 1 {
 		t.Errorf("want 1 delivery left, got %d", len(list))
+	}
+}
+
+func TestUseTopicsOffRoutesToMain(t *testing.T) {
+	e := newEnv(t, Config{})
+	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "en", IsForum: true}))
+	must(t, e.store.SaveTopic(storage.TopicInfo{TopicID: 55, ChatID: 200, Name: "Stars", EventType: "star"}))
+	must(t, e.store.SetEventTopic(200, "star", 55))
+	must(t, e.store.SetChatSettings(200, storage.FormatClassic, false))
+	must(t, e.store.SaveRepo(storage.RepoInfo{ChatID: 200, RepoURL: "https://github.com/octo/hello", Platform: "GitHub"}))
+
+	if rec := e.post(t, ghHeaders("star"), starPayload); rec.Code != http.StatusOK {
+		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
+	}
+	if len(e.sender.sent) != 1 {
+		t.Fatalf("want 1 message, got %+v", e.sender.sent)
+	}
+	if msg := e.sender.sent[0]; msg.topicID != 0 || msg.format != storage.FormatClassic {
+		t.Errorf("got topic %d format %q, want the general chat in classic", msg.topicID, msg.format)
+	}
+}
+
+func TestDeletedTopicFallsBackToMain(t *testing.T) {
+	e := newEnv(t, Config{})
+	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "en", IsForum: true}))
+	must(t, e.store.SaveTopic(storage.TopicInfo{TopicID: 55, ChatID: 200, Name: "Stars", EventType: "star"}))
+	must(t, e.store.SetEventTopic(200, "star", 55))
+	must(t, e.store.SaveRepo(storage.RepoInfo{ChatID: 200, RepoURL: "https://github.com/octo/hello", Platform: "GitHub"}))
+	e.sender.failTopicIDs[55] = true
+
+	e.post(t, ghHeaders("star"), starPayload)
+	if e.sender.calls != 2 {
+		t.Errorf("want 2 sends (topic, then general), got %d", e.sender.calls)
+	}
+	if len(e.sender.sent) != 1 || e.sender.sent[0].topicID != 0 || e.sender.sent[0].format != storage.FormatRich {
+		t.Fatalf("want one rich message in the general chat, got %+v", e.sender.sent)
+	}
+}
+
+func TestMetricsCountAttemptsByFormat(t *testing.T) {
+	m := metrics.New("test")
+	e := newEnv(t, Config{DefaultChatID: 100, Metrics: m})
+	e.sender.reply = []notify.Attempt{
+		{Format: notify.FormatRich, Err: errors.New("can't parse")},
+		{Format: notify.FormatClassic},
+	}
+
+	e.post(t, ghHeaders("star"), starPayload)
+
+	var b strings.Builder
+	m.WriteTo(&b)
+	out := b.String()
+	for _, want := range []string{
+		`notifier_messages_sent_total{messenger="telegram",format="rich",result="error"} 1`,
+		`notifier_messages_sent_total{messenger="telegram",format="classic",result="ok"} 1`,
+		`notifier_rich_fallbacks_total 1`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
 	}
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"encoding/json"
 	"fmt"
@@ -26,6 +27,8 @@ type GitHubPushDto struct {
 	// TotalCommits is the real number of pushed commits when the payload
 	// lists only some of them (GitLab sends at most 20).
 	TotalCommits int `json:"-"`
+	// TreeURL is the branch page; GitLab sets it, GitHub derives it.
+	TreeURL string `json:"-"`
 }
 
 type GitHubPushSender struct {
@@ -98,8 +101,12 @@ func (d *GitHubPushDto) CommitCount() int {
 	return max(len(d.Commits), d.TotalCommits)
 }
 
-// maxListedCommits is the number of commits shown in a push notification.
+// maxListedCommits is the number of commits listed in a classic push
+// notification; rich messages list up to 20 in a collapsed section.
 const maxListedCommits = 5
+
+// maxListedFiles is the number of changed files listed in a classic message.
+const maxListedFiles = 10
 
 // GitHubPushHandler handles GitHub push events.
 type GitHubPushHandler struct{}
@@ -108,169 +115,112 @@ func (h *GitHubPushHandler) GetEventType() platform.EventType {
 	return platform.GitHubPush
 }
 
-func (h *GitHubPushHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
+func (h *GitHubPushHandler) Handle(lang i18n.Lang, payload []byte) (notify.Notification, error) {
 	var dto GitHubPushDto
 	if err := json.Unmarshal(payload, &dto); err != nil {
-		return "", fmt.Errorf(i18n.T(lang, i18n.MsgFailedToParsePushEvent), err)
+		return notify.Notification{}, fmt.Errorf(i18n.T(lang, i18n.MsgFailedToParsePushEvent), err)
 	}
-	return formatPushMessage(lang, &dto), nil
+	return pushNotification(lang, &dto), nil
 }
 
-func formatPushMessage(lang i18n.Lang, dto *GitHubPushDto) string {
+func pushNotification(lang i18n.Lang, dto *GitHubPushDto) notify.Notification {
+	actorLogin := firstNonEmpty(dto.Sender.Login, dto.Pusher.Name)
 	if strings.HasPrefix(dto.Ref, "refs/tags/") {
 		tag := dto.Branch()
-		return formatTag(lang, tagView{
+		return tagNotification(lang, tagView{
 			Repo:     dto.Repository.FullName,
 			RepoURL:  dto.Repository.HTMLURL,
 			Tag:      tag,
 			URL:      dto.Repository.HTMLURL + "/releases/tag/" + tag,
 			Deleted:  dto.Deleted,
-			Actor:    firstNonEmpty(dto.Sender.Login, dto.Pusher.Name),
+			Actor:    actorLogin,
 			ActorURL: dto.Sender.HTMLURL,
 		})
 	}
 
-	var sb strings.Builder
+	n := notify.Notification{
+		Heading: pushHeading(lang, dto),
+		Repo:    notify.Link{Text: dto.Repository.FullName, URL: dto.Repository.HTMLURL},
+		Actor:   actor(actorLogin, dto.Sender.HTMLURL),
+	}
+	if dto.HeadCommit != nil {
+		n.Time = parseTime(dto.HeadCommit.Timestamp)
+	}
 
-	sb.WriteString(i18n.Tf(lang, i18n.MsgPushHeader,
-		getEmoji(dto), esc(dto.Repository.FullName), getActionText(lang, dto), esc(dto.Branch())))
-
-	sb.WriteString(formatPusher(lang, dto))
-	sb.WriteString("\n")
+	n.Item = notify.Link{Text: dto.Branch()}
+	if !dto.Deleted {
+		n.Item.URL = dto.TreeURL
+		if n.Item.URL == "" && dto.Repository.HTMLURL != "" {
+			n.Item.URL = dto.Repository.HTMLURL + "/tree/" + dto.Branch()
+		}
+		n.Fields = append(n.Fields, countField(lang, i18n.MsgFieldCommits, dto.CommitCount()))
+	}
+	if dto.Pusher.Email != "" {
+		n.Fields = append(n.Fields, field(lang, i18n.MsgFieldEmail, notify.C(dto.Pusher.Email)))
+	}
 
 	if !dto.Deleted {
-		sb.WriteString(formatCommits(lang, dto))
-		sb.WriteString(formatFiles(lang, dto))
+		n.Sections = append(n.Sections, commitsSection(lang, dto), filesSection(lang, dto))
+		n.Buttons = append(n.Buttons, button(lang, i18n.MsgBtnCompare, dto.Compare, notify.StylePrimary))
 	}
-
-	if dto.Compare != "" && !dto.Deleted {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgViewChanges, esc(dto.Compare)))
-	}
-
-	return strings.TrimRight(sb.String(), "\n")
+	return n
 }
 
-// ─── Helpers ───
-
-func getEmoji(dto *GitHubPushDto) string {
-	if dto.Deleted {
-		return "🗑️"
-	}
-	if dto.Created {
-		return "🆕"
-	}
-	if dto.Forced {
-		return "⚠️"
-	}
-	return "🚀"
-}
-
-func getActionText(lang i18n.Lang, dto *GitHubPushDto) string {
-	if dto.Deleted {
+func pushHeading(lang i18n.Lang, dto *GitHubPushDto) string {
+	switch {
+	case dto.Deleted:
 		return i18n.T(lang, i18n.MsgPushDeleted)
-	}
-	if dto.Created {
+	case dto.Created:
 		return i18n.T(lang, i18n.MsgPushCreated)
-	}
-	if dto.Forced {
+	case dto.Forced:
 		return i18n.T(lang, i18n.MsgPushForce)
 	}
 	return i18n.T(lang, i18n.MsgPushNew)
 }
 
-func formatPusher(lang i18n.Lang, dto *GitHubPushDto) string {
-	login := dto.Sender.Login
-	if login == "" {
-		login = dto.Pusher.Name
-	}
-
-	result := i18n.Tf(lang, i18n.MsgPusher, esc(dto.Sender.HTMLURL), esc(login))
-	if dto.Pusher.Email != "" {
-		result += i18n.Tf(lang, i18n.MsgPusherEmail, esc(dto.Pusher.Email))
-	}
-	return result
-}
-
-func formatCommits(lang i18n.Lang, dto *GitHubPushDto) string {
-	var sb strings.Builder
-
-	sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsCount, dto.CommitCount()))
-	if dto.Forced {
-		sb.WriteString(i18n.T(lang, i18n.MsgCommitsForced))
-	}
-	sb.WriteString("\n\n")
-
+// commitsSection lists the pushed commits; commits the payload does not
+// include (GitLab sends at most 20) are counted as "more".
+func commitsSection(lang i18n.Lang, dto *GitHubPushDto) notify.Section {
+	s := notify.Section{Summary: i18n.T(lang, i18n.MsgSectionCommits), ClassicMax: maxListedCommits}
 	if len(dto.Commits) == 0 {
-		return sb.String()
+		// The count is already a field; a list of only "…and N more" adds nothing.
+		return s
 	}
-
-	sb.WriteString(i18n.T(lang, i18n.MsgCommitsHeader))
-	shown := min(len(dto.Commits), maxListedCommits)
-	for _, c := range dto.Commits[:shown] {
-		author := c.Author.Name
-		if author == "" {
-			author = "unknown"
-		}
-		authorText := "<i>" + esc(author) + "</i>"
+	s.More = dto.CommitCount() - len(dto.Commits)
+	for _, c := range dto.Commits {
+		author := notify.T(firstNonEmpty(c.Author.Name, "unknown"))
 		if c.Author.Username != "" {
-			authorText = "<i>" + link("https://github.com/"+c.Author.Username, author) + "</i>"
+			author = notify.L(author.Text, "https://github.com/"+c.Author.Username)
 		}
-		sb.WriteString(fmt.Sprintf("  %s %s — %s\n",
-			link(c.URL, shortSHA(c.ID)), esc(truncate(firstLine(c.Message), 70)), authorText))
+		s.Items = append(s.Items, []notify.Part{
+			notify.L(shortSHA(c.ID), c.URL),
+			notify.T(" " + truncate(firstLine(c.Message), 70) + " — "),
+			author,
+		})
 	}
-	if dto.CommitCount() > shown {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgCommitsMore, dto.CommitCount()-shown))
-	}
-	sb.WriteString("\n")
-
-	return sb.String()
+	return s
 }
 
-// maxListedFiles limits each changed-files line to keep messages short.
-const maxListedFiles = 10
-
-func formatFiles(lang i18n.Lang, dto *GitHubPushDto) string {
+// filesSection lists the files changed by the head commit.
+func filesSection(lang i18n.Lang, dto *GitHubPushDto) notify.Section {
+	s := notify.Section{Summary: i18n.T(lang, i18n.MsgSectionFiles), ClassicMax: maxListedFiles}
 	if dto.HeadCommit == nil {
-		return ""
+		return s
 	}
-
-	added := dto.HeadCommit.Added
-	removed := dto.HeadCommit.Removed
-	modified := dto.HeadCommit.Modified
-
-	if len(added) == 0 && len(removed) == 0 && len(modified) == 0 {
-		return ""
+	groups := []struct {
+		mark  string
+		files []string
+	}{
+		{"➕ ", dto.HeadCommit.Added},
+		{"✏️ ", dto.HeadCommit.Modified},
+		{"➖ ", dto.HeadCommit.Removed},
 	}
-
-	var sb strings.Builder
-	sb.WriteString(i18n.T(lang, i18n.MsgFilesHeader))
-
-	if len(added) > 0 {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesAdded, joinFiles(added)))
+	for _, g := range groups {
+		for _, f := range g.files {
+			s.Items = append(s.Items, []notify.Part{notify.T(g.mark), notify.C(f)})
+		}
 	}
-	if len(modified) > 0 {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesModified, joinFiles(modified)))
-	}
-	if len(removed) > 0 {
-		sb.WriteString(i18n.Tf(lang, i18n.MsgFilesRemoved, joinFiles(removed)))
-	}
-	sb.WriteString("\n")
-
-	return sb.String()
-}
-
-// joinFiles renders a comma-separated list of <code> file names,
-// collapsing the tail into "+N" when the list is long.
-func joinFiles(items []string) string {
-	shown := min(len(items), maxListedFiles)
-	result := make([]string, 0, shown+1)
-	for _, item := range items[:shown] {
-		result = append(result, "<code>"+esc(item)+"</code>")
-	}
-	if len(items) > shown {
-		result = append(result, fmt.Sprintf("+%d", len(items)-shown))
-	}
-	return strings.Join(result, ", ")
+	return s
 }
 
 // tagView describes a created or deleted git tag.
@@ -284,19 +234,20 @@ type tagView struct {
 	ActorURL string
 }
 
-// formatTag renders a tag push notification (shared by GitHub and GitLab).
-func formatTag(lang i18n.Lang, v tagView) string {
-	header, url := i18n.T(lang, i18n.MsgTagCreated), v.URL
-	if v.Deleted {
-		header, url = i18n.T(lang, i18n.MsgTagDeleted), ""
-	}
-	return formatItem(lang, itemView{
-		Header:   header,
+// tagNotification is a tag push notification (shared by GitHub and GitLab).
+func tagNotification(lang i18n.Lang, v tagView) notify.Notification {
+	view := itemView{
+		Heading:  i18n.T(lang, i18n.MsgTagCreated),
 		Repo:     v.Repo,
 		RepoURL:  v.RepoURL,
 		Ref:      v.Tag,
-		URL:      url,
+		URL:      v.URL,
 		Actor:    v.Actor,
 		ActorURL: v.ActorURL,
-	})
+		Buttons:  []notify.Button{button(lang, i18n.MsgBtnOpenTag, v.URL, notify.StyleDefault)},
+	}
+	if v.Deleted {
+		view.Heading, view.URL, view.Buttons = i18n.T(lang, i18n.MsgTagDeleted), "", nil
+	}
+	return view.notification()
 }

@@ -178,3 +178,40 @@ func TestDeliveriesLog(t *testing.T) {
 		t.Errorf("after prune: %d deliveries, want 2", len(list))
 	}
 }
+
+func TestSetChatSettings(t *testing.T) {
+	s := openTest(t)
+	if err := s.SaveChat(ChatConfig{ChatID: 7, Language: "en", IsForum: true}); err != nil {
+		t.Fatal(err)
+	}
+	chat, _ := s.GetChat(7)
+	if chat.Format != FormatRich || !chat.UseTopics {
+		t.Fatalf("new chat defaults = %q, %v; want rich, true", chat.Format, chat.UseTopics)
+	}
+
+	if err := s.SetChatSettings(7, FormatClassic, false); err != nil {
+		t.Fatal(err)
+	}
+	chat, _ = s.GetChat(7)
+	if chat.Format != FormatClassic || chat.UseTopics {
+		t.Errorf("got %q, %v; want classic, false", chat.Format, chat.UseTopics)
+	}
+	if all := s.GetAllChats(); len(all) != 1 || all[0].Format != FormatClassic || all[0].UseTopics {
+		t.Errorf("GetAllChats = %+v", all)
+	}
+
+	// SaveChat (e.g. /lang, /configure) must not reset the settings.
+	if err := s.SaveChat(ChatConfig{ChatID: 7, Language: "ru", IsForum: true}); err != nil {
+		t.Fatal(err)
+	}
+	if chat, _ = s.GetChat(7); chat.Format != FormatClassic || chat.UseTopics {
+		t.Errorf("SaveChat reset settings: %q, %v", chat.Format, chat.UseTopics)
+	}
+
+	if err := s.SetChatSettings(7, "fancy", true); err == nil {
+		t.Error("invalid format must be refused")
+	}
+	if err := s.SetChatSettings(404, FormatRich, true); err == nil {
+		t.Error("unknown chat must be an error")
+	}
+}

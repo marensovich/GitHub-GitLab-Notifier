@@ -37,8 +37,27 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - GitLab confidential issues, comments on them and internal notes are marked with 🔒 "Confidential — visible only
   to project members in GitLab", so the chat sees that the text was not public in the project.
 
+- New notification look using Telegram rich messages: a heading, the item as a bold link, a compact table of
+  repository, branch and other details, long text in an expandable quote, commit and file lists collapsed under a
+  summary, coloured buttons ("Open PR", "Compare", "Open run"…) and a footer with the author and the event time,
+  shown relative in the reader's language and time zone. If Telegram rejects a rich message, the classic message
+  is sent instead (counted in `notifier_rich_fallbacks_total`). `RICH_MESSAGES=false` turns rich messages off for
+  the whole installation.
+- `/configure` is a short setup with buttons, edited in place: in a forum chat it asks whether to create topics or
+  post everything to the main chat, then every chat picks the new look or the classic one (for old and third-party
+  Telegram clients, which show rich messages as unsupported). Current choices are marked with ✓; run it again to
+  change them. Only chat administrators can press the buttons. The web panel shows each chat's look and topic
+  routing.
+
 ### Changed
 
+- Classic notifications use the same layout as the new look and carry their links as coloured inline buttons.
+- `/configure` works in regular groups too (it skips the topics step and posts to the main chat) instead of
+  refusing them.
+- `notifier_messages_sent_total` has a `format` label (`rich` / `classic`); dashboards that sum it by
+  `messenger, result` keep working. The Grafana dashboard splits "Messages sent" by format and shows rich fallbacks.
+- Database migration `0003` adds `format` (default `rich`) and `use_topics` (default on) to every chat, so an
+  upgraded installation gets the new look with the same routing.
 - `GET /health` and `/webhook/health` return the health report (same as the new `/healthz`) instead of `pong`,
   and answer `503` when the database or Telegram is not working. Monitors that compared the body with `pong`
   need to check the status code instead. The installer prints the report when the check fails.

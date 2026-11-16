@@ -1,33 +1,61 @@
 topic: push
 
---- en ---
-🚀 <b>octo/hello</b>
-New push to branch <code>main</code>
+--- en rich ---
+<h4>🚀 New push</h4>
+<p><b><a href="https://github.com/octo/hello/tree/main">main</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>Commits</td><td><b>1</b></td></tr>
+<tr><td>E-mail</td><td><code>octo@example.com</code></td></tr>
+</table>
+<details><summary>Commits (1)</summary><ul><li><a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <a href="https://github.com/octocat">Octo Cat</a></li></ul></details>
+<details><summary>Changed files (2)</summary><ul><li>➕ <code>new.go</code></li><li>✏️ <code>main.go</code></li></ul></details>
+<p><tg-button type="url" style="primary" url="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Compare</tg-button></p>
+<footer><a href="https://github.com/octocat">@octocat</a></footer>
 
-👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
-📦 Commits: <b>1</b>
+--- en classic ---
+🚀 New push
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
 
-<b>📝 Commits:</b>
-  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <i><a href="https://github.com/octocat">Octo Cat</a></i>
+<b><a href="https://github.com/octo/hello/tree/main">main</a></b>
+Commits: <b>1</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
 
-<b>📁 Changed files:</b>
-  ➕ Added: <code>new.go</code>
-  ✏️ Modified: <code>main.go</code>
+<b>Commits:</b>
+  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <a href="https://github.com/octocat">Octo Cat</a>
 
-🔗 <a href="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">View changes</a>
+<b>Changed files:</b>
+  ➕ <code>new.go</code>
+  ✏️ <code>main.go</code>
+buttons: [Compare](https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f) primary
 
---- ru ---
-🚀 <b>octo/hello</b>
-Новый пуш в ветку <code>main</code>
+--- ru rich ---
+<h4>🚀 Новый пуш</h4>
+<p><b><a href="https://github.com/octo/hello/tree/main">main</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>Коммиты</td><td><b>1</b></td></tr>
+<tr><td>E-mail</td><td><code>octo@example.com</code></td></tr>
+</table>
+<details><summary>Коммиты (1)</summary><ul><li><a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <a href="https://github.com/octocat">Octo Cat</a></li></ul></details>
+<details><summary>Изменённые файлы (2)</summary><ul><li>➕ <code>new.go</code></li><li>✏️ <code>main.go</code></li></ul></details>
+<p><tg-button type="url" style="primary" url="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Сравнить</tg-button></p>
+<footer><a href="https://github.com/octocat">@octocat</a></footer>
 
-👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
-📦 Коммитов: <b>1</b>
+--- ru classic ---
+🚀 Новый пуш
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
 
-<b>📝 Коммиты:</b>
-  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <i><a href="https://github.com/octocat">Octo Cat</a></i>
+<b><a href="https://github.com/octo/hello/tree/main">main</a></b>
+Коммиты: <b>1</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
 
-<b>📁 Изменённые файлы:</b>
-  ➕ Добавлено: <code>new.go</code>
-  ✏️ Изменено: <code>main.go</code>
+<b>Коммиты:</b>
+  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <a href="https://github.com/octocat">Octo Cat</a>
 
-🔗 <a href="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Смотреть изменения</a>
+<b>Изменённые файлы:</b>
+  ➕ <code>new.go</code>
+  ✏️ <code>main.go</code>
+buttons: [Сравнить](https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f) primary

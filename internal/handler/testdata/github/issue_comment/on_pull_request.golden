@@ -1,19 +1,41 @@
 topic: issues
 
---- en ---
+--- en rich ---
+<h4>💬 New comment on pull request</h4>
+<p><b><a href="https://github.com/octo/hello/pull/12">#12 Add dark mode</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+</table>
+<blockquote expandable>Could you add a test?</blockquote>
+<p><tg-button type="url" url="https://github.com/octo/hello/pull/12#issuecomment-1">Open comment</tg-button></p>
+<footer><a href="https://github.com/reviewer">@reviewer</a></footer>
+
+--- en classic ---
 💬 New comment on pull request
 <b><a href="https://github.com/octo/hello">octo/hello</a></b>
 
-<a href="https://github.com/octo/hello/pull/12#issuecomment-1">#12</a> <b>Add dark mode</b>
+<b><a href="https://github.com/octo/hello/pull/12">#12 Add dark mode</a></b>
 👤 <a href="https://github.com/reviewer">@reviewer</a>
 
-<blockquote>Could you add a test?</blockquote>
+<blockquote expandable>Could you add a test?</blockquote>
+buttons: [Open comment](https://github.com/octo/hello/pull/12#issuecomment-1)
 
---- ru ---
+--- ru rich ---
+<h4>💬 Новый комментарий к pull request</h4>
+<p><b><a href="https://github.com/octo/hello/pull/12">#12 Add dark mode</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+</table>
+<blockquote expandable>Could you add a test?</blockquote>
+<p><tg-button type="url" url="https://github.com/octo/hello/pull/12#issuecomment-1">Открыть комментарий</tg-button></p>
+<footer><a href="https://github.com/reviewer">@reviewer</a></footer>
+
+--- ru classic ---
 💬 Новый комментарий к pull request
 <b><a href="https://github.com/octo/hello">octo/hello</a></b>
 
-<a href="https://github.com/octo/hello/pull/12#issuecomment-1">#12</a> <b>Add dark mode</b>
+<b><a href="https://github.com/octo/hello/pull/12">#12 Add dark mode</a></b>
 👤 <a href="https://github.com/reviewer">@reviewer</a>
 
-<blockquote>Could you add a test?</blockquote>
+<blockquote expandable>Could you add a test?</blockquote>
+buttons: [Открыть комментарий](https://github.com/octo/hello/pull/12#issuecomment-1)

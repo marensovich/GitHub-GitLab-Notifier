@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"encoding/json"
 	"fmt"
@@ -48,32 +49,35 @@ func (h *GitHubStarHandler) GetEventType() platform.EventType {
 	return platform.GitHubStar
 }
 
-func (h *GitHubStarHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
+func (h *GitHubStarHandler) Handle(lang i18n.Lang, payload []byte) (notify.Notification, error) {
 	var dto GitHubStarDto
 	if err := json.Unmarshal(payload, &dto); err != nil {
-		return "", fmt.Errorf(i18n.T(lang, i18n.MsgFailedToParseStarEvent), err)
+		return notify.Notification{}, fmt.Errorf(i18n.T(lang, i18n.MsgFailedToParseStarEvent), err)
 	}
-	return formatStarMessage(lang, &dto), nil
+	return starNotification(lang, &dto), nil
 }
 
-func formatStarMessage(lang i18n.Lang, dto *GitHubStarDto) string {
-	repoURL := dto.Repository.HTMLURL
-
-	msgKey, verbKey := i18n.MsgStarCreated, i18n.MsgStarVerbCreated
+func starNotification(lang i18n.Lang, dto *GitHubStarDto) notify.Notification {
+	heading := i18n.T(lang, i18n.MsgStarCreated)
 	if dto.StarAction() == StarDeleted {
-		msgKey, verbKey = i18n.MsgStarDeleted, i18n.MsgStarVerbDeleted
+		heading = i18n.T(lang, i18n.MsgStarDeleted)
 	}
 
-	msg := i18n.Tf(lang, msgKey,
-		esc(dto.Repository.FullName),
-		esc(dto.Sender.HTMLURL),
-		"@"+esc(dto.Sender.Login),
-		i18n.T(lang, verbKey),
-		esc(repoURL),
-		esc(repoURL+"/stargazers"),
-	)
-	if dto.Repository.StargazersCount > 0 {
-		msg += i18n.Tf(lang, i18n.MsgStarTotal, dto.Repository.StargazersCount)
+	repoURL := dto.Repository.HTMLURL
+	n := notify.Notification{
+		Heading: heading,
+		Repo:    notify.Link{Text: dto.Repository.FullName, URL: repoURL},
+		Fields:  []notify.Field{countField(lang, i18n.MsgFieldStars, dto.Repository.StargazersCount)},
+		Actor:   actor(dto.Sender.Login, dto.Sender.HTMLURL),
+		Buttons: []notify.Button{
+			button(lang, i18n.MsgBtnOpenRepo, repoURL, notify.StyleDefault),
+		},
 	}
-	return msg
+	if repoURL != "" {
+		n.Buttons = append(n.Buttons, button(lang, i18n.MsgBtnStargazers, repoURL+"/stargazers", notify.StyleDefault))
+	}
+	if dto.StarredAt != nil {
+		n.Time = parseTime(*dto.StarredAt)
+	}
+	return n
 }

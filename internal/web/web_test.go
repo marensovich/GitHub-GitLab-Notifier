@@ -223,3 +223,26 @@ func TestStaticCSS(t *testing.T) {
 func TestStoreSatisfiesSource(t *testing.T) {
 	var _ Source = (*storage.Store)(nil)
 }
+
+func TestChatsPageShowsSettings(t *testing.T) {
+	src := newSource()
+	src.chats = []storage.ChatConfig{
+		{ChatID: -1001, Language: "ru", IsForum: true, Format: storage.FormatClassic, UseTopics: false},
+		{ChatID: 42, Language: "en", Format: storage.FormatRich, UseTopics: false},
+	}
+	h := newServer(t, Config{}, src).Handler()
+	body := get(t, h, http.MethodGet, "/chats", "localhost").Body.String()
+	for _, want := range []string{
+		`<span class="badge">look: classic</span>`,
+		`<span class="badge">look: rich</span>`,
+		`<span class="badge warn">topics off</span>`,
+		"Topic routing is off",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("chats: missing %q", want)
+		}
+	}
+	if n := strings.Count(body, "topics off"); n != 1 {
+		t.Errorf("only the forum chat has topic routing to turn off, got %d badges", n)
+	}
+}
