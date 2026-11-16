@@ -126,6 +126,8 @@
   "disconnect_not_found": "❌ Repository is not connected to this chat: %s",
   "disconnect_success": "✅ Repository disconnected: %s\n\nDon't forget to delete the webhook on GitHub/GitLab.",
   "status_header": "📊 <b>Chat status</b>\n\n🆔 Chat ID: <code>%d</code>\n🌐 Language: <code>%s</code>\n💬 Forum: %s\n",
+  "status_settings": "🎨 Look: %s\n🗂 Topics: %s\n",
+  "status_rich_off": "%s (the new look is off on this server)",
   "status_yes": "yes",
   "status_no": "no",
   "status_topics_header": "\n🗂 <b>Topics:</b>\n",

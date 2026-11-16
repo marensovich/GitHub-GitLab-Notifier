@@ -46,8 +46,8 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - `/configure` is a short setup with buttons, edited in place: in a forum chat it asks whether to create topics or
   post everything to the main chat, then every chat picks the new look or the classic one (for old and third-party
   Telegram clients, which show rich messages as unsupported). Current choices are marked with ✓; run it again to
-  change them. Only chat administrators can press the buttons. The web panel shows each chat's look and topic
-  routing.
+  change them. Only chat administrators can press the buttons. The web panel and `/status` show each chat's look
+  and topic routing; `/status` also says when the new look is off on the server.
 
 ### Changed
 
@@ -72,6 +72,8 @@ and the project follows [Semantic Versioning](https://semver.org/).
   they now say "Deleted branch …" / "Удалена ветка …".
 - Pull requests from forks showed the source branch without its owner (often `main` → `main`); they now show
   `owner:branch`.
+- A slow `setMyCommands` at start-up (Telegram answering `504` after minutes) kept the webhook port closed until it
+  gave up; the command menu is now registered in the background.
 
 ## [1.0.1] — 2026-10-30
 

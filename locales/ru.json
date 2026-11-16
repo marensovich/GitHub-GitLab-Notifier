@@ -126,6 +126,8 @@
   "disconnect_not_found": "❌ Репозиторий не подключён к этому чату: %s",
   "disconnect_success": "✅ Репозиторий отключён: %s\n\nНе забудьте удалить вебхук на GitHub/GitLab.",
   "status_header": "📊 <b>Статус чата</b>\n\n🆔 ID чата: <code>%d</code>\n🌐 Язык: <code>%s</code>\n💬 Форум: %s\n",
+  "status_settings": "🎨 Вид: %s\n🗂 Темы: %s\n",
+  "status_rich_off": "%s (новый вид выключен на этом сервере)",
   "status_yes": "да",
   "status_no": "нет",
   "status_topics_header": "\n🗂 <b>Темы:</b>\n",

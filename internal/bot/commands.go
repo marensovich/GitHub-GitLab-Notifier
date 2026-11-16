@@ -191,15 +191,36 @@ func (b *Bot) handleStatus(msg *telego.Message) {
 	var sb strings.Builder
 	sb.WriteString(i18n.Tf(lang, i18n.MsgStatusHeader, chatID, lang, forum))
 
-	topics, err := b.store.GetTopicsByChat(chatID)
-	if err == nil && len(topics) > 0 {
-		sb.WriteString(i18n.T(lang, i18n.MsgStatusTopicsHeader))
-		for _, t := range topics {
-			sb.WriteString(i18n.Tf(lang, i18n.MsgStatusTopicLine,
-				html.EscapeString(t.Name), html.EscapeString(t.EventType), t.TopicID))
+	// A chat that never ran /configure has the defaults: rich, topics on.
+	format, useTopics := storage.FormatRich, true
+	if chat, err := b.store.GetChat(chatID); err == nil {
+		format, useTopics = chat.Format, chat.UseTopics
+	}
+	look := i18n.T(lang, i18n.MsgCfgFormatClassicShort)
+	if format != storage.FormatClassic {
+		look = i18n.T(lang, i18n.MsgCfgFormatRichShort)
+		if !b.rich || b.richMissing.Load() {
+			look = i18n.Tf(lang, i18n.MsgStatusRichOff, i18n.T(lang, i18n.MsgCfgFormatClassicShort))
 		}
-	} else {
-		sb.WriteString(i18n.T(lang, i18n.MsgStatusNoTopics))
+	}
+	routing := i18n.T(lang, i18n.MsgCfgTopicsOff)
+	if useTopics {
+		routing = i18n.T(lang, i18n.MsgCfgTopicsOn)
+	}
+	sb.WriteString(i18n.Tf(lang, i18n.MsgStatusSettings, look, routing))
+
+	// With routing off the topic list would only mislead.
+	if useTopics {
+		topics, err := b.store.GetTopicsByChat(chatID)
+		if err == nil && len(topics) > 0 {
+			sb.WriteString(i18n.T(lang, i18n.MsgStatusTopicsHeader))
+			for _, t := range topics {
+				sb.WriteString(i18n.Tf(lang, i18n.MsgStatusTopicLine,
+					html.EscapeString(t.Name), html.EscapeString(t.EventType), t.TopicID))
+			}
+		} else {
+			sb.WriteString(i18n.T(lang, i18n.MsgStatusNoTopics))
+		}
 	}
 
 	repos, err := b.store.GetReposByChat(chatID)

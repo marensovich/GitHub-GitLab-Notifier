@@ -126,7 +126,9 @@ func (b *Bot) Username() string {
 func (b *Bot) Start(ctx context.Context) {
 	log.Printf(i18n.T(b.lang, i18n.MsgBotStarted), b.self.Username)
 
-	b.registerCommands(ctx)
+	// setMyCommands can hang for minutes when Telegram answers 504; the menu
+	// is cosmetic, so it must not delay polling or the webhook server.
+	go b.registerCommands(ctx)
 
 	updates, err := b.api.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{
 		Timeout:        60,
