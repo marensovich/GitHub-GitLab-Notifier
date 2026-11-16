@@ -1,0 +1,27 @@
+topic: pull_request
+
+--- en ---
+🔀 New pull request
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12">#12</a> <b>Add &lt;dark&gt; mode</b>
+🌿 <code>feature/dark-mode</code> → <code>main</code>
+👤 <a href="https://github.com/dev">@dev</a>
+📊 <b>+120</b> / <b>−8</b> · files: 5 · commits: 3
+
+<blockquote>This PR adds dark mode.
+
+Closes #10</blockquote>
+
+--- ru ---
+🔀 Новый pull request
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12">#12</a> <b>Add &lt;dark&gt; mode</b>
+🌿 <code>feature/dark-mode</code> → <code>main</code>
+👤 <a href="https://github.com/dev">@dev</a>
+📊 <b>+120</b> / <b>−8</b> · файлов: 5 · коммитов: 3
+
+<blockquote>This PR adds dark mode.
+
+Closes #10</blockquote>

@@ -1,0 +1,19 @@
+topic: issues
+
+--- en ---
+💬 New comment on issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23</a> <b>New API: create/update/delete file</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Can reproduce on &lt;main&gt; &amp; v2.</blockquote>
+
+--- ru ---
+💬 Новый комментарий к issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23</a> <b>New API: create/update/delete file</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Can reproduce on &lt;main&gt; &amp; v2.</blockquote>

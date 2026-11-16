@@ -1,0 +1,19 @@
+topic: issues
+
+--- en ---
+💬 New comment on commit
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf</a> <b>Add submodule</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>is this commit ready?</blockquote>
+
+--- ru ---
+💬 Новый комментарий к коммиту
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/commit/cfe32cf6#note_1243">cfe32cf</a> <b>Add submodule</b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>is this commit ready?</blockquote>

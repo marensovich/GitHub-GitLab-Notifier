@@ -8,7 +8,7 @@ import (
 func TestGitLabHandlers(t *testing.T) {
 	runHandlerCases(t, []handlerCase{
 		{
-			fixture: "gitlab/push.json",
+			fixture: "gitlab/push_hook/basic.json",
 			event:   platform.GitLabPush,
 			contains: []string{
 				`<b>group/app</b>`,
@@ -23,12 +23,12 @@ func TestGitLabHandlers(t *testing.T) {
 			absent: []string{"github.com"},
 		},
 		{
-			fixture:  "gitlab/tag_push.json",
+			fixture:  "gitlab/tag_push_hook/basic.json",
 			event:    platform.GitLabTagPush,
 			contains: []string{"New tag", `<a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a>`, "@dev1"},
 		},
 		{
-			fixture: "gitlab/merge_request_open.json",
+			fixture: "gitlab/merge_request_hook/open.json",
 			event:   platform.GitLabMergeRequest,
 			contains: []string{
 				"New merge request",
@@ -38,43 +38,43 @@ func TestGitLabHandlers(t *testing.T) {
 			},
 		},
 		{
-			fixture:  "gitlab/merge_request_merge.json",
+			fixture:  "gitlab/merge_request_hook/merge.json",
 			event:    platform.GitLabMergeRequest,
 			contains: []string{"Merge request merged", "!3"},
 			absent:   []string{"blockquote"},
 		},
 		{
-			fixture: "gitlab/merge_request_update.json",
+			fixture: "gitlab/merge_request_hook/update.json",
 			event:   platform.GitLabMergeRequest,
 			skip:    true,
 		},
 		{
-			fixture:  "gitlab/issue_open.json",
+			fixture:  "gitlab/issue_hook/open.json",
 			event:    platform.GitLabIssue,
 			contains: []string{"New issue", "#23", "New API: create/update/delete file", "Create new API"},
 		},
 		{
-			fixture:  "gitlab/issue_open.json",
+			fixture:  "gitlab/issue_hook/open.json",
 			event:    platform.GitLabConfidentialIssue,
 			contains: []string{"New issue", "#23"},
 		},
 		{
-			fixture:  "gitlab/note_mr.json",
+			fixture:  "gitlab/note_hook/merge_request.json",
 			event:    platform.GitLabNote,
 			contains: []string{"New comment on merge request", "!1", "This MR needs work.", "note_1244"},
 		},
 		{
-			fixture:  "gitlab/note_commit.json",
+			fixture:  "gitlab/note_hook/commit.json",
 			event:    platform.GitLabNote,
 			contains: []string{"New comment on commit", ">cfe32cf<", "<b>Add submodule</b>"},
 		},
 		{
-			fixture: "gitlab/note_snippet.json",
+			fixture: "gitlab/note_hook/snippet.json",
 			event:   platform.GitLabNote,
 			skip:    true,
 		},
 		{
-			fixture: "gitlab/pipeline_failed.json",
+			fixture: "gitlab/pipeline_hook/failed.json",
 			event:   platform.GitLabPipeline,
 			contains: []string{
 				"CI failed",
@@ -85,12 +85,12 @@ func TestGitLabHandlers(t *testing.T) {
 			},
 		},
 		{
-			fixture: "gitlab/pipeline_running.json",
+			fixture: "gitlab/pipeline_hook/running.json",
 			event:   platform.GitLabPipeline,
 			skip:    true,
 		},
 		{
-			fixture:  "gitlab/release_create.json",
+			fixture:  "gitlab/release_hook/create.json",
 			event:    platform.GitLabRelease,
 			contains: []string{"New release", "Release 1.0", "First stable release", "/-/releases/v1.0.0"},
 		},

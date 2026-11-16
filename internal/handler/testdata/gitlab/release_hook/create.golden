@@ -1,0 +1,17 @@
+topic: release
+
+--- en ---
+📦 New release
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">v1.0.0</a> <b>Release 1.0</b>
+
+<blockquote>First stable release</blockquote>
+
+--- ru ---
+📦 Новый релиз
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">v1.0.0</a> <b>Release 1.0</b>
+
+<blockquote>First stable release</blockquote>

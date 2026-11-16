@@ -1,0 +1,15 @@
+topic: push
+
+--- en ---
+🏷 New tag
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+--- ru ---
+🏷 Новый тег
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>

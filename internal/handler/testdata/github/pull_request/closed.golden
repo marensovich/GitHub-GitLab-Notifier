@@ -1,0 +1,17 @@
+topic: pull_request
+
+--- en ---
+🚫 Pull request closed
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12">#12</a> <b>Add &lt;dark&gt; mode</b>
+🌿 <code>feature/dark-mode</code> → <code>main</code>
+👤 <a href="https://github.com/dev">@dev</a>
+
+--- ru ---
+🚫 Pull request закрыт
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/pull/12">#12</a> <b>Add &lt;dark&gt; mode</b>
+🌿 <code>feature/dark-mode</code> → <code>main</code>
+👤 <a href="https://github.com/dev">@dev</a>

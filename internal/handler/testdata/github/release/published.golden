@@ -1,0 +1,21 @@
+topic: release
+
+--- en ---
+📦 New release
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0</a> <b>v1.2.0 — Dark mode</b>
+👤 <a href="https://github.com/maintainer">@maintainer</a>
+
+<blockquote>## Changes
+- Dark mode</blockquote>
+
+--- ru ---
+📦 Новый релиз
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0</a> <b>v1.2.0 — Dark mode</b>
+👤 <a href="https://github.com/maintainer">@maintainer</a>
+
+<blockquote>## Changes
+- Dark mode</blockquote>
