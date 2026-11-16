@@ -55,6 +55,7 @@ const (
 	MsgCfgFormatClassicShort       = "cfg_format_classic_short"
 	MsgCfgSummary                  = "cfg_summary"
 	MsgCfgNotAdmin                 = "cfg_not_admin"
+	MsgCfgAnonymous                = "cfg_anonymous"
 	MsgCfgFailed                   = "cfg_failed"
 	MsgConnectUsage                = "connect_usage"
 	MsgConnectInvalidURL           = "connect_invalid_url"

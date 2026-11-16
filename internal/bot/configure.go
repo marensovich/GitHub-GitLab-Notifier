@@ -67,11 +67,8 @@ func (b *Bot) configureChat(msg *telego.Message) {
 	if chat.IsForum {
 		text, keyboard = topicsStep(lang, chat.UseTopics)
 	} else {
-		if chat.UseTopics {
-			if err := b.store.SetChatSettings(chatID, chat.Format, false); err != nil {
-				log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
-			}
-		}
+		// Nothing is stored until a button is pressed; the format press
+		// turns topic routing off for a chat that is not a forum.
 		text, keyboard = formatStep(lang, chat.Format, "")
 	}
 
@@ -107,8 +104,8 @@ func (b *Bot) handleCallback(q *telego.CallbackQuery) {
 	}
 	lang := b.chatLang(chatID)
 
-	if !b.canConfigure(chatID, q) {
-		b.answer(q.ID, i18n.T(lang, i18n.MsgCfgNotAdmin), true)
+	if refusal := b.canConfigure(chatID, q); refusal != "" {
+		b.answer(q.ID, i18n.T(lang, refusal), true)
 		return
 	}
 
@@ -118,41 +115,57 @@ func (b *Bot) handleCallback(q *telego.CallbackQuery) {
 		useTopics := value == "yes"
 		intro := ""
 		if useTopics {
+			// Creating topics takes a few seconds: stop the button's spinner
+			// first. Failures are shown in the message from here on.
+			b.answer(q.ID, "", false)
 			created, skipped, err := b.createTopics(chatID, lang)
 			if err != nil {
-				b.edit(chatID, messageID, err.Error(), nil)
-				b.answer(q.ID, "", false)
+				// Keep the buttons, so the choice can be made again once
+				// the cause (usually the bot's rights) is fixed.
+				question, keyboard := topicsStep(lang, chat.UseTopics)
+				b.edit(chatID, messageID, err.Error()+"\n\n"+question, keyboard)
 				return
 			}
 			intro = topicsResult(lang, created, skipped)
 		}
 		if err := b.store.SetChatSettings(chatID, chat.Format, useTopics); err != nil {
 			log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
-			b.answer(q.ID, i18n.T(lang, i18n.MsgCfgFailed), true)
+			if useTopics {
+				question, keyboard := topicsStep(lang, chat.UseTopics)
+				b.edit(chatID, messageID, i18n.T(lang, i18n.MsgCfgFailed)+"\n\n"+question, keyboard)
+			} else {
+				b.answer(q.ID, i18n.T(lang, i18n.MsgCfgFailed), true)
+			}
 			return
 		}
 		text, keyboard := formatStep(lang, chat.Format, intro)
 		b.edit(chatID, messageID, text, keyboard)
+		if useTopics {
+			return
+		}
 
 	case stepFormat:
-		if err := b.store.SetChatSettings(chatID, value, chat.UseTopics); err != nil {
+		// A chat that is not a forum has no topics to route to.
+		useTopics := chat.UseTopics && chat.IsForum
+		if err := b.store.SetChatSettings(chatID, value, useTopics); err != nil {
 			log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 			b.answer(q.ID, i18n.T(lang, i18n.MsgCfgFailed), true)
 			return
 		}
-		b.edit(chatID, messageID, summary(lang, value, chat.UseTopics), nil)
+		b.edit(chatID, messageID, summary(lang, value, useTopics), nil)
 	}
 	b.answer(q.ID, "", false)
 }
 
-// canConfigure reports whether the user who pressed a button may change the
-// chat settings: a chat administrator, the owner of a private chat, or,
-// when the bot cannot read the member list, the user who sent /configure.
-func (b *Bot) canConfigure(chatID int64, q *telego.CallbackQuery) bool {
+// canConfigure reports why the user who pressed a button may not change the
+// chat settings, as an i18n key, or "" when they may: a chat administrator,
+// the owner of a private chat, or, when the bot cannot read the member list,
+// the user who sent /configure.
+func (b *Bot) canConfigure(chatID int64, q *telego.CallbackQuery) string {
 	if q.Message.GetChat().Type == telego.ChatTypePrivate {
 		// Only the owner of a private chat can press its buttons, and
 		// getChatMember reports them as a plain member.
-		return true
+		return ""
 	}
 	member, err := b.api.GetChatMember(context.Background(), &telego.GetChatMemberParams{
 		ChatID: telegoutil.ID(chatID),
@@ -160,13 +173,26 @@ func (b *Bot) canConfigure(chatID int64, q *telego.CallbackQuery) bool {
 	})
 	if err != nil {
 		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToCheckBotAdminStatus, err))
-		if m := q.Message.Message(); m != nil && m.ReplyToMessage != nil && m.ReplyToMessage.From != nil {
-			return m.ReplyToMessage.From.ID == q.From.ID
+		m := q.Message.Message()
+		if m == nil || m.ReplyToMessage == nil {
+			return i18n.MsgCfgNotAdmin
 		}
-		return false
+		cmd := m.ReplyToMessage
+		if cmd.SenderChat != nil && cmd.SenderChat.ID == chatID {
+			// Sent by an anonymous administrator: nobody can be matched
+			// to the command.
+			return i18n.MsgCfgAnonymous
+		}
+		if cmd.From != nil && cmd.From.ID == q.From.ID {
+			return ""
+		}
+		return i18n.MsgCfgNotAdmin
 	}
 	status := member.MemberStatus()
-	return status == telego.MemberStatusCreator || status == telego.MemberStatusAdministrator
+	if status == telego.MemberStatusCreator || status == telego.MemberStatusAdministrator {
+		return ""
+	}
+	return i18n.MsgCfgNotAdmin
 }
 
 // topicsStep asks whether to route events into forum topics.

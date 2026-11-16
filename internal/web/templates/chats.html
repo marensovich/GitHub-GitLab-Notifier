@@ -1,6 +1,7 @@
 {{define "title"}}Chats{{end}}
 {{define "content"}}
 <h1>Chats</h1>
+{{if .RichOff}}<p class="alerts warn">Rich messages are off (<code>RICH_MESSAGES=false</code>, or the Bot API server has no <code>sendRichMessage</code>): every chat gets the classic look.</p>{{end}}
 {{range .Chats}}
 <section class="card">
   <div class="card-head">
@@ -8,7 +9,7 @@
     <div class="tags">
       <span class="badge">{{.Language}}</span>
       {{if .IsForum}}<span class="badge">forum</span>{{end}}
-      <span class="badge">look: {{.Format}}</span>
+      {{if .RichOff}}<span class="badge warn">look: rich → classic</span>{{else}}<span class="badge">look: {{.Format}}</span>{{end}}
       {{if and .IsForum (not .UseTopics)}}<span class="badge warn">topics off</span>{{end}}
       <span class="badge">{{len .Repos}} repo{{if ne (len .Repos) 1}}s{{end}}</span>
     </div>

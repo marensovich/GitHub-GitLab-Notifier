@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -167,14 +168,35 @@ func isTopicOrChatError(description string) bool {
 	return false
 }
 
-// loggedFallbacks keeps the rich-message rejections already logged, so a
-// recurring one is logged once per process instead of on every event.
-var loggedFallbacks sync.Map
+// maxLoggedFallbacks bounds the rejection kinds remembered for logging.
+const maxLoggedFallbacks = 64
+
+// loggedFallbacks keeps the kinds of rich-message rejections already logged,
+// so a recurring one is logged once per process instead of on every event.
+var (
+	loggedFallbacksMu sync.Mutex
+	loggedFallbacks   = map[string]bool{}
+	digitsRe          = regexp.MustCompile(`[0-9]+`)
+)
 
 func logFallbackOnce(err error) {
-	if _, seen := loggedFallbacks.LoadOrStore(err.Error(), true); !seen {
+	// Byte offsets and positions differ between messages with the same cause.
+	kind := digitsRe.ReplaceAllString(err.Error(), "N")
+	loggedFallbacksMu.Lock()
+	seen := loggedFallbacks[kind]
+	if !seen && len(loggedFallbacks) < maxLoggedFallbacks {
+		loggedFallbacks[kind] = true
+	}
+	loggedFallbacksMu.Unlock()
+	if !seen {
 		log.Printf("⚠️ Rich message rejected, sent the classic message instead: %v", err)
 	}
+}
+
+func loggedFallbackCount() int {
+	loggedFallbacksMu.Lock()
+	defer loggedFallbacksMu.Unlock()
+	return len(loggedFallbacks)
 }
 
 // SendMessageToTopic sends an HTML message to a specific forum topic.
