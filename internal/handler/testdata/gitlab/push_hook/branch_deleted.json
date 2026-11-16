@@ -1,0 +1,16 @@
+{
+  "object_kind": "push",
+  "before": "95790bf891e76fee5e1747ab589903a6a1f80f22",
+  "after": "0000000000000000000000000000000000000000",
+  "ref": "refs/heads/feature/old",
+  "checkout_sha": null,
+  "user_name": "Dev One",
+  "user_username": "dev1",
+  "user_email": "dev1@example.com",
+  "project": {
+    "path_with_namespace": "group/app",
+    "web_url": "https://gitlab.example.com/group/app"
+  },
+  "commits": [],
+  "total_commits_count": 0
+}

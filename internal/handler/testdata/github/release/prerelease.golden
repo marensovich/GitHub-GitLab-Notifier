@@ -1,0 +1,47 @@
+topic: release
+
+--- en rich ---
+<h4>🧪 New pre-release</h4>
+<p><b><a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0 — Dark mode</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>Tag</td><td><code>v1.2.0</code></td></tr>
+</table>
+<blockquote expandable>## Changes<br>- Dark mode</blockquote>
+<p><tg-button type="url" style="primary" url="https://github.com/octo/hello/releases/tag/v1.2.0">Open release</tg-button></p>
+<footer><a href="https://github.com/maintainer">@maintainer</a></footer>
+
+--- en classic ---
+🧪 New pre-release
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0 — Dark mode</a></b>
+Tag: <code>v1.2.0</code>
+👤 <a href="https://github.com/maintainer">@maintainer</a>
+
+<blockquote expandable>## Changes
+- Dark mode</blockquote>
+buttons: [Open release](https://github.com/octo/hello/releases/tag/v1.2.0) primary
+
+--- ru rich ---
+<h4>🧪 Новый пре-релиз</h4>
+<p><b><a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0 — Dark mode</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>Тег</td><td><code>v1.2.0</code></td></tr>
+</table>
+<blockquote expandable>## Changes<br>- Dark mode</blockquote>
+<p><tg-button type="url" style="primary" url="https://github.com/octo/hello/releases/tag/v1.2.0">Открыть релиз</tg-button></p>
+<footer><a href="https://github.com/maintainer">@maintainer</a></footer>
+
+--- ru classic ---
+🧪 Новый пре-релиз
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/releases/tag/v1.2.0">v1.2.0 — Dark mode</a></b>
+Тег: <code>v1.2.0</code>
+👤 <a href="https://github.com/maintainer">@maintainer</a>
+
+<blockquote expandable>## Changes
+- Dark mode</blockquote>
+buttons: [Открыть релиз](https://github.com/octo/hello/releases/tag/v1.2.0) primary

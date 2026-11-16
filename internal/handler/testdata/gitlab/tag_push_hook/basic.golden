@@ -1,0 +1,35 @@
+topic: push
+
+--- en rich ---
+<h4>🏷 New tag</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/tags/v1.0.0">Open tag</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
+🏷 New tag
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+buttons: [Open tag](https://gitlab.example.com/group/app/-/tags/v1.0.0)
+
+--- ru rich ---
+<h4>🏷 Новый тег</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/tags/v1.0.0">Открыть тег</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
+🏷 Новый тег
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+buttons: [Открыть тег](https://gitlab.example.com/group/app/-/tags/v1.0.0)

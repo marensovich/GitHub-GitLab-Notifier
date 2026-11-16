@@ -51,6 +51,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run shellcheck
         run: shellcheck -x scripts/*.sh
+      - name: Check scrub-fixture.sh
+        run: |
+          printf '%s' '{"installation":{"id":1},"sender":{"login":"a","avatar_url":"x","node_id":"y"},"pusher":{"email":"real.person@corp.io"},"msg":"by joe@mail.ru"}' > /tmp/payload.json
+          out="$(scripts/scrub-fixture.sh /tmp/payload.json)"
+          echo "$out"
+          jq -e '.installation == null and .sender.avatar_url == null and .sender.node_id == null
+                 and .pusher.email == "user@example.com" and .msg == "by user@example.com"' <<<"$out"
 
   docker:
     name: Docker build
@@ -61,3 +68,8 @@ jobs:
         run: docker build --build-arg VERSION=ci -t github-gitlab-notifier:ci .
       - name: Smoke test
         run: docker run --rm github-gitlab-notifier:ci --version
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Cross-build arm64 and arm/v7
+        # Same platforms as the published image; nothing is pushed.
+        run: docker buildx build --platform linux/arm64,linux/arm/v7 --build-arg VERSION=ci .

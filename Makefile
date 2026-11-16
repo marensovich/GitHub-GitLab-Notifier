@@ -1,4 +1,4 @@
-.PHONY: help version deps run run-ru run-en run-args build build-all release clean test cover fmt vet lint install docker docker-run
+.PHONY: help version deps run run-ru run-en run-args build build-all release clean test golden cover fmt vet lint install docker docker-run
 
 BINARY_NAME=GitHub-GitLab-Notifier
 VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo "v0.0.1")
@@ -65,6 +65,10 @@ clean: ## Remove build artifacts
 
 test: ## Run tests
 	go test -count=1 ./...
+
+golden: ## Regenerate handler golden files (review the diff before committing)
+	go test -count=1 ./internal/handler -run TestGolden -update
+	git status --short internal/handler/testdata
 
 cover: ## Run tests with a coverage report
 	go test -count=1 -coverprofile=coverage.out ./...

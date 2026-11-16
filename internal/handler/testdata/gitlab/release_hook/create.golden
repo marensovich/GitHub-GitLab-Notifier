@@ -1,0 +1,41 @@
+topic: release
+
+--- en rich ---
+<h4>📦 New release</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">Release 1.0</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Tag</td><td><code>v1.0.0</code></td></tr>
+</table>
+<blockquote expandable>First stable release</blockquote>
+<p><tg-button type="url" style="primary" url="https://gitlab.example.com/group/app/-/releases/v1.0.0">Open release</tg-button></p>
+
+--- en classic ---
+📦 New release
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">Release 1.0</a></b>
+Tag: <code>v1.0.0</code>
+
+<blockquote expandable>First stable release</blockquote>
+buttons: [Open release](https://gitlab.example.com/group/app/-/releases/v1.0.0) primary
+
+--- ru rich ---
+<h4>📦 Новый релиз</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">Release 1.0</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Тег</td><td><code>v1.0.0</code></td></tr>
+</table>
+<blockquote expandable>First stable release</blockquote>
+<p><tg-button type="url" style="primary" url="https://gitlab.example.com/group/app/-/releases/v1.0.0">Открыть релиз</tg-button></p>
+
+--- ru classic ---
+📦 Новый релиз
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">Release 1.0</a></b>
+Тег: <code>v1.0.0</code>
+
+<blockquote expandable>First stable release</blockquote>
+buttons: [Открыть релиз](https://gitlab.example.com/group/app/-/releases/v1.0.0) primary

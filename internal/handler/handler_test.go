@@ -2,11 +2,11 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"errors"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -51,19 +51,21 @@ func runHandlerCases(t *testing.T, cases []handlerCase) {
 			}
 
 			for _, lang := range i18n.Supported {
-				msg, err := h.Handle(lang, payload)
+				n, err := h.Handle(lang, payload)
 				if tc.skip {
 					if !errors.Is(err, ErrSkip) {
-						t.Fatalf("%s: want ErrSkip, got msg=%q err=%v", lang, msg, err)
+						t.Fatalf("%s: want ErrSkip, got %+v err=%v", lang, n, err)
 					}
 					continue
 				}
 				if err != nil {
 					t.Fatalf("%s: unexpected error: %v", lang, err)
 				}
-				assertTelegramHTML(t, msg)
-				if strings.Contains(msg, "???") || strings.Contains(msg, "%!") {
-					t.Errorf("%s: message has missing translation or bad format verb:\n%s", lang, msg)
+				// The classic text plus its buttons line carries every piece of
+				// content, so assertions run against it.
+				msg := renderClassic(t, lang, n)
+				if rich := notify.Rich(lang, n); strings.Contains(rich+msg, "???") || strings.Contains(rich+msg, "%!") {
+					t.Errorf("%s: message has missing translation or bad format verb:\n%s\n%s", lang, msg, rich)
 				}
 				if lang != i18n.EN {
 					continue
@@ -80,42 +82,6 @@ func runHandlerCases(t *testing.T, cases []handlerCase) {
 				}
 			}
 		})
-	}
-}
-
-var tagRe = regexp.MustCompile(`<(/?)([a-z]+)[^>]*>`)
-
-// telegramTags are the HTML tags used by the bot and supported by Telegram.
-var telegramTags = map[string]bool{"b": true, "i": true, "a": true, "code": true, "pre": true, "blockquote": true}
-
-// assertTelegramHTML checks that a message only uses Telegram-supported tags,
-// that tags are balanced, and that no raw "<" from user input leaked through.
-func assertTelegramHTML(t *testing.T, msg string) {
-	t.Helper()
-
-	var stack []string
-	for _, m := range tagRe.FindAllStringSubmatch(msg, -1) {
-		closing, name := m[1] == "/", m[2]
-		if !telegramTags[name] {
-			t.Errorf("unsupported tag <%s> in message:\n%s", name, msg)
-			return
-		}
-		if !closing {
-			stack = append(stack, name)
-			continue
-		}
-		if len(stack) == 0 || stack[len(stack)-1] != name {
-			t.Errorf("unbalanced </%s> in message:\n%s", name, msg)
-			return
-		}
-		stack = stack[:len(stack)-1]
-	}
-	if len(stack) > 0 {
-		t.Errorf("unclosed tags %v in message:\n%s", stack, msg)
-	}
-
-	if stripped := tagRe.ReplaceAllString(msg, ""); strings.ContainsAny(stripped, "<>") {
-		t.Errorf("unescaped < or > in message text:\n%s", msg)
 	}
 }
 

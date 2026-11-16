@@ -1,0 +1,23 @@
+{{define "title"}}Overview{{end}}
+{{define "content"}}
+<h1>Overview</h1>
+
+<section class="tiles">
+  <div class="tile"><div class="tile-label">Version</div><div class="tile-value">{{.Version}}</div><div class="tile-sub">up {{.Uptime}}</div></div>
+  <div class="tile"><div class="tile-label">Repositories</div><div class="tile-value">{{.Repos}}</div>
+    <div class="tile-sub">{{range $i, $p := .ByPlatform}}{{if $i}} · {{end}}{{$p.Name}} {{$p.Count}}{{else}}none connected{{end}}</div></div>
+  <div class="tile"><div class="tile-label">Chats</div><div class="tile-value">{{.Chats}}</div><div class="tile-sub">{{.IdleChats}} without repositories</div></div>
+</section>
+
+<h2>Attention</h2>
+{{if or .Unprotected .Orphans}}
+<ul class="alerts">
+  {{if .Unprotected}}<li class="warn"><strong>{{.Unprotected}}</strong> repositor{{if eq .Unprotected 1}}y has{{else}}ies have{{end}} no webhook secret and no global WEBHOOK_SECRET is set — anyone who knows the URL can send events. <a href="/repos">Review</a></li>{{end}}
+  {{if .Orphans}}<li class="warn"><strong>{{.Orphans}}</strong> repositor{{if eq .Orphans 1}}y points{{else}}ies point{{end}} to a chat the bot has no record of. <a href="/repos">Review</a></li>{{end}}
+</ul>
+{{else}}
+<p class="ok">Nothing needs attention.</p>
+{{end}}
+
+<p class="muted">Started {{.StartedAt.Format "2006-01-02 15:04:05 MST"}}. Delivery history, the send queue and management actions come in later releases.</p>
+{{end}}

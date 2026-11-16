@@ -1,0 +1,65 @@
+topic: push
+
+--- en rich ---
+<h4>🚀 New push</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/tree/master">master</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Commits</td><td><b>25</b></td></tr>
+<tr><td>E-mail</td><td><code>dev1@example.com</code></td></tr>
+</table>
+<details><summary>Commits (25)</summary><ul><li><a href="https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327">b6568db</a> Update Catalan translation — Jordi</li><li><a href="https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7">da15608</a> fixed readme — Dev One</li><li><i>…and 23 more</i></li></ul></details>
+<details><summary>Changed files (2)</summary><ul><li>➕ <code>CHANGELOG</code></li><li>✏️ <code>README.md</code></li></ul></details>
+<p><tg-button type="url" style="primary" url="https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7">Compare</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
+🚀 New push
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/tree/master">master</a></b>
+Commits: <b>25</b>
+E-mail: <code>dev1@example.com</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<b>Commits:</b>
+  <a href="https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327">b6568db</a> Update Catalan translation — Jordi
+  <a href="https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7">da15608</a> fixed readme — Dev One
+  <i>…and 23 more</i>
+
+<b>Changed files:</b>
+  ➕ <code>CHANGELOG</code>
+  ✏️ <code>README.md</code>
+buttons: [Compare](https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7) primary
+
+--- ru rich ---
+<h4>🚀 Новый пуш</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/tree/master">master</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Коммиты</td><td><b>25</b></td></tr>
+<tr><td>E-mail</td><td><code>dev1@example.com</code></td></tr>
+</table>
+<details><summary>Коммиты (25)</summary><ul><li><a href="https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327">b6568db</a> Update Catalan translation — Jordi</li><li><a href="https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7">da15608</a> fixed readme — Dev One</li><li><i>…и ещё 23</i></li></ul></details>
+<details><summary>Изменённые файлы (2)</summary><ul><li>➕ <code>CHANGELOG</code></li><li>✏️ <code>README.md</code></li></ul></details>
+<p><tg-button type="url" style="primary" url="https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7">Сравнить</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
+🚀 Новый пуш
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/tree/master">master</a></b>
+Коммиты: <b>25</b>
+E-mail: <code>dev1@example.com</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<b>Коммиты:</b>
+  <a href="https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327">b6568db</a> Update Catalan translation — Jordi
+  <a href="https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7">da15608</a> fixed readme — Dev One
+  <i>…и ещё 23</i>
+
+<b>Изменённые файлы:</b>
+  ➕ <code>CHANGELOG</code>
+  ✏️ <code>README.md</code>
+buttons: [Сравнить](https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7) primary

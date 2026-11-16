@@ -1,0 +1,45 @@
+topic: issues
+
+--- en rich ---
+<h4>🐛 New issue</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/issues/23">#23 New API: create/update/delete file</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<p>🔒 Confidential — visible only to project members in GitLab</p>
+<blockquote expandable>Create new API for manipulations with repository</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/issues/23">Open issue</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
+🐛 New issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23">#23 New API: create/update/delete file</a></b>
+🔒 Confidential — visible only to project members in GitLab
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote expandable>Create new API for manipulations with repository</blockquote>
+buttons: [Open issue](https://gitlab.example.com/group/app/-/issues/23)
+
+--- ru rich ---
+<h4>🐛 Новый issue</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/issues/23">#23 New API: create/update/delete file</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<p>🔒 Конфиденциально — в GitLab видно только участникам проекта</p>
+<blockquote expandable>Create new API for manipulations with repository</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/issues/23">Открыть issue</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
+🐛 Новый issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23">#23 New API: create/update/delete file</a></b>
+🔒 Конфиденциально — в GitLab видно только участникам проекта
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote expandable>Create new API for manipulations with repository</blockquote>
+buttons: [Открыть issue](https://gitlab.example.com/group/app/-/issues/23)

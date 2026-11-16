@@ -1,0 +1,37 @@
+topic: push
+
+--- en rich ---
+<h4>🗑️ Deleted branch</h4>
+<p><b>feature/old</b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>E-mail</td><td><code>octo@example.com</code></td></tr>
+</table>
+<footer><a href="https://github.com/octocat">@octocat</a></footer>
+
+--- en classic ---
+🗑️ Deleted branch
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b>feature/old</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
+buttons: none
+
+--- ru rich ---
+<h4>🗑️ Удалена ветка</h4>
+<p><b>feature/old</b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>E-mail</td><td><code>octo@example.com</code></td></tr>
+</table>
+<footer><a href="https://github.com/octocat">@octocat</a></footer>
+
+--- ru classic ---
+🗑️ Удалена ветка
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b>feature/old</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
+buttons: none

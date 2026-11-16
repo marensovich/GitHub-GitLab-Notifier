@@ -5,6 +5,8 @@ package server
 import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/metrics"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
@@ -12,11 +14,14 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,9 +29,10 @@ import (
 // but notification-relevant events are far smaller).
 const maxPayloadSize = 10 << 20
 
-// Sender delivers a notification to a Telegram chat (optionally to a forum topic).
+// Sender delivers a notification to a Telegram chat (optionally to a forum
+// topic) in a format, and reports every attempt it made.
 type Sender interface {
-	SendMessageToTopic(chatID int64, topicID int, text string) error
+	SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error)
 }
 
 // Config holds the server settings.
@@ -42,7 +48,22 @@ type Config struct {
 	WebhookSecret string
 	// Version is reported by the health endpoint.
 	Version string
+	// DeliveriesRetention is how long the delivery log is kept (0 = forever).
+	DeliveriesRetention time.Duration
+	// Metrics receives counters; nil creates a private set.
+	Metrics *metrics.Metrics
+	// ServeMetrics exposes GET /metrics on this server. Leave it false when
+	// the metrics are served on their own address.
+	ServeMetrics bool
+	// Checks are run by GET /healthz, by name ("db", "telegram").
+	Checks map[string]Check
 }
+
+// Check reports whether a dependency works; nil means healthy.
+type Check func(ctx context.Context) error
+
+// checkTimeout bounds each health check.
+const checkTimeout = 2 * time.Second
 
 // Server receives webhooks and delivers notifications.
 type Server struct {
@@ -51,11 +72,21 @@ type Server struct {
 	store      *storage.Store
 	sender     Sender
 	http       *http.Server
+
+	// inflight holds delivery IDs being processed right now, so two copies
+	// of one delivery arriving at the same time are not both sent.
+	mu       sync.Mutex
+	inflight map[string]bool
+
+	started time.Time
 }
 
 // New creates a webhook server.
 func New(cfg Config, d *dispatcher.Dispatcher, store *storage.Store, sender Sender) *Server {
-	s := &Server{cfg: cfg, dispatcher: d, store: store, sender: sender}
+	if cfg.Metrics == nil {
+		cfg.Metrics = metrics.New(cfg.Version)
+	}
+	s := &Server{cfg: cfg, dispatcher: d, store: store, sender: sender, inflight: map[string]bool{}, started: time.Now()}
 	s.http = &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           s.Handler(),
@@ -70,8 +101,14 @@ func New(cfg Config, d *dispatcher.Dispatcher, store *storage.Store, sender Send
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/webhook", s.handleWebhook)
-	mux.HandleFunc("/webhook/health", s.handleHealth)
-	mux.HandleFunc("/health", s.handleHealth)
+	// All three paths return the same report; /health and /webhook/health
+	// are kept for existing monitors and the installer.
+	mux.HandleFunc("/health", s.handleHealthz)
+	mux.HandleFunc("/healthz", s.handleHealthz)
+	mux.HandleFunc("/webhook/health", s.handleHealthz)
+	if s.cfg.ServeMetrics {
+		mux.Handle("/metrics", s.cfg.Metrics.Handler())
+	}
 	return mux
 }
 
@@ -89,13 +126,65 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.http.Shutdown(ctx)
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte("pong"))
+// checkResult is one entry of the /healthz response.
+type checkResult struct {
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
+// handleHealthz runs every check and answers 200 when all pass, 503 otherwise.
+func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, i18n.T(s.cfg.DefaultLang, i18n.MsgMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	resp := struct {
+		Status  string                 `json:"status"`
+		Version string                 `json:"version"`
+		Uptime  int64                  `json:"uptime_seconds"`
+		Checks  map[string]checkResult `json:"checks"`
+	}{
+		Status:  "ok",
+		Version: s.cfg.Version,
+		Uptime:  int64(time.Since(s.started).Seconds()),
+		Checks:  map[string]checkResult{},
+	}
+
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for name, check := range s.cfg.Checks {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(r.Context(), checkTimeout)
+			defer cancel()
+			res := checkResult{OK: true}
+			if err := check(ctx); err != nil {
+				res = checkResult{Error: err.Error()}
+			}
+			mu.Lock()
+			resp.Checks[name] = res
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+
+	code := http.StatusOK
+	for _, c := range resp.Checks {
+		if !c.OK {
+			resp.Status, code = "fail", http.StatusServiceUnavailable
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	lang := s.cfg.DefaultLang
+	start := time.Now()
 
 	if r.Method != http.MethodPost {
 		http.Error(w, i18n.T(lang, i18n.MsgMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -119,19 +208,131 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	repoURL := platform.RepositoryURL(p, body)
 	repo := s.store.FindRepo(repoURL)
+	if repo != nil {
+		repoURL = repo.RepoURL
+	}
+
+	entry := storage.Delivery{
+		DeliveryID: deliveryID(r, p),
+		Platform:   string(p),
+		Event:      eventName,
+		RepoURL:    repoURL,
+		ReceivedAt: start,
+	}
+	reply := func(status int, text, result, errText string) {
+		entry.Status, entry.HTTPStatus, entry.Error = result, status, errText
+		entry.Duration = time.Since(start)
+		s.cfg.Metrics.ObserveWebhook(entry.Platform, entry.Event, result, entry.Duration)
+		if err := s.store.RecordDelivery(entry); err != nil {
+			log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
+		}
+		if status != http.StatusOK {
+			http.Error(w, text, status)
+			return
+		}
+		w.Write([]byte(text))
+	}
 
 	if !s.verify(r, p, body, repo) {
 		log.Print(i18n.Tf(lang, i18n.MsgWebhookUnauthorized, p, eventName, repoURL))
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		reply(http.StatusUnauthorized, "Unauthorized", storage.DeliveryRejected, "invalid or missing signature")
 		return
 	}
 
-	sent := s.deliver(p, eventName, body, repo)
-	if sent == 0 {
-		w.Write([]byte("SKIPPED"))
+	if id := entry.DeliveryID; id != "" {
+		if !s.claim(p, id) {
+			log.Print(i18n.Tf(lang, i18n.MsgWebhookDuplicate, p, eventName, id))
+			reply(http.StatusOK, "DUPLICATE", storage.DeliveryDuplicate, "")
+			return
+		}
+		defer s.release(p, id)
+		if s.alreadyDelivered(p, id) {
+			log.Print(i18n.Tf(lang, i18n.MsgWebhookDuplicate, p, eventName, id))
+			reply(http.StatusOK, "DUPLICATE", storage.DeliveryDuplicate, "")
+			return
+		}
+	}
+
+	out := s.deliver(p, eventName, body, repo)
+	switch {
+	case out.sent > 0 && out.failed > 0:
+		reply(http.StatusOK, "OK", storage.DeliveryDelivered,
+			fmt.Sprintf("%d of %d sends failed: %v", out.failed, out.sent+out.failed, out.err))
+	case out.sent > 0:
+		reply(http.StatusOK, "OK", storage.DeliveryDelivered, "")
+	case out.failed > 0:
+		// Still 200: GitLab disables hooks that keep failing, and the sender
+		// is not at fault. Redelivering the webhook tries again.
+		reply(http.StatusOK, "SKIPPED", storage.DeliveryFailed, out.err.Error())
+	default:
+		reply(http.StatusOK, "SKIPPED", storage.DeliveryIgnored, "")
+	}
+}
+
+// deliveryID returns the ID the platform gives this delivery, which stays
+// the same when it is delivered again. Empty if the platform sends none.
+func deliveryID(r *http.Request, p platform.Platform) string {
+	switch p {
+	case platform.GitHub:
+		return r.Header.Get("X-GitHub-Delivery")
+	case platform.GitLab:
+		if id := r.Header.Get("Idempotency-Key"); id != "" {
+			return id
+		}
+		return r.Header.Get("X-Gitlab-Event-UUID")
+	}
+	return ""
+}
+
+// claim marks a delivery as being processed. It returns false when another
+// request with the same ID is in progress.
+func (s *Server) claim(p platform.Platform, id string) bool {
+	key := string(p) + "/" + id
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.inflight[key] {
+		return false
+	}
+	s.inflight[key] = true
+	return true
+}
+
+func (s *Server) release(p platform.Platform, id string) {
+	s.mu.Lock()
+	delete(s.inflight, string(p)+"/"+id)
+	s.mu.Unlock()
+}
+
+// alreadyDelivered checks the log. If the log cannot be read the delivery
+// is processed: a possible duplicate is better than a lost notification.
+func (s *Server) alreadyDelivered(p platform.Platform, id string) bool {
+	done, err := s.store.WasDelivered(string(p), id)
+	if err != nil {
+		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+		return false
+	}
+	return done
+}
+
+// PruneDeliveries removes log entries older than DeliveriesRetention right
+// away and then every hour, until ctx is cancelled. It does nothing when
+// the retention is 0.
+func (s *Server) PruneDeliveries(ctx context.Context) {
+	if s.cfg.DeliveriesRetention <= 0 {
 		return
 	}
-	w.Write([]byte("OK"))
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	for {
+		if _, err := s.store.PruneDeliveries(time.Now().Add(-s.cfg.DeliveriesRetention)); err != nil {
+			log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 // detectPlatform returns the platform and event name from webhook headers.
@@ -205,8 +406,10 @@ func validGitHubSignature(secret string, body []byte, header string) bool {
 
 // target is a chat that should receive a notification.
 type target struct {
-	chatID int64
-	lang   i18n.Lang
+	chatID    int64
+	lang      i18n.Lang
+	format    string
+	useTopics bool
 }
 
 // targets returns the chats that receive notifications for a repository:
@@ -214,25 +417,34 @@ type target struct {
 // otherwise the default CHAT_ID.
 func (s *Server) targets(repo *storage.RepoInfo) []target {
 	if repo != nil {
-		return []target{{repo.ChatID, s.chatLang(repo.ChatID)}}
+		chat, err := s.store.GetChat(repo.ChatID)
+		if err != nil {
+			return []target{s.defaultTarget(repo.ChatID)}
+		}
+		return []target{s.chatTarget(*chat)}
 	}
 
 	var result []target
 	for _, chat := range s.store.GetAllChats() {
-		result = append(result, target{chat.ChatID, s.langOrDefault(chat.Language)})
+		result = append(result, s.chatTarget(chat))
 	}
 	if len(result) == 0 && s.cfg.DefaultChatID != 0 {
 		log.Println(i18n.T(s.cfg.DefaultLang, i18n.MsgNoChatsConfigured))
-		result = append(result, target{s.cfg.DefaultChatID, s.cfg.DefaultLang})
+		result = append(result, s.defaultTarget(s.cfg.DefaultChatID))
 	}
 	return result
 }
 
+// outcome counts the messages of one delivery.
+type outcome struct {
+	sent, failed int
+	err          error // last send error
+}
+
 // deliver formats the event for each target chat and sends it.
-// Returns the number of messages sent.
-func (s *Server) deliver(p platform.Platform, eventName string, body []byte, repo *storage.RepoInfo) int {
+func (s *Server) deliver(p platform.Platform, eventName string, body []byte, repo *storage.RepoInfo) outcome {
 	results := make(map[i18n.Lang]dispatcher.Result)
-	sent := 0
+	var out outcome
 
 	for _, t := range s.targets(repo) {
 		res, ok := results[t.lang]
@@ -245,30 +457,51 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 		}
 
 		topicID := 0
-		if res.Topic != platform.TopicGeneral {
+		if t.useTopics && res.Topic != platform.TopicGeneral {
 			topicID = s.store.GetTopicByEvent(t.chatID, string(res.Topic))
 		}
 
-		err := s.sender.SendMessageToTopic(t.chatID, topicID, res.Message)
+		err := s.send(t, topicID, res.Notification)
 		if err != nil && topicID != 0 {
 			// The topic may have been deleted or closed: fall back to the general chat.
-			err = s.sender.SendMessageToTopic(t.chatID, 0, res.Message)
+			err = s.send(t, 0, res.Notification)
 		}
 		if err != nil {
+			out.failed++
+			out.err = err
 			continue
 		}
-		sent++
+		out.sent++
 		log.Print(i18n.Tf(s.cfg.DefaultLang, i18n.MsgWebhookNotificationSent, t.chatID))
 	}
-	return sent
+	return out
 }
 
-func (s *Server) chatLang(chatID int64) i18n.Lang {
-	chat, err := s.store.GetChat(chatID)
-	if err != nil {
-		return s.cfg.DefaultLang
+// send sends one notification and counts every attempt by format.
+func (s *Server) send(t target, topicID int, n notify.Notification) error {
+	attempts, err := s.sender.SendNotification(t.chatID, topicID, t.format, t.lang, n)
+	for i, a := range attempts {
+		s.cfg.Metrics.MessageSent("telegram", a.Format, a.Err)
+		if i > 0 && a.Format == notify.FormatClassic && attempts[i-1].Format == notify.FormatRich {
+			s.cfg.Metrics.RichFallback()
+		}
 	}
-	return s.langOrDefault(chat.Language)
+	return err
+}
+
+// chatTarget is a configured chat with its own language and settings.
+func (s *Server) chatTarget(chat storage.ChatConfig) target {
+	format := chat.Format
+	if format == "" {
+		format = storage.FormatRich
+	}
+	return target{chat.ChatID, s.langOrDefault(chat.Language), format, chat.UseTopics}
+}
+
+// defaultTarget is a chat with no stored settings: the default language,
+// rich messages and topic routing (it has no topics mapped anyway).
+func (s *Server) defaultTarget(chatID int64) target {
+	return target{chatID, s.cfg.DefaultLang, storage.FormatRich, true}
 }
 
 func (s *Server) langOrDefault(language string) i18n.Lang {

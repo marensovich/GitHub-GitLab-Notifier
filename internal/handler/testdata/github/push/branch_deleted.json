@@ -1,0 +1,23 @@
+{
+  "ref": "refs/heads/feature/old",
+  "before": "6113728f27ae82c7b1a177c8d03f9e96e0adf246",
+  "after": "0000000000000000000000000000000000000000",
+  "created": false,
+  "deleted": true,
+  "forced": false,
+  "compare": "https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f",
+  "commits": [],
+  "head_commit": null,
+  "repository": {
+    "full_name": "octo/hello",
+    "html_url": "https://github.com/octo/hello"
+  },
+  "pusher": {
+    "name": "octocat",
+    "email": "octo@example.com"
+  },
+  "sender": {
+    "login": "octocat",
+    "html_url": "https://github.com/octocat"
+  }
+}

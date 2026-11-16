@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -25,6 +26,46 @@ type ChatConfig struct {
 	ChatID   int64  `json:"chat_id"`
 	Language string `json:"language"`
 	IsForum  bool   `json:"is_forum"`
+	// Format is the message look the chat chose: FormatRich or FormatClassic.
+	Format string `json:"format"`
+	// UseTopics routes events to forum topics; off sends all to the general chat.
+	UseTopics bool `json:"use_topics"`
+}
+
+// Message formats a chat can choose.
+const (
+	FormatRich    = "rich"
+	FormatClassic = "classic"
+)
+
+const chatColumns = "chat_id, language, is_forum, format, use_topics"
+
+// scanChat reads one row selected with chatColumns.
+func scanChat(row interface{ Scan(...any) error }) (ChatConfig, error) {
+	var chat ChatConfig
+	var isForum, useTopics int
+	err := row.Scan(&chat.ChatID, &chat.Language, &isForum, &chat.Format, &useTopics)
+	chat.IsForum = intToBool(isForum)
+	chat.UseTopics = intToBool(useTopics)
+	return chat, err
+}
+
+// SetChatSettings stores the message format and topic routing of a chat.
+//
+// Сохраняет формат сообщений и маршрутизацию по темам для чата.
+func (s *Store) SetChatSettings(chatID int64, format string, useTopics bool) error {
+	if format != FormatRich && format != FormatClassic {
+		return fmt.Errorf("unknown message format %q", format)
+	}
+	res, err := s.db.Exec("UPDATE chats SET format = ?, use_topics = ? WHERE chat_id = ?",
+		format, boolToInt(useTopics), chatID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("chat %d not found", chatID)
+	}
+	return nil
 }
 
 // TopicInfo holds information about a created forum topic.
@@ -43,9 +84,9 @@ type RepoInfo struct {
 	Secret   string `json:"secret"`
 }
 
-// Open opens or creates a SQLite database and creates tables.
+// Open opens or creates a SQLite database and migrates its schema.
 //
-// Открывает или создаёт базу данных SQLite и создаёт таблицы.
+// Открывает или создаёт базу данных SQLite и применяет миграции.
 func Open(path string) (*Store, error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -59,67 +100,30 @@ func Open(path string) (*Store, error) {
 
 	// Проверяем соединение
 	if err := db.Ping(); err != nil {
+		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	store := &Store{db: db}
-
-	// Создаём таблицы
-	if err := store.createTables(); err != nil {
-		return nil, fmt.Errorf("failed to create tables: %w", err)
+	// Применяем миграции схемы
+	list, err := loadMigrations(embeddedMigrations, "migrations")
+	if err == nil {
+		err = migrate(context.Background(), db, list)
+	}
+	if err != nil {
+		db.Close()
+		return nil, err
 	}
 
 	log.Println("✅ Storage initialized (SQLite)")
-	return store, nil
+	return &Store{db: db}, nil
 }
 
-// createTables creates all required tables if they don't exist.
+// Ping checks that the database answers.
 //
-// Создаёт все необходимые таблицы, если они не существуют.
-func (s *Store) createTables() error {
-	schema := `
-	CREATE TABLE IF NOT EXISTS chats (
-		chat_id INTEGER PRIMARY KEY,
-		language TEXT NOT NULL DEFAULT 'ru',
-		is_forum INTEGER NOT NULL DEFAULT 0,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-
-	CREATE TABLE IF NOT EXISTS topics (
-		topic_id INTEGER NOT NULL,
-		chat_id INTEGER NOT NULL,
-		name TEXT NOT NULL,
-		event_type TEXT NOT NULL DEFAULT '',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		PRIMARY KEY (chat_id, topic_id),
-		FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS repos (
-		repo_url TEXT PRIMARY KEY,
-		chat_id INTEGER NOT NULL,
-		platform TEXT NOT NULL DEFAULT 'GitHub',
-		secret TEXT NOT NULL DEFAULT '',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS event_mapping (
-		chat_id INTEGER NOT NULL,
-		event_type TEXT NOT NULL,
-		topic_id INTEGER NOT NULL,
-		PRIMARY KEY (chat_id, event_type),
-		FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
-		FOREIGN KEY (chat_id, topic_id) REFERENCES topics(chat_id, topic_id) ON DELETE CASCADE
-	);
-
-	CREATE INDEX IF NOT EXISTS idx_topics_chat ON topics(chat_id);
-	CREATE INDEX IF NOT EXISTS idx_repos_chat ON repos(chat_id);
-	CREATE INDEX IF NOT EXISTS idx_event_mapping_chat ON event_mapping(chat_id);
-	`
-
-	_, err := s.db.Exec(schema)
-	return err
+// Проверяет, что база данных отвечает.
+func (s *Store) Ping(ctx context.Context) error {
+	var one int
+	return s.db.QueryRowContext(ctx, "SELECT 1").Scan(&one)
 }
 
 // Close closes the database.
@@ -147,17 +151,13 @@ func (s *Store) SaveChat(chat ChatConfig) error {
 //
 // Получает чат по ID.
 func (s *Store) GetChat(chatID int64) (*ChatConfig, error) {
-	var chat ChatConfig
-	var isForum int
-	err := s.db.QueryRow("SELECT chat_id, language, is_forum FROM chats WHERE chat_id = ?", chatID).
-		Scan(&chat.ChatID, &chat.Language, &isForum)
+	chat, err := scanChat(s.db.QueryRow("SELECT "+chatColumns+" FROM chats WHERE chat_id = ?", chatID))
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("chat %d not found", chatID)
 	}
 	if err != nil {
 		return nil, err
 	}
-	chat.IsForum = intToBool(isForum)
 	return &chat, nil
 }
 
@@ -165,7 +165,7 @@ func (s *Store) GetChat(chatID int64) (*ChatConfig, error) {
 //
 // Возвращает все настроенные чаты.
 func (s *Store) GetAllChats() []ChatConfig {
-	rows, err := s.db.Query("SELECT chat_id, language, is_forum FROM chats")
+	rows, err := s.db.Query("SELECT " + chatColumns + " FROM chats")
 	if err != nil {
 		log.Printf("❌ GetAllChats error: %v", err)
 		return nil
@@ -174,13 +174,11 @@ func (s *Store) GetAllChats() []ChatConfig {
 
 	var chats []ChatConfig
 	for rows.Next() {
-		var chat ChatConfig
-		var isForum int
-		if err := rows.Scan(&chat.ChatID, &chat.Language, &isForum); err != nil {
+		chat, err := scanChat(rows)
+		if err != nil {
 			log.Printf("❌ GetAllChats scan error: %v", err)
 			continue
 		}
-		chat.IsForum = intToBool(isForum)
 		chats = append(chats, chat)
 	}
 	return chats
@@ -311,6 +309,31 @@ func (s *Store) GetTopicByEvent(chatID int64, eventType string) int {
 		return 0
 	}
 	return topicID
+}
+
+// GetEventMappings returns the event type → topic ID routing of a chat.
+//
+// Возвращает привязку типов событий к темам в чате.
+func (s *Store) GetEventMappings(chatID int64) (map[string]int, error) {
+	rows, err := s.db.Query(
+		"SELECT event_type, topic_id FROM event_mapping WHERE chat_id = ?",
+		chatID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	mappings := make(map[string]int)
+	for rows.Next() {
+		var eventType string
+		var topicID int
+		if err := rows.Scan(&eventType, &topicID); err != nil {
+			return nil, err
+		}
+		mappings[eventType] = topicID
+	}
+	return mappings, rows.Err()
 }
 
 // SetEventTopic maps an event type to a topic in a chat.

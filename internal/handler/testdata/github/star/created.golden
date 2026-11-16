@@ -1,0 +1,35 @@
+topic: star
+
+--- en rich ---
+<h4>⭐ New star</h4>
+<p><b><a href="https://github.com/octo/hello">octo/hello</a></b></p>
+<table compact>
+<tr><td>Stars</td><td><b>42</b></td></tr>
+</table>
+<p><tg-button type="url" url="https://github.com/octo/hello">Open repository</tg-button> <tg-button type="url" url="https://github.com/octo/hello/stargazers">Stargazers</tg-button></p>
+<footer><a href="https://github.com/fan">@fan</a> · <tg-time unix="1793354400" format="r">2026-10-30 10:00 UTC</tg-time></footer>
+
+--- en classic ---
+⭐ New star
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+Stars: <b>42</b>
+👤 <a href="https://github.com/fan">@fan</a>
+buttons: [Open repository](https://github.com/octo/hello) | [Stargazers](https://github.com/octo/hello/stargazers)
+
+--- ru rich ---
+<h4>⭐ Новая звезда</h4>
+<p><b><a href="https://github.com/octo/hello">octo/hello</a></b></p>
+<table compact>
+<tr><td>Звёзды</td><td><b>42</b></td></tr>
+</table>
+<p><tg-button type="url" url="https://github.com/octo/hello">Открыть репозиторий</tg-button> <tg-button type="url" url="https://github.com/octo/hello/stargazers">Звёзды</tg-button></p>
+<footer><a href="https://github.com/fan">@fan</a> · <tg-time unix="1793354400" format="r">2026-10-30 10:00 UTC</tg-time></footer>
+
+--- ru classic ---
+⭐ Новая звезда
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+Звёзды: <b>42</b>
+👤 <a href="https://github.com/fan">@fan</a>
+buttons: [Открыть репозиторий](https://github.com/octo/hello) | [Звёзды](https://github.com/octo/hello/stargazers)

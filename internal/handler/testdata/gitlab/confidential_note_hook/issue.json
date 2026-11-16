@@ -1,0 +1,22 @@
+{
+  "object_kind": "note",
+  "user": {
+    "name": "Dev One",
+    "username": "dev1"
+  },
+  "project": {
+    "path_with_namespace": "group/app",
+    "web_url": "https://gitlab.example.com/group/app"
+  },
+  "object_attributes": {
+    "note": "Security details are in the private thread.",
+    "noteable_type": "Issue",
+    "url": "https://gitlab.example.com/group/app/-/issues/23#note_1301",
+    "confidential": true
+  },
+  "issue": {
+    "iid": 23,
+    "title": "New API: create/update/delete file"
+  },
+  "event_type": "confidential_note"
+}

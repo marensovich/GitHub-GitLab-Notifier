@@ -1,0 +1,25 @@
+{{define "title"}}Repositories{{end}}
+{{define "content"}}
+<h1>Repositories</h1>
+{{if .Repos}}
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Repository</th><th>Platform</th><th>Chat</th><th>Language</th><th>Webhook secret</th></tr></thead>
+  <tbody>
+  {{range .Repos}}
+    <tr>
+      <td class="mono">{{$link := safeURL .URL}}{{if $link}}<a href="{{$link}}" rel="noreferrer">{{.URL}}</a>{{else}}{{.URL}}{{end}}</td>
+      <td>{{.Platform}}</td>
+      <td class="mono">{{chatID .ChatID}}</td>
+      <td>{{with .Language}}{{.}}{{else}}<span class="muted">unknown chat</span>{{end}}</td>
+      <td>{{if eq .Secret "repo"}}<span class="badge ok">own</span>{{else if eq .Secret "global"}}<span class="badge">global</span>{{else}}<span class="badge warn">none</span>{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+<p class="muted">Secrets are never shown here, only whether one is set.</p>
+{{else}}
+<p class="empty">No repositories connected yet. Use <code>/connect</code> in a chat with the bot.</p>
+{{end}}
+{{end}}

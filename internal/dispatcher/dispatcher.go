@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"GitHub-GitLab-Notifier/internal/handler"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"errors"
 	"log"
@@ -10,8 +11,8 @@ import (
 
 // Result is the outcome of dispatching a webhook event.
 type Result struct {
-	// Message is the formatted Telegram HTML notification.
-	Message string
+	// Notification is the event notification, rendered by the sender.
+	Notification notify.Notification
 	// Topic is the forum topic the notification belongs to.
 	Topic platform.Topic
 	// Skip is true when no notification should be sent.
@@ -70,21 +71,24 @@ func (d *Dispatcher) Dispatch(lang i18n.Lang, p platform.Platform, eventName str
 		return d.unknown(lang, p, eventName)
 	}
 
-	message, err := h.Handle(lang, payload)
+	n, err := h.Handle(lang, payload)
 	if errors.Is(err, handler.ErrSkip) {
 		return Result{Topic: eventType.Topic, Skip: true}
 	}
 	if err != nil {
 		log.Printf(i18n.T(d.lang, i18n.MsgErrorEventLog), *eventType, err)
-		return Result{Message: i18n.Tf(lang, i18n.MsgErrorEvent, eventName), Topic: eventType.Topic}
+		return Result{
+			Notification: notify.Notification{Heading: i18n.Tf(lang, i18n.MsgErrorEvent, eventName)},
+			Topic:        eventType.Topic,
+		}
 	}
 
-	return Result{Message: message, Topic: eventType.Topic}
+	return Result{Notification: n, Topic: eventType.Topic}
 }
 
 func (d *Dispatcher) unknown(lang i18n.Lang, p platform.Platform, eventName string) Result {
 	if !d.notifyUnknown {
 		return Result{Skip: true}
 	}
-	return Result{Message: i18n.Tf(lang, i18n.MsgUnknownEvent, eventName, p)}
+	return Result{Notification: notify.Notification{Heading: i18n.Tf(lang, i18n.MsgUnknownEvent, eventName, p)}}
 }

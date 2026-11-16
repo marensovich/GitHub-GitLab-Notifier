@@ -442,14 +442,18 @@ health_check() {
     [[ -z "${addr}" || "${addr}" == "0.0.0.0" ]] && addr="127.0.0.1"
     command -v curl >/dev/null 2>&1 || return 0
 
+    local url="http://${addr}:${port}/health" report=""
     for _ in $(seq 1 10); do
-        if curl -fsS --max-time 2 "http://${addr}:${port}/health" >/dev/null 2>&1; then
-            success "Health check passed: http://${addr}:${port}/health"
+        if report="$(curl -fsS --max-time 2 "${url}" 2>/dev/null)"; then
+            success "Health check passed: ${url}"
             return 0
         fi
         sleep 1
     done
-    warn "Health check failed. Inspect the logs: journalctl -u ${SERVICE_NAME} -n 50"
+    # Fetch once more without -f to show which check failed.
+    report="$(curl -sS --max-time 2 "${url}" 2>&1 || true)"
+    warn "Health check failed: ${report:-no response from ${url}}"
+    warn "Inspect the logs: journalctl -u ${SERVICE_NAME} -n 50"
     return 1
 }
 

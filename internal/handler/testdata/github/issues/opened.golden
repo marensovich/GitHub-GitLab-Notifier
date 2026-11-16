@@ -1,0 +1,45 @@
+topic: issues
+
+--- en rich ---
+<h4>🐛 New issue</h4>
+<p><b><a href="https://github.com/octo/hello/issues/10">#10 App crashes on start</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+</table>
+<blockquote expandable>Steps:<br>1. Open the app<br>2. &lt;crash&gt;</blockquote>
+<p><tg-button type="url" url="https://github.com/octo/hello/issues/10">Open issue</tg-button></p>
+<footer><a href="https://github.com/user1">@user1</a></footer>
+
+--- en classic ---
+🐛 New issue
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/issues/10">#10 App crashes on start</a></b>
+👤 <a href="https://github.com/user1">@user1</a>
+
+<blockquote expandable>Steps:
+1. Open the app
+2. &lt;crash&gt;</blockquote>
+buttons: [Open issue](https://github.com/octo/hello/issues/10)
+
+--- ru rich ---
+<h4>🐛 Новый issue</h4>
+<p><b><a href="https://github.com/octo/hello/issues/10">#10 App crashes on start</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+</table>
+<blockquote expandable>Steps:<br>1. Open the app<br>2. &lt;crash&gt;</blockquote>
+<p><tg-button type="url" url="https://github.com/octo/hello/issues/10">Открыть issue</tg-button></p>
+<footer><a href="https://github.com/user1">@user1</a></footer>
+
+--- ru classic ---
+🐛 Новый issue
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/issues/10">#10 App crashes on start</a></b>
+👤 <a href="https://github.com/user1">@user1</a>
+
+<blockquote expandable>Steps:
+1. Open the app
+2. &lt;crash&gt;</blockquote>
+buttons: [Открыть issue](https://github.com/octo/hello/issues/10)

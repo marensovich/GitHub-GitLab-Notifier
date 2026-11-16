@@ -1,0 +1,41 @@
+topic: issues
+
+--- en rich ---
+<h4>💬 New comment on issue</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<blockquote expandable>Can reproduce on &lt;main&gt; &amp; v2.</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/issues/23#note_1301">Open comment</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
+💬 New comment on issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote expandable>Can reproduce on &lt;main&gt; &amp; v2.</blockquote>
+buttons: [Open comment](https://gitlab.example.com/group/app/-/issues/23#note_1301)
+
+--- ru rich ---
+<h4>💬 Новый комментарий к issue</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<blockquote expandable>Can reproduce on &lt;main&gt; &amp; v2.</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/issues/23#note_1301">Открыть комментарий</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
+💬 Новый комментарий к issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote expandable>Can reproduce on &lt;main&gt; &amp; v2.</blockquote>
+buttons: [Открыть комментарий](https://gitlab.example.com/group/app/-/issues/23#note_1301)
