@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"bytes"
 	"errors"
@@ -79,13 +80,14 @@ func TestGolden(t *testing.T) {
 }
 
 // renderGolden produces the golden file content for one payload: the topic the
-// event goes to (or "skip: true"), then the message in every language.
+// event goes to (or "skip: true"), then the rich and the classic rendering of
+// the notification in every language.
 func renderGolden(t *testing.T, h EventHandler, payload []byte) []byte {
 	t.Helper()
 	var b bytes.Buffer
 	et := h.GetEventType()
 	for i, lang := range i18n.Supported {
-		msg, err := h.Handle(lang, payload)
+		n, err := h.Handle(lang, payload)
 		if errors.Is(err, ErrSkip) {
 			if i == 0 {
 				b.WriteString("skip: true\n")
@@ -95,7 +97,6 @@ func renderGolden(t *testing.T, h EventHandler, payload []byte) []byte {
 		if err != nil {
 			t.Fatalf("%s: unexpected error: %v", lang, err)
 		}
-		assertTelegramHTML(t, msg)
 		if i == 0 {
 			topic := string(et.Topic)
 			if topic == "" {
@@ -103,7 +104,36 @@ func renderGolden(t *testing.T, h EventHandler, payload []byte) []byte {
 			}
 			fmt.Fprintf(&b, "topic: %s\n", topic)
 		}
-		fmt.Fprintf(&b, "\n--- %s ---\n%s\n", lang, msg)
+		rich := notify.Rich(lang, n)
+		if err := notify.CheckRichHTML(rich); err != nil {
+			t.Errorf("%s: invalid rich html: %v\n%s", lang, err, rich)
+		}
+		fmt.Fprintf(&b, "\n--- %s rich ---\n%s\n", lang, rich)
+		fmt.Fprintf(&b, "\n--- %s classic ---\n%s\n", lang, renderClassic(t, lang, n))
 	}
 	return b.Bytes()
+}
+
+// renderClassic is the classic text of n followed by a "buttons:" line that
+// lists its inline keyboard.
+func renderClassic(t *testing.T, lang i18n.Lang, n notify.Notification) string {
+	t.Helper()
+	text, kb := notify.Classic(lang, n)
+	if err := notify.CheckClassicHTML(text); err != nil {
+		t.Errorf("%s: invalid classic html: %v\n%s", lang, err, text)
+	}
+	var bs []string
+	for _, row := range kb {
+		for _, btn := range row {
+			s := fmt.Sprintf("[%s](%s)", btn.Label, btn.URL)
+			if btn.Style != notify.StyleDefault {
+				s += " " + string(btn.Style)
+			}
+			bs = append(bs, s)
+		}
+	}
+	if len(bs) == 0 {
+		bs = []string{"none"}
+	}
+	return text + "\nbuttons: " + strings.Join(bs, " | ")
 }

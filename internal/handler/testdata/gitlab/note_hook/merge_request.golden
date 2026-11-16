@@ -1,19 +1,41 @@
 topic: issues
 
---- en ---
+--- en rich ---
+<h4>💬 New comment on merge request</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1 Tempora et eos debitis quae laborum et.</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<blockquote expandable>This MR needs work.</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">Open comment</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
 💬 New comment on merge request
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1</a> <b>Tempora et eos debitis quae laborum et.</b>
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1 Tempora et eos debitis quae laborum et.</a></b>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
 
-<blockquote>This MR needs work.</blockquote>
+<blockquote expandable>This MR needs work.</blockquote>
+buttons: [Open comment](https://gitlab.example.com/group/app/-/merge_requests/1#note_1244)
 
---- ru ---
+--- ru rich ---
+<h4>💬 Новый комментарий к merge request</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1 Tempora et eos debitis quae laborum et.</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<blockquote expandable>This MR needs work.</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">Открыть комментарий</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
 💬 Новый комментарий к merge request
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1</a> <b>Tempora et eos debitis quae laborum et.</b>
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1 Tempora et eos debitis quae laborum et.</a></b>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
 
-<blockquote>This MR needs work.</blockquote>
+<blockquote expandable>This MR needs work.</blockquote>
+buttons: [Открыть комментарий](https://gitlab.example.com/group/app/-/merge_requests/1#note_1244)

@@ -1,21 +1,45 @@
 topic: issues
 
---- en ---
+--- en rich ---
+<h4>💬 New comment on issue</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<p>🔒 Confidential — visible only to project members in GitLab</p>
+<blockquote expandable>Internal: the customer is on v1.4.</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/issues/23#note_1301">Open comment</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
 💬 New comment on issue
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23</a> <b>New API: create/update/delete file</b>
+<b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b>
+🔒 Confidential — visible only to project members in GitLab
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
-🔒 <b>Confidential</b> — visible only to project members in GitLab
 
-<blockquote>Internal: the customer is on v1.4.</blockquote>
+<blockquote expandable>Internal: the customer is on v1.4.</blockquote>
+buttons: [Open comment](https://gitlab.example.com/group/app/-/issues/23#note_1301)
 
---- ru ---
+--- ru rich ---
+<h4>💬 Новый комментарий к issue</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+</table>
+<p>🔒 Конфиденциально — в GitLab видно только участникам проекта</p>
+<blockquote expandable>Internal: the customer is on v1.4.</blockquote>
+<p><tg-button type="url" url="https://gitlab.example.com/group/app/-/issues/23#note_1301">Открыть комментарий</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
 💬 Новый комментарий к issue
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23</a> <b>New API: create/update/delete file</b>
+<b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b>
+🔒 Конфиденциально — в GitLab видно только участникам проекта
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
-🔒 <b>Конфиденциально</b> — в GitLab видно только участникам проекта
 
-<blockquote>Internal: the customer is on v1.4.</blockquote>
+<blockquote expandable>Internal: the customer is on v1.4.</blockquote>
+buttons: [Открыть комментарий](https://gitlab.example.com/group/app/-/issues/23#note_1301)

@@ -1,24 +1,6 @@
 package handler
 
-import (
-	"fmt"
-	"html"
-	"strings"
-)
-
-// esc escapes text for Telegram HTML parse mode.
-func esc(s string) string {
-	return html.EscapeString(s)
-}
-
-// link builds an HTML link with escaped URL and text.
-// Falls back to plain escaped text when the URL is empty.
-func link(url, text string) string {
-	if url == "" {
-		return esc(text)
-	}
-	return fmt.Sprintf(`<a href="%s">%s</a>`, esc(url), esc(text))
-}
+import "strings"
 
 // truncate shortens s to at most max runes, appending "..." when cut.
 // Works on runes so multi-byte (e.g. Cyrillic) text is never broken.
@@ -48,13 +30,6 @@ func shortSHA(sha string) string {
 		return sha[:7]
 	}
 	return sha
-}
-
-// excerpt prepares a user-written body (issue, comment, review) for display:
-// trims, limits the length and escapes HTML.
-func excerpt(s string, max int) string {
-	s = strings.TrimSpace(strings.ReplaceAll(s, "\r\n", "\n"))
-	return esc(truncate(s, max))
 }
 
 // branchName strips refs/heads/ or refs/tags/ prefixes from a git ref.

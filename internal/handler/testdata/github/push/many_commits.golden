@@ -1,43 +1,71 @@
 topic: push
 
---- en ---
-🚀 <b>octo/hello</b>
-New push to branch <code>main</code>
+--- en rich ---
+<h4>🚀 New push</h4>
+<p><b><a href="https://github.com/octo/hello/tree/main">main</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>Commits</td><td><b>50</b></td></tr>
+<tr><td>E-mail</td><td><code>octo@example.com</code></td></tr>
+</table>
+<details><summary>Commits (50)</summary><ul><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000000">0000000</a> chore: step 1 — обновление №1 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000001">0000000</a> chore: step 2 — обновление №2 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000002">0000000</a> chore: step 3 — обновление №3 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000003">0000000</a> chore: step 4 — обновление №4 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000004">0000000</a> chore: step 5 — обновление №5 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000005">0000000</a> chore: step 6 — обновление №6 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000006">0000000</a> chore: step 7 — обновление №7 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000007">0000000</a> chore: step 8 — обновление №8 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000008">0000000</a> chore: step 9 — обновление №9 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000009">0000000</a> chore: step 10 — обновление №10 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000a">0000000</a> chore: step 11 — обновление №11 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000b">0000000</a> chore: step 12 — обновление №12 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000c">0000000</a> chore: step 13 — обновление №13 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000d">0000000</a> chore: step 14 — обновление №14 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000e">0000000</a> chore: step 15 — обновление №15 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000f">0000000</a> chore: step 16 — обновление №16 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000010">0000000</a> chore: step 17 — обновление №17 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000011">0000000</a> chore: step 18 — обновление №18 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000012">0000000</a> chore: step 19 — обновление №19 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000013">0000000</a> chore: step 20 — обновление №20 — <a href="https://github.com/octocat">Octo Cat</a></li><li><i>…and 30 more</i></li></ul></details>
+<details><summary>Changed files (2)</summary><ul><li>➕ <code>new.go</code></li><li>✏️ <code>main.go</code></li></ul></details>
+<p><tg-button type="url" style="primary" url="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Compare</tg-button></p>
+<footer><a href="https://github.com/octocat">@octocat</a></footer>
 
-👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
-📦 Commits: <b>50</b>
+--- en classic ---
+🚀 New push
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
 
-<b>📝 Commits:</b>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000000">0000000</a> chore: step 1 — обновление №1 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000001">0000000</a> chore: step 2 — обновление №2 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000002">0000000</a> chore: step 3 — обновление №3 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000003">0000000</a> chore: step 4 — обновление №4 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000004">0000000</a> chore: step 5 — обновление №5 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <i>...and 45 more commits</i>
+<b><a href="https://github.com/octo/hello/tree/main">main</a></b>
+Commits: <b>50</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
 
-<b>📁 Changed files:</b>
-  ➕ Added: <code>new.go</code>
-  ✏️ Modified: <code>main.go</code>
+<b>Commits:</b>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000000">0000000</a> chore: step 1 — обновление №1 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000001">0000000</a> chore: step 2 — обновление №2 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000002">0000000</a> chore: step 3 — обновление №3 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000003">0000000</a> chore: step 4 — обновление №4 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000004">0000000</a> chore: step 5 — обновление №5 — <a href="https://github.com/octocat">Octo Cat</a>
+  <i>…and 45 more</i>
 
-🔗 <a href="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">View changes</a>
+<b>Changed files:</b>
+  ➕ <code>new.go</code>
+  ✏️ <code>main.go</code>
+buttons: [Compare](https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f) primary
 
---- ru ---
-🚀 <b>octo/hello</b>
-Новый пуш в ветку <code>main</code>
+--- ru rich ---
+<h4>🚀 Новый пуш</h4>
+<p><b><a href="https://github.com/octo/hello/tree/main">main</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://github.com/octo/hello">octo/hello</a></td></tr>
+<tr><td>Коммиты</td><td><b>50</b></td></tr>
+<tr><td>E-mail</td><td><code>octo@example.com</code></td></tr>
+</table>
+<details><summary>Коммиты (50)</summary><ul><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000000">0000000</a> chore: step 1 — обновление №1 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000001">0000000</a> chore: step 2 — обновление №2 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000002">0000000</a> chore: step 3 — обновление №3 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000003">0000000</a> chore: step 4 — обновление №4 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000004">0000000</a> chore: step 5 — обновление №5 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000005">0000000</a> chore: step 6 — обновление №6 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000006">0000000</a> chore: step 7 — обновление №7 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000007">0000000</a> chore: step 8 — обновление №8 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000008">0000000</a> chore: step 9 — обновление №9 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000009">0000000</a> chore: step 10 — обновление №10 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000a">0000000</a> chore: step 11 — обновление №11 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000b">0000000</a> chore: step 12 — обновление №12 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000c">0000000</a> chore: step 13 — обновление №13 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000d">0000000</a> chore: step 14 — обновление №14 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000e">0000000</a> chore: step 15 — обновление №15 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/000000000000000000000000000000000000000f">0000000</a> chore: step 16 — обновление №16 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000010">0000000</a> chore: step 17 — обновление №17 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000011">0000000</a> chore: step 18 — обновление №18 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000012">0000000</a> chore: step 19 — обновление №19 — <a href="https://github.com/octocat">Octo Cat</a></li><li><a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000013">0000000</a> chore: step 20 — обновление №20 — <a href="https://github.com/octocat">Octo Cat</a></li><li><i>…и ещё 30</i></li></ul></details>
+<details><summary>Изменённые файлы (2)</summary><ul><li>➕ <code>new.go</code></li><li>✏️ <code>main.go</code></li></ul></details>
+<p><tg-button type="url" style="primary" url="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Сравнить</tg-button></p>
+<footer><a href="https://github.com/octocat">@octocat</a></footer>
 
-👤 <a href="https://github.com/octocat">@octocat</a> (<code>octo@example.com</code>)
-📦 Коммитов: <b>50</b>
+--- ru classic ---
+🚀 Новый пуш
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
 
-<b>📝 Коммиты:</b>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000000">0000000</a> chore: step 1 — обновление №1 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000001">0000000</a> chore: step 2 — обновление №2 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000002">0000000</a> chore: step 3 — обновление №3 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000003">0000000</a> chore: step 4 — обновление №4 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000004">0000000</a> chore: step 5 — обновление №5 — <i><a href="https://github.com/octocat">Octo Cat</a></i>
-  <i>...и ещё 45 коммитов</i>
+<b><a href="https://github.com/octo/hello/tree/main">main</a></b>
+Коммиты: <b>50</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
 
-<b>📁 Изменённые файлы:</b>
-  ➕ Добавлено: <code>new.go</code>
-  ✏️ Изменено: <code>main.go</code>
+<b>Коммиты:</b>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000000">0000000</a> chore: step 1 — обновление №1 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000001">0000000</a> chore: step 2 — обновление №2 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000002">0000000</a> chore: step 3 — обновление №3 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000003">0000000</a> chore: step 4 — обновление №4 — <a href="https://github.com/octocat">Octo Cat</a>
+  <a href="https://github.com/octo/hello/commit/0000000000000000000000000000000000000004">0000000</a> chore: step 5 — обновление №5 — <a href="https://github.com/octocat">Octo Cat</a>
+  <i>…и ещё 45</i>
 
-🔗 <a href="https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f">Смотреть изменения</a>
+<b>Изменённые файлы:</b>
+  ➕ <code>new.go</code>
+  ✏️ <code>main.go</code>
+buttons: [Сравнить](https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f) primary

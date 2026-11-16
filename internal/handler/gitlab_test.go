@@ -11,12 +11,12 @@ func TestGitLabHandlers(t *testing.T) {
 			fixture: "gitlab/push_hook/basic.json",
 			event:   platform.GitLabPush,
 			contains: []string{
-				`<b>group/app</b>`,
-				"<code>master</code>",
+				`<b><a href="https://gitlab.example.com/group/app">group/app</a></b>`,
+				`/-/tree/master">master</a>`,
 				`<a href="https://gitlab.example.com/dev1">@dev1</a>`,
 				"Commits: <b>25</b>",
 				"Update Catalan translation",
-				"...and 23 more commits",
+				"…and 23 more",
 				"<code>CHANGELOG</code>",
 				`https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7`,
 			},
@@ -32,7 +32,7 @@ func TestGitLabHandlers(t *testing.T) {
 			event:   platform.GitLabMergeRequest,
 			contains: []string{
 				"New merge request",
-				`<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>MS-Viewer update</b>`,
+				`<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a>`,
 				"<code>ms-viewer</code> → <code>master</code>",
 				"Adds a &lt;viewer&gt; &amp; fixes bugs",
 			},
@@ -66,7 +66,7 @@ func TestGitLabHandlers(t *testing.T) {
 		{
 			fixture:  "gitlab/note_hook/commit.json",
 			event:    platform.GitLabNote,
-			contains: []string{"New comment on commit", ">cfe32cf<", "<b>Add submodule</b>"},
+			contains: []string{"New comment on commit", ">cfe32cf Add submodule<"},
 		},
 		{
 			fixture: "gitlab/note_hook/snippet.json",
@@ -78,7 +78,7 @@ func TestGitLabHandlers(t *testing.T) {
 			event:   platform.GitLabPipeline,
 			contains: []string{
 				"CI failed",
-				`<a href="https://gitlab.example.com/group/app/-/pipelines/31">#3</a>`,
+				`<a href="https://gitlab.example.com/group/app/-/pipelines/31">#3 Pipeline`,
 				"Pipeline for branch: master",
 				">bcbb5ec<",
 				"1h 2m 5s",

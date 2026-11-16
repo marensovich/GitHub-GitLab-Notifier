@@ -6,6 +6,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/metrics"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
@@ -453,10 +454,11 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 			topicID = s.store.GetTopicByEvent(t.chatID, string(res.Topic))
 		}
 
-		err := s.send(t.chatID, topicID, res.Message)
+		text, _ := notify.Classic(t.lang, res.Notification)
+		err := s.send(t.chatID, topicID, text)
 		if err != nil && topicID != 0 {
 			// The topic may have been deleted or closed: fall back to the general chat.
-			err = s.send(t.chatID, 0, res.Message)
+			err = s.send(t.chatID, 0, text)
 		}
 		if err != nil {
 			out.failed++

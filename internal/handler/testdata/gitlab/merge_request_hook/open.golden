@@ -1,21 +1,45 @@
 topic: pull_request
 
---- en ---
+--- en rich ---
+<h4>🔀 New merge request</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a></b></p>
+<table compact>
+<tr><td>Repository</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Branches</td><td><code>ms-viewer</code> → <code>master</code></td></tr>
+</table>
+<blockquote expandable>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+<p><tg-button type="url" style="primary" url="https://gitlab.example.com/group/app/-/merge_requests/3">Open MR</tg-button> <tg-button type="url" url="https://gitlab.example.com/group/app/-/merge_requests/3/diffs">Files changed</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- en classic ---
 🔀 New merge request
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>MS-Viewer update</b>
-🌿 <code>ms-viewer</code> → <code>master</code>
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a></b>
+Branches: <code>ms-viewer</code> → <code>master</code>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
 
-<blockquote>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+<blockquote expandable>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+buttons: [Open MR](https://gitlab.example.com/group/app/-/merge_requests/3) primary | [Files changed](https://gitlab.example.com/group/app/-/merge_requests/3/diffs)
 
---- ru ---
+--- ru rich ---
+<h4>🔀 Новый merge request</h4>
+<p><b><a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a></b></p>
+<table compact>
+<tr><td>Репозиторий</td><td><a href="https://gitlab.example.com/group/app">group/app</a></td></tr>
+<tr><td>Ветки</td><td><code>ms-viewer</code> → <code>master</code></td></tr>
+</table>
+<blockquote expandable>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+<p><tg-button type="url" style="primary" url="https://gitlab.example.com/group/app/-/merge_requests/3">Открыть MR</tg-button> <tg-button type="url" url="https://gitlab.example.com/group/app/-/merge_requests/3/diffs">Файлы</tg-button></p>
+<footer><a href="https://gitlab.example.com/dev1">@dev1</a></footer>
+
+--- ru classic ---
 🔀 Новый merge request
 <b><a href="https://gitlab.example.com/group/app">group/app</a></b>
 
-<a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3</a> <b>MS-Viewer update</b>
-🌿 <code>ms-viewer</code> → <code>master</code>
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a></b>
+Ветки: <code>ms-viewer</code> → <code>master</code>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
 
-<blockquote>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+<blockquote expandable>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+buttons: [Открыть MR](https://gitlab.example.com/group/app/-/merge_requests/3) primary | [Файлы](https://gitlab.example.com/group/app/-/merge_requests/3/diffs)

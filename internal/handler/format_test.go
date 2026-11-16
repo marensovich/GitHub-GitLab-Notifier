@@ -21,18 +21,6 @@ func TestTruncateIsRuneSafe(t *testing.T) {
 	}
 }
 
-func TestEscAndLink(t *testing.T) {
-	if got := esc(`<b>"x" & y</b>`); got != "&lt;b&gt;&#34;x&#34; &amp; y&lt;/b&gt;" {
-		t.Errorf("esc: got %q", got)
-	}
-	if got := link("https://e.com/?a=1&b=2", "a<b"); got != `<a href="https://e.com/?a=1&amp;b=2">a&lt;b</a>` {
-		t.Errorf("link: got %q", got)
-	}
-	if got := link("", "plain"); got != "plain" {
-		t.Errorf("link without url: got %q", got)
-	}
-}
-
 func TestGitHelpers(t *testing.T) {
 	if got := firstLine("  feat: x\n\nbody"); got != "feat: x" {
 		t.Errorf("firstLine: got %q", got)

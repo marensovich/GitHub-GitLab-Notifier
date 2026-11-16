@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"errors"
 )
@@ -15,9 +16,9 @@ type EventHandler interface {
 	// GetEventType returns the event type this handler processes.
 	GetEventType() platform.EventType
 
-	// Handle parses the JSON payload and returns a formatted notification
-	// message (Telegram HTML) in the requested language.
-	Handle(lang i18n.Lang, payload []byte) (string, error)
+	// Handle parses the JSON payload and returns the notification, with its
+	// text in the requested language. Rendering is left to package notify.
+	Handle(lang i18n.Lang, payload []byte) (notify.Notification, error)
 }
 
 // All returns every built-in event handler.

@@ -147,7 +147,7 @@ func TestRoutesConnectedRepoToItsChatTopicAndLanguage(t *testing.T) {
 	if msg.chatID != 200 || msg.topicID != 55 {
 		t.Errorf("sent to chat %d topic %d, want chat 200 topic 55", msg.chatID, msg.topicID)
 	}
-	if !strings.Contains(msg.text, "поставил(а) звезду") {
+	if !strings.Contains(msg.text, "Новая звезда") {
 		t.Errorf("message is not in Russian: %s", msg.text)
 	}
 }

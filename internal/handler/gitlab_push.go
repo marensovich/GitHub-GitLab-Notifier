@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 )
 
@@ -21,10 +22,11 @@ type GitLabPushDto struct {
 
 // GitLabPushCommit is a commit inside a GitLab push payload.
 type GitLabPushCommit struct {
-	ID      string `json:"id"`
-	Message string `json:"message"`
-	URL     string `json:"url"`
-	Author  struct {
+	ID        string `json:"id"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"`
+	URL       string `json:"url"`
+	Author    struct {
 		Name  string `json:"name"`
 		Email string `json:"email"`
 	} `json:"author"`
@@ -49,6 +51,9 @@ func (d *GitLabPushDto) toGitHubPush() *GitHubPushDto {
 		Sender:       GitHubPushSender{Login: d.UserUsername, HTMLURL: gitlabUserURL(d.Project.WebURL, d.UserUsername)},
 		TotalCommits: d.TotalCommitsCount,
 	}
+	if d.Project.WebURL != "" {
+		dto.TreeURL = d.Project.WebURL + "/-/tree/" + branchName(d.Ref)
+	}
 	if !created && !deleted && d.Project.WebURL != "" {
 		dto.Compare = d.Project.WebURL + "/-/compare/" + d.Before + "..." + d.After
 	}
@@ -56,13 +61,14 @@ func (d *GitLabPushDto) toGitHubPush() *GitHubPushDto {
 	head := firstNonEmpty(d.CheckoutSHA, d.After)
 	for _, c := range d.Commits {
 		commit := GitHubPushCommit{
-			ID:       c.ID,
-			Message:  c.Message,
-			URL:      c.URL,
-			Author:   GitHubPushAuthor{Name: c.Author.Name, Email: c.Author.Email},
-			Added:    c.Added,
-			Modified: c.Modified,
-			Removed:  c.Removed,
+			ID:        c.ID,
+			Message:   c.Message,
+			Timestamp: c.Timestamp,
+			URL:       c.URL,
+			Author:    GitHubPushAuthor{Name: c.Author.Name, Email: c.Author.Email},
+			Added:     c.Added,
+			Modified:  c.Modified,
+			Removed:   c.Removed,
 		}
 		dto.Commits = append(dto.Commits, commit)
 		if c.ID == head {
@@ -79,12 +85,12 @@ func (h *GitLabPushHandler) GetEventType() platform.EventType {
 	return platform.GitLabPush
 }
 
-func (h *GitLabPushHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
+func (h *GitLabPushHandler) Handle(lang i18n.Lang, payload []byte) (notify.Notification, error) {
 	var dto GitLabPushDto
 	if err := decode(lang, "Push Hook", payload, &dto); err != nil {
-		return "", err
+		return notify.Notification{}, err
 	}
-	return formatPushMessage(lang, dto.toGitHubPush()), nil
+	return pushNotification(lang, dto.toGitHubPush()), nil
 }
 
 // GitLabTagPushHandler handles GitLab "Tag Push Hook" events.
@@ -94,14 +100,14 @@ func (h *GitLabTagPushHandler) GetEventType() platform.EventType {
 	return platform.GitLabTagPush
 }
 
-func (h *GitLabTagPushHandler) Handle(lang i18n.Lang, payload []byte) (string, error) {
+func (h *GitLabTagPushHandler) Handle(lang i18n.Lang, payload []byte) (notify.Notification, error) {
 	var dto GitLabPushDto
 	if err := decode(lang, "Tag Push Hook", payload, &dto); err != nil {
-		return "", err
+		return notify.Notification{}, err
 	}
 
 	tag := branchName(dto.Ref)
-	return formatTag(lang, tagView{
+	return tagNotification(lang, tagView{
 		Repo:     dto.Project.PathWithNamespace,
 		RepoURL:  dto.Project.WebURL,
 		Tag:      tag,

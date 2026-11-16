@@ -14,12 +14,12 @@ func TestGitHubHandlers(t *testing.T) {
 			fixture: "github/push/branch.json",
 			event:   platform.GitHubPush,
 			contains: []string{
-				"<b>octo/hello</b>",
-				"<code>main</code>",
+				`<b><a href="https://github.com/octo/hello">octo/hello</a></b>`,
+				`/tree/main">main</a>`,
 				`<a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a>`,
 				"fix: handle &lt;nil&gt; &amp; empty values",
 				"<code>new.go</code>",
-				"View changes",
+				"[Compare](https://github.com/octo/hello/compare/",
 			},
 			absent: []string{"Longer description"},
 		},
@@ -32,7 +32,7 @@ func TestGitHubHandlers(t *testing.T) {
 		{
 			fixture:  "github/star/created.json",
 			event:    platform.GitHubStar,
-			contains: []string{"new star", "@fan", "<b>42</b>"},
+			contains: []string{"New star", "@fan", "<b>42</b>"},
 		},
 		{
 			fixture:  "github/ping/basic.json",
@@ -42,17 +42,17 @@ func TestGitHubHandlers(t *testing.T) {
 		{
 			fixture:  "github/fork/basic.json",
 			event:    platform.GitHubFork,
-			contains: []string{"new fork", "@fan", "fan/hello", "<b>7</b>"},
+			contains: []string{"New fork", "@fan", "fan/hello", "<b>7</b>"},
 		},
 		{
 			fixture: "github/pull_request/opened.json",
 			event:   platform.GitHubPullRequest,
 			contains: []string{
 				"New pull request",
-				`<a href="https://github.com/octo/hello/pull/12">#12</a> <b>Add &lt;dark&gt; mode</b>`,
+				`<a href="https://github.com/octo/hello/pull/12">#12 Add &lt;dark&gt; mode</a>`,
 				"<code>feature/dark-mode</code> → <code>main</code>",
 				"<b>+120</b> / <b>−8</b>",
-				"<blockquote>This PR adds dark mode.\n\nCloses #10</blockquote>",
+				"<blockquote expandable>This PR adds dark mode.\n\nCloses #10</blockquote>",
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func TestGitHubHandlers(t *testing.T) {
 			event:   platform.GitHubWorkflowRun,
 			contains: []string{
 				"CI failed",
-				`<a href="https://github.com/octo/hello/actions/runs/1">#57</a> <b>CI</b>`,
+				`<a href="https://github.com/octo/hello/actions/runs/1">#57 CI</a>`,
 				"<code>main</code>",
 				"fix: handle nil values",
 				"2m 5s",
