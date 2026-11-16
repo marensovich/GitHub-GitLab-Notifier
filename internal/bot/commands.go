@@ -124,7 +124,7 @@ func (b *Bot) handleConnect(msg *telego.Message, args []string) {
 		repoURL = existing.RepoURL
 	}
 
-	err := b.store.SaveRepo(storage.RepoInfo{
+	err := b.store.SaveRepo(RepoInfo{
 		ChatID:   chatID,
 		RepoURL:  repoURL,
 		Platform: platformName,

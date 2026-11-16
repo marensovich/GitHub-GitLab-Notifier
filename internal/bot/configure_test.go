@@ -38,7 +38,7 @@ func newConfigureBot(t *testing.T, replies map[string][]string) (*Bot, *fakeAPI)
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { store.Close() })
-	b.store = store
+	b.store = legacyStore{store}
 	b.self = &telego.User{ID: 42, IsBot: true, Username: "notifier_bot"}
 	return b, fake
 }
@@ -312,7 +312,7 @@ func statusText(t *testing.T, b *Bot, f *fakeAPI, c telego.Chat) string {
 func TestStatusShowsChatSettings(t *testing.T) {
 	b, fake := newConfigureBot(t, nil)
 	c := chat(true)
-	if err := b.store.SaveChat(storage.ChatConfig{ChatID: c.ID, Language: "en", IsForum: true}); err != nil {
+	if err := b.store.SaveChat(ChatConfig{ChatID: c.ID, Language: "en", IsForum: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := b.store.SetChatSettings(c.ID, storage.FormatClassic, false); err != nil {
@@ -331,7 +331,7 @@ func TestStatusShowsRichSwitchedOff(t *testing.T) {
 	b, fake := newConfigureBot(t, nil)
 	b.rich = false
 	c := chat(false)
-	if err := b.store.SaveChat(storage.ChatConfig{ChatID: c.ID, Language: "en"}); err != nil {
+	if err := b.store.SaveChat(ChatConfig{ChatID: c.ID, Language: "en"}); err != nil {
 		t.Fatal(err)
 	}
 

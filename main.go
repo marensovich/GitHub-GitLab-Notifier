@@ -62,15 +62,6 @@ func main() {
 		log.Println(i18n.T(lang, i18n.MsgEnvFileNotFound))
 	}
 
-	var chatID int64
-	if chatIDStr := os.Getenv("CHAT_ID"); chatIDStr != "" {
-		var err error
-		chatID, err = strconv.ParseInt(chatIDStr, 10, 64)
-		if err != nil {
-			log.Fatalf(i18n.T(lang, i18n.MsgInvalidBotChatId), err)
-		}
-	}
-
 	store, err := storage.Open(firstNonEmpty(*dbPath, os.Getenv("DB_PATH"), "data/notifier.db"))
 	if err != nil {
 		log.Fatalf("❌ %v", err)
@@ -94,7 +85,6 @@ func main() {
 
 	srv := server.New(server.Config{
 		Addr:                net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
-		DefaultChatID:       chatID,
 		DefaultLang:         lang,
 		WebhookSecret:       os.Getenv("WEBHOOK_SECRET"),
 		Version:             Version,

@@ -10,10 +10,11 @@
 </section>
 
 <h2>Attention</h2>
+{{if .Err}}<p class="alerts warn">Could not read everything: {{.Err}}</p>{{end}}
 {{if or .Unprotected .Orphans}}
 <ul class="alerts">
   {{if .Unprotected}}<li class="warn"><strong>{{.Unprotected}}</strong> repositor{{if eq .Unprotected 1}}y has{{else}}ies have{{end}} no webhook secret and no global WEBHOOK_SECRET is set — anyone who knows the URL can send events. <a href="/repos">Review</a></li>{{end}}
-  {{if .Orphans}}<li class="warn"><strong>{{.Orphans}}</strong> repositor{{if eq .Orphans 1}}y points{{else}}ies point{{end}} to a chat the bot has no record of. <a href="/repos">Review</a></li>{{end}}
+  {{if .Orphans}}<li class="warn"><strong>{{.Orphans}}</strong> repositor{{if eq .Orphans 1}}y is{{else}}ies are{{end}} not connected to any chat — their events are dropped. Connect them with <code>/connect</code> or ignore this. <a href="/repos">Review</a></li>{{end}}
 </ul>
 {{else}}
 <p class="ok">Nothing needs attention.</p>

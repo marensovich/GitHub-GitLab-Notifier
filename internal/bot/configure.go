@@ -64,7 +64,7 @@ func (b *Bot) configureChat(msg *telego.Message) {
 
 	var text string
 	var keyboard *telego.InlineKeyboardMarkup
-	if chat.IsForum {
+	if msg.Chat.IsForum {
 		text, keyboard = topicsStep(lang, chat.UseTopics)
 	} else {
 		// Nothing is stored until a button is pressed; the format press
@@ -146,7 +146,7 @@ func (b *Bot) handleCallback(q *telego.CallbackQuery) {
 
 	case stepFormat:
 		// A chat that is not a forum has no topics to route to.
-		useTopics := chat.UseTopics && chat.IsForum
+		useTopics := chat.UseTopics && q.Message.GetChat().IsForum
 		if err := b.store.SetChatSettings(chatID, value, useTopics); err != nil {
 			log.Print(i18n.Tf(b.lang, i18n.MsgFailedToSaveChatConfig, err))
 			b.answer(q.ID, i18n.T(lang, i18n.MsgCfgFailed), true)
@@ -289,7 +289,7 @@ func (b *Bot) createTopics(chatID int64, lang i18n.Lang) (created, skipped []str
 		log.Print(i18n.Tf(b.lang, i18n.MsgFailedToGetExistingTopics, err))
 		return nil, nil, errors.New(i18n.T(lang, i18n.MsgFailedToGetTopics))
 	}
-	existingByName := make(map[string]storage.TopicInfo, len(existing))
+	existingByName := make(map[string]TopicInfo, len(existing))
 	for _, t := range existing {
 		existingByName[t.Name] = t
 	}
@@ -316,7 +316,7 @@ func (b *Bot) createTopics(chatID int64, lang i18n.Lang) (created, skipped []str
 			return created, skipped, errors.New(i18n.Tf(lang, i18n.MsgTopicCreateFailed, def.Name, err.Error()))
 		}
 
-		err = b.store.SaveTopic(storage.TopicInfo{
+		err = b.store.SaveTopic(TopicInfo{
 			TopicID:   topic.MessageThreadID,
 			ChatID:    chatID,
 			Name:      def.Name,

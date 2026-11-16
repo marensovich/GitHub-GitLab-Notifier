@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -39,8 +40,6 @@ type Sender interface {
 type Config struct {
 	// Addr is the listen address, e.g. "0.0.0.0:8080".
 	Addr string
-	// DefaultChatID receives notifications when no chat is configured (0 = disabled).
-	DefaultChatID int64
 	// DefaultLang is used for logs and for chats without a stored language.
 	DefaultLang i18n.Lang
 	// WebhookSecret, if set, is required for every webhook (GitHub signature
@@ -207,9 +206,12 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Print(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventName))
 
 	repoURL := platform.RepositoryURL(p, body)
-	repo := s.store.FindRepo(repoURL)
+	repo, err := s.store.FindRepo(repoURL)
+	if err != nil {
+		log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
+	}
 	if repo != nil {
-		repoURL = repo.RepoURL
+		repoURL = repo.URL
 	}
 
 	entry := storage.Delivery{
@@ -255,6 +257,10 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	out := s.deliver(p, eventName, body, repo)
 	switch {
+	case out.notConnected:
+		// Nobody subscribed to this repository: its events are not sent
+		// anywhere (1.x broadcast them to every chat).
+		reply(http.StatusOK, "SKIPPED", storage.DeliveryIgnored, "not connected")
 	case out.sent > 0 && out.failed > 0:
 		reply(http.StatusOK, "OK", storage.DeliveryDelivered,
 			fmt.Sprintf("%d of %d sends failed: %v", out.failed, out.sent+out.failed, out.err))
@@ -352,7 +358,7 @@ func detectPlatform(r *http.Request) (platform.Platform, string) {
 //   - a request carrying a signature/token must match the repository secret
 //     or the global WEBHOOK_SECRET (if any of them is known);
 //   - a request without a signature is rejected only when WEBHOOK_SECRET is set.
-func (s *Server) verify(r *http.Request, p platform.Platform, body []byte, repo *storage.RepoInfo) bool {
+func (s *Server) verify(r *http.Request, p platform.Platform, body []byte, repo *storage.Repo) bool {
 	var secrets []string
 	if repo != nil && repo.Secret != "" {
 		secrets = append(secrets, repo.Secret)
@@ -406,47 +412,60 @@ func validGitHubSignature(secret string, body []byte, header string) bool {
 
 // target is a chat that should receive a notification.
 type target struct {
+	dest      storage.Destination
 	chatID    int64
 	lang      i18n.Lang
 	format    string
 	useTopics bool
 }
 
-// targets returns the chats that receive notifications for a repository:
-// the chat the repository is connected to, otherwise every configured chat,
-// otherwise the default CHAT_ID.
-func (s *Server) targets(repo *storage.RepoInfo) []target {
-	if repo != nil {
-		chat, err := s.store.GetChat(repo.ChatID)
-		if err != nil {
-			return []target{s.defaultTarget(repo.ChatID)}
-		}
-		return []target{s.chatTarget(*chat)}
+// targets returns the Telegram chats subscribed to a repository; an
+// unknown repository has none.
+func (s *Server) targets(repo *storage.Repo) []target {
+	if repo == nil {
+		return nil
 	}
-
+	subs, err := s.store.Subscribers(repo.ID)
+	if err != nil {
+		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+		return nil
+	}
 	var result []target
-	for _, chat := range s.store.GetAllChats() {
-		result = append(result, s.chatTarget(chat))
-	}
-	if len(result) == 0 && s.cfg.DefaultChatID != 0 {
-		log.Println(i18n.T(s.cfg.DefaultLang, i18n.MsgNoChatsConfigured))
-		result = append(result, s.defaultTarget(s.cfg.DefaultChatID))
+	for _, d := range subs {
+		if d.Messenger != "telegram" {
+			continue
+		}
+		chatID, err := strconv.ParseInt(d.ChatID, 10, 64)
+		if err != nil {
+			continue
+		}
+		format := d.Format
+		if format == "" {
+			format = storage.FormatRich
+		}
+		result = append(result, target{d, chatID, s.langOrDefault(d.Language), format, d.UseThreads})
 	}
 	return result
 }
 
 // outcome counts the messages of one delivery.
 type outcome struct {
+	notConnected bool
 	sent, failed int
 	err          error // last send error
 }
 
 // deliver formats the event for each target chat and sends it.
-func (s *Server) deliver(p platform.Platform, eventName string, body []byte, repo *storage.RepoInfo) outcome {
+func (s *Server) deliver(p platform.Platform, eventName string, body []byte, repo *storage.Repo) outcome {
 	results := make(map[i18n.Lang]dispatcher.Result)
 	var out outcome
 
-	for _, t := range s.targets(repo) {
+	targets := s.targets(repo)
+	if len(targets) == 0 {
+		out.notConnected = true
+		return out
+	}
+	for _, t := range targets {
 		res, ok := results[t.lang]
 		if !ok {
 			res = s.dispatcher.Dispatch(t.lang, p, eventName, body)
@@ -458,7 +477,7 @@ func (s *Server) deliver(p platform.Platform, eventName string, body []byte, rep
 
 		topicID := 0
 		if t.useTopics && res.Topic != platform.TopicGeneral {
-			topicID = s.store.GetTopicByEvent(t.chatID, string(res.Topic))
+			topicID, _ = strconv.Atoi(s.store.ThreadFor(t.dest.ID, string(res.Topic)))
 		}
 
 		err := s.send(t, topicID, res.Notification)
@@ -491,21 +510,6 @@ func (s *Server) send(t target, topicID int, n notify.Notification) error {
 		}
 	}
 	return err
-}
-
-// chatTarget is a configured chat with its own language and settings.
-func (s *Server) chatTarget(chat storage.ChatConfig) target {
-	format := chat.Format
-	if format == "" {
-		format = storage.FormatRich
-	}
-	return target{chat.ChatID, s.langOrDefault(chat.Language), format, chat.UseTopics}
-}
-
-// defaultTarget is a chat with no stored settings: the default language,
-// rich messages and topic routing (it has no topics mapped anyway).
-func (s *Server) defaultTarget(chatID int64) target {
-	return target{chatID, s.cfg.DefaultLang, storage.FormatRich, true}
 }
 
 func (s *Server) langOrDefault(language string) i18n.Lang {

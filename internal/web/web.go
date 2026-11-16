@@ -36,10 +36,11 @@ var staticFS embed.FS
 
 // Source is the read-only view of the storage the panel needs.
 type Source interface {
-	GetAllChats() []storage.ChatConfig
-	GetAllRepos() []storage.RepoInfo
-	GetTopicsByChat(chatID int64) ([]storage.TopicInfo, error)
-	GetEventMappings(chatID int64) (map[string]int, error)
+	Destinations() ([]storage.Destination, error)
+	Repos() ([]storage.Repo, error)
+	Threads(destID int64) ([]storage.Thread, error)
+	Routes(destID int64) (map[string]string, error)
+	SubscriptionsOf(destID int64) ([]storage.Repo, error)
 }
 
 // Config holds the panel settings.
@@ -161,15 +162,14 @@ type nav struct {
 type repoRow struct {
 	URL      string
 	Platform string
-	ChatID   int64
-	Language string
-	Secret   string // "repo", "global" or "none"
+	Chats    []string // "messenger chat_id" of every subscribed chat
+	Secret   string   // "repo", "global" or "none"
 }
 
 type chatRow struct {
-	ChatID    int64
+	Messenger string
+	ChatID    string
 	Language  string
-	IsForum   bool
 	Format    string
 	RichOff   bool // the chat chose rich, but it gets classic messages
 	UseTopics bool
@@ -179,39 +179,58 @@ type chatRow struct {
 }
 
 type topicRow struct {
-	ID     int
+	ID     string
 	Name   string
 	Events []string
 }
 
+// snapshot is everything the pages show, read once per request.
+type snapshot struct {
+	dests  []storage.Destination
+	repos  []storage.Repo
+	subs   map[int64][]storage.Repo // by destination
+	chats  map[int64][]string       // subscribed chats by repository
+	errors []error
+}
+
+func (s *Server) load() snapshot {
+	var snap snapshot
+	var err error
+	snap.dests, err = s.src.Destinations()
+	snap.errors = append(snap.errors, err)
+	snap.repos, err = s.src.Repos()
+	snap.errors = append(snap.errors, err)
+	snap.subs = map[int64][]storage.Repo{}
+	snap.chats = map[int64][]string{}
+	for _, d := range snap.dests {
+		repos, err := s.src.SubscriptionsOf(d.ID)
+		snap.errors = append(snap.errors, err)
+		snap.subs[d.ID] = repos
+		for _, r := range repos {
+			snap.chats[r.ID] = append(snap.chats[r.ID], d.Messenger+" "+d.ChatID)
+		}
+	}
+	return snap
+}
+
 func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
-	chats := s.src.GetAllChats()
-	repos := s.rows()
+	snap := s.load()
+	repos := s.rows(snap)
 
 	byPlatform := map[string]int{}
-	unprotected := 0
+	unprotected, orphans := 0, 0
 	for _, r := range repos {
 		byPlatform[r.Platform]++
 		if r.Secret == "none" {
 			unprotected++
 		}
-	}
-
-	known := map[int64]bool{}
-	for _, c := range chats {
-		known[c.ChatID] = true
-	}
-	withRepos := map[int64]bool{}
-	orphans := 0
-	for _, r := range repos {
-		withRepos[r.ChatID] = true
-		if !known[r.ChatID] {
+		if len(r.Chats) == 0 {
 			orphans++
 		}
 	}
 	idle := 0
-	for _, c := range chats {
-		if !withRepos[c.ChatID] {
+	for _, d := range snap.dests {
+		if len(snap.subs[d.ID]) == 0 {
 			idle++
 		}
 	}
@@ -221,66 +240,81 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		"Version":     s.cfg.Version,
 		"Uptime":      time.Since(s.cfg.StartedAt).Truncate(time.Second),
 		"StartedAt":   s.cfg.StartedAt,
-		"Chats":       len(chats),
+		"Chats":       len(snap.dests),
 		"Repos":       len(repos),
 		"ByPlatform":  sortedCounts(byPlatform),
 		"Unprotected": unprotected,
 		"IdleChats":   idle,
 		"Orphans":     orphans,
+		"Err":         errors.Join(snap.errors...),
 	})
 }
 
 func (s *Server) handleRepos(w http.ResponseWriter, r *http.Request) {
+	snap := s.load()
 	s.render(w, http.StatusOK, "repos", map[string]any{
 		"Nav":   nav{Active: "repos", Version: s.cfg.Version},
-		"Repos": s.rows(),
+		"Repos": s.rows(snap),
+		"Err":   errors.Join(snap.errors...),
 	})
 }
 
 func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
-	chats := s.src.GetAllChats()
-	sort.Slice(chats, func(i, j int) bool { return chats[i].ChatID < chats[j].ChatID })
-
-	reposByChat := map[int64][]string{}
-	for _, repo := range s.src.GetAllRepos() {
-		reposByChat[repo.ChatID] = append(reposByChat[repo.ChatID], repo.RepoURL)
-	}
-
+	snap := s.load()
 	richOff := s.cfg.RichAvailable != nil && !s.cfg.RichAvailable()
-	rows := make([]chatRow, 0, len(chats))
-	for _, c := range chats {
-		format := c.Format
-		if format == "" {
+	rows := make([]chatRow, 0, len(snap.dests))
+	for _, d := range snap.dests {
+		format := d.Format
+		if format == "" && d.Messenger == "telegram" {
 			format = storage.FormatRich
 		}
-		row := chatRow{ChatID: c.ChatID, Language: c.Language, IsForum: c.IsForum,
-			Format: format, RichOff: richOff && format == storage.FormatRich,
-			UseTopics: c.UseTopics, Repos: reposByChat[c.ChatID]}
+		row := chatRow{Messenger: d.Messenger, ChatID: d.ChatID, Language: d.Language,
+			Format: format, RichOff: richOff && format == storage.FormatRich, UseTopics: d.UseThreads}
+		for _, repo := range snap.subs[d.ID] {
+			row.Repos = append(row.Repos, repo.URL)
+		}
 		sort.Strings(row.Repos)
 
-		topics, err := s.src.GetTopicsByChat(c.ChatID)
-		mappings, mapErr := s.src.GetEventMappings(c.ChatID)
-		if err = errors.Join(err, mapErr); err != nil {
+		threads, err := s.src.Threads(d.ID)
+		routes, routeErr := s.src.Routes(d.ID)
+		if err = errors.Join(err, routeErr); err != nil {
 			row.Err = err.Error()
 		}
-		events := map[int][]string{}
-		for event, topicID := range mappings {
-			events[topicID] = append(events[topicID], event)
+		events := map[string][]string{}
+		for event, thread := range routes {
+			events[thread] = append(events[thread], event)
 		}
-		for _, t := range topics {
-			ev := events[t.TopicID]
+		for _, t := range threads {
+			ev := events[t.ThreadID]
 			sort.Strings(ev)
-			row.Topics = append(row.Topics, topicRow{ID: t.TopicID, Name: t.Name, Events: ev})
+			row.Topics = append(row.Topics, topicRow{ID: t.ThreadID, Name: t.Name, Events: ev})
 		}
-		sort.Slice(row.Topics, func(i, j int) bool { return row.Topics[i].ID < row.Topics[j].ID })
+		sort.Slice(row.Topics, func(i, j int) bool { return lessID(row.Topics[i].ID, row.Topics[j].ID) })
 		rows = append(rows, row)
 	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].Messenger != rows[j].Messenger {
+			return rows[i].Messenger < rows[j].Messenger
+		}
+		return lessID(rows[i].ChatID, rows[j].ChatID)
+	})
 
 	s.render(w, http.StatusOK, "chats", map[string]any{
 		"Nav":     nav{Active: "chats", Version: s.cfg.Version},
 		"Chats":   rows,
 		"RichOff": richOff,
+		"Err":     errors.Join(snap.errors...),
 	})
+}
+
+// lessID orders numeric IDs by value and anything else as text.
+func lessID(a, b string) bool {
+	x, errA := strconv.ParseInt(a, 10, 64)
+	y, errB := strconv.ParseInt(b, 10, 64)
+	if errA == nil && errB == nil {
+		return x < y
+	}
+	return a < b
 }
 
 func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
@@ -289,17 +323,11 @@ func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// rows joins repositories with their chat and reports how each is protected.
-// The secret itself never leaves this function.
-func (s *Server) rows() []repoRow {
-	langs := map[int64]string{}
-	for _, c := range s.src.GetAllChats() {
-		langs[c.ChatID] = c.Language
-	}
-
-	repos := s.src.GetAllRepos()
-	out := make([]repoRow, 0, len(repos))
-	for _, r := range repos {
+// rows lists repositories with their chats and reports how each is
+// protected. The secret itself never leaves this function.
+func (s *Server) rows(snap snapshot) []repoRow {
+	out := make([]repoRow, 0, len(snap.repos))
+	for _, r := range snap.repos {
 		secret := "none"
 		switch {
 		case r.Secret != "":
@@ -307,7 +335,9 @@ func (s *Server) rows() []repoRow {
 		case s.cfg.GlobalSecretSet:
 			secret = "global"
 		}
-		out = append(out, repoRow{URL: r.RepoURL, Platform: r.Platform, ChatID: r.ChatID, Language: langs[r.ChatID], Secret: secret})
+		chats := append([]string(nil), snap.chats[r.ID]...)
+		sort.Strings(chats)
+		out = append(out, repoRow{URL: r.URL, Platform: r.Platform, Chats: chats, Secret: secret})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].URL < out[j].URL })
 	return out
@@ -342,7 +372,6 @@ func sortedCounts(m map[string]int) []count {
 }
 
 var funcs = template.FuncMap{
-	"chatID": func(id int64) string { return strconv.FormatInt(id, 10) },
 	"safeURL": func(raw string) template.URL {
 		// Repository URLs come from webhook payloads and /connect; only link real http(s) URLs.
 		if strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {

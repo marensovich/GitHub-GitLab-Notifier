@@ -63,7 +63,8 @@ func TestHealthz(t *testing.T) {
 
 func TestMetricsEndpoint(t *testing.T) {
 	m := metrics.New("v9")
-	e := newEnv(t, Config{DefaultChatID: 100, Metrics: m, ServeMetrics: true})
+	e := newEnv(t, Config{Metrics: m, ServeMetrics: true})
+	e.hello(t)
 	e.sender.failTopicIDs[0] = true
 	e.post(t, ghHeaders("star"), starPayload)
 	e.sender.failTopicIDs[0] = false

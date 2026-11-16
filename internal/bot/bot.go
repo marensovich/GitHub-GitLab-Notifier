@@ -28,7 +28,7 @@ type Bot struct {
 	token   string
 	self    *telego.User
 	lang    i18n.Lang
-	store   *storage.Store
+	store   legacyStore
 	version string
 	// rich enables rich messages for notifications (RICH_MESSAGES).
 	rich bool
@@ -76,7 +76,7 @@ func NewBot(lang i18n.Lang, store *storage.Store, version string, rich bool) (*B
 		token:   token,
 		self:    self,
 		lang:    lang,
-		store:   store,
+		store:   legacyStore{store},
 		version: version,
 		rich:    rich,
 	}
@@ -279,7 +279,7 @@ func (b *Bot) chatLang(chatID int64) i18n.Lang {
 // ensureChat makes sure the chat exists in the database (repos and topics
 // reference it), keeping its stored language if it already exists.
 func (b *Bot) ensureChat(chat telego.Chat) error {
-	return b.store.SaveChat(storage.ChatConfig{
+	return b.store.SaveChat(ChatConfig{
 		ChatID:   chat.ID,
 		Language: string(b.chatLang(chat.ID)),
 		IsForum:  chat.IsForum,

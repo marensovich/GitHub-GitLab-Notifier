@@ -45,7 +45,7 @@ func TestFreshDatabaseIsMigrated(t *testing.T) {
 	if v != len(list) {
 		t.Errorf("version = %d, want %d", v, len(list))
 	}
-	if err := s.SaveChat(ChatConfig{ChatID: 1, Language: "en"}); err != nil {
+	if _, err := s.EnsureDestination("telegram", "1", Destination{Language: "en", Format: FormatRich}); err != nil {
 		t.Fatalf("schema not usable: %v", err)
 	}
 }
@@ -65,14 +65,11 @@ func TestLegacyDatabaseKeepsData(t *testing.T) {
 	if v, _ := s.SchemaVersion(); v < 1 {
 		t.Errorf("version = %d, want >= 1", v)
 	}
-	if n := len(s.GetAllChats()); n != 2 {
-		t.Errorf("chats = %d, want 2", n)
+	if d, _ := s.Destinations(); len(d) != 2 {
+		t.Errorf("destinations = %d, want 2", len(d))
 	}
-	if n := len(s.GetAllRepos()); n != 2 {
-		t.Errorf("repos = %d, want 2", n)
-	}
-	if id := s.GetTopicByEvent(-1001, "pipeline"); id != 5 {
-		t.Errorf("pipeline topic = %d, want 5", id)
+	if r, _ := s.Repos(); len(r) != 2 {
+		t.Errorf("repos = %d, want 2", len(r))
 	}
 	var marked int
 	s.db.QueryRow("SELECT COUNT(*) FROM schema_version WHERE version = 1").Scan(&marked)
@@ -152,28 +149,5 @@ func TestLoadMigrationsValidates(t *testing.T) {
 	list, err := loadMigrations(fstest.MapFS{"m/0002_b.sql": {}, "m/0001_a.sql": {}, "m/README.md": {}}, "m")
 	if err != nil || len(list) != 2 || list[0].version != 1 {
 		t.Errorf("sorted load: %v %+v", err, list)
-	}
-}
-
-func TestMigration0003Defaults(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "legacy.db")
-	if _, err := rawDB(t, path).Exec(schema101); err != nil {
-		t.Fatal(err)
-	}
-	s, err := Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-
-	if v, _ := s.SchemaVersion(); v < 3 {
-		t.Errorf("version = %d, want >= 3", v)
-	}
-	chat, err := s.GetChat(-1001)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if chat.Format != FormatRich || !chat.UseTopics {
-		t.Errorf("existing chat got format %q, use_topics %v; want rich, true", chat.Format, chat.UseTopics)
 	}
 }

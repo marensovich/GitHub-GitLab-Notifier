@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -128,27 +129,32 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-func TestFallsBackToDefaultChat(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
+func TestUnconnectedRepoIsDropped(t *testing.T) {
+	e := newEnv(t, Config{})
+	// Chats exist, but none is subscribed to the repository.
+	e.chat(t, 200, "ru")
+	e.connect(t, e.chat(t, 300, "en"), "https://github.com/octo/other", "")
 
 	rec := e.post(t, ghHeaders("star"), starPayload)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
 	}
-	if len(e.sender.sent) != 1 || e.sender.sent[0].chatID != 100 || e.sender.sent[0].topicID != 0 {
-		t.Fatalf("unexpected messages: %+v", e.sender.sent)
+	if len(e.sender.sent) != 0 {
+		t.Fatalf("want no messages, got %+v", e.sender.sent)
+	}
+	if d := lastDelivery(t, e); d.Status != storage.DeliveryIgnored || d.Error != "not connected" {
+		t.Errorf("delivery logged as %+v", d)
 	}
 }
 
 func TestRoutesConnectedRepoToItsChatTopicAndLanguage(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
+	e := newEnv(t, Config{})
 
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "ru", IsForum: true}))
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 300, Language: "en", IsForum: true}))
-	must(t, e.store.SaveTopic(storage.TopicInfo{TopicID: 55, ChatID: 200, Name: "⭐ Stars", EventType: "star"}))
-	must(t, e.store.SetEventTopic(200, "star", 55))
+	ru := e.chat(t, 200, "ru")
+	e.chat(t, 300, "en")
+	e.topic(t, ru, 55, "star")
 	// Different spelling than in the payload: matching must be normalized.
-	must(t, e.store.SaveRepo(storage.RepoInfo{ChatID: 200, RepoURL: "http://github.com/octo/hello.git/", Platform: "GitHub"}))
+	e.connect(t, ru, "http://github.com/octo/hello.git/", "")
 
 	e.post(t, ghHeaders("star"), starPayload)
 
@@ -164,10 +170,10 @@ func TestRoutesConnectedRepoToItsChatTopicAndLanguage(t *testing.T) {
 	}
 }
 
-func TestBroadcastsUnconnectedRepoToAllChats(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "ru"}))
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 300, Language: "en"}))
+func TestFansOutToEverySubscriber(t *testing.T) {
+	e := newEnv(t, Config{})
+	e.connect(t, e.chat(t, 200, "ru"), "https://github.com/octo/hello", "")
+	e.connect(t, e.chat(t, 300, "en"), "https://github.com/octo/hello", "")
 
 	e.post(t, ghHeaders("star"), starPayload)
 
@@ -178,9 +184,9 @@ func TestBroadcastsUnconnectedRepoToAllChats(t *testing.T) {
 
 func TestFallsBackToGeneralWhenTopicSendFails(t *testing.T) {
 	e := newEnv(t, Config{})
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "en", IsForum: true}))
-	must(t, e.store.SaveTopic(storage.TopicInfo{TopicID: 55, ChatID: 200, Name: "⭐ Stars", EventType: "star"}))
-	must(t, e.store.SetEventTopic(200, "star", 55))
+	d := e.chat(t, 200, "en")
+	e.topic(t, d, 55, "star")
+	e.connect(t, d, "https://github.com/octo/hello", "")
 	e.sender.failTopicIDs[55] = true
 
 	e.post(t, ghHeaders("star"), starPayload)
@@ -191,7 +197,7 @@ func TestFallsBackToGeneralWhenTopicSendFails(t *testing.T) {
 }
 
 func TestSkippedEventsSendNothing(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
+	e := newEnv(t, Config{})
 
 	for _, event := range []string{"check_suite", "watch"} {
 		rec := e.post(t, ghHeaders(event), starPayload)
@@ -205,9 +211,8 @@ func TestSkippedEventsSendNothing(t *testing.T) {
 }
 
 func TestGitHubSignatureWithRepoSecret(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "en"}))
-	must(t, e.store.SaveRepo(storage.RepoInfo{ChatID: 200, RepoURL: "https://github.com/octo/hello", Secret: "s3cret"}))
+	e := newEnv(t, Config{})
+	e.connect(t, e.chat(t, 200, "en"), "https://github.com/octo/hello", "s3cret")
 
 	h := ghHeaders("star")
 	h["X-Hub-Signature-256"] = sign("s3cret", starPayload)
@@ -227,7 +232,9 @@ func TestGitHubSignatureWithRepoSecret(t *testing.T) {
 }
 
 func TestGlobalWebhookSecretIsRequired(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100, WebhookSecret: "global"})
+	e := newEnv(t, Config{WebhookSecret: "global"})
+	e.hello(t)
+	e.connect(t, e.chat(t, 100, "en"), "https://gitlab.com/g/a", "")
 
 	if rec := e.post(t, ghHeaders("star"), starPayload); rec.Code != http.StatusUnauthorized {
 		t.Errorf("missing signature: got %d, want 401", rec.Code)
@@ -248,6 +255,40 @@ func TestGlobalWebhookSecretIsRequired(t *testing.T) {
 	}
 }
 
+// chat stores a Telegram chat as a destination.
+func (e *env) chat(t *testing.T, chatID int64, lang string) storage.Destination {
+	t.Helper()
+	d, err := e.store.EnsureDestination("telegram", strconv.FormatInt(chatID, 10),
+		storage.Destination{Language: lang, Format: storage.FormatRich, UseThreads: true})
+	must(t, err)
+	return d
+}
+
+// connect subscribes a destination to a repository, creating it if needed.
+func (e *env) connect(t *testing.T, d storage.Destination, url, secret string) {
+	t.Helper()
+	repo, err := e.store.FindRepo(url)
+	must(t, err)
+	if repo == nil {
+		created, err := e.store.CreateRepo(url, "GitHub", secret)
+		must(t, err)
+		repo = &created
+	}
+	must(t, e.store.Subscribe(repo.ID, d.ID))
+}
+
+// topic routes an event type to a forum topic of a destination.
+func (e *env) topic(t *testing.T, d storage.Destination, topicID int, event string) {
+	t.Helper()
+	must(t, e.store.SaveThread(storage.Thread{DestinationID: d.ID, ThreadID: strconv.Itoa(topicID), Name: event}, event))
+}
+
+// hello subscribes chat 100 to the repository of starPayload.
+func (e *env) hello(t *testing.T) {
+	t.Helper()
+	e.connect(t, e.chat(t, 100, "en"), "https://github.com/octo/hello", "")
+}
+
 func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
@@ -265,7 +306,8 @@ func lastDelivery(t *testing.T, e *env) storage.Delivery {
 }
 
 func TestRedeliveryIsSentOnce(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
+	e := newEnv(t, Config{})
+	e.hello(t)
 	h := ghHeaders("star")
 	h["X-GitHub-Delivery"] = "d-1"
 
@@ -298,7 +340,8 @@ func TestRedeliveryIsSentOnce(t *testing.T) {
 }
 
 func TestGitLabRedeliveryUsesIdempotencyKey(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
+	e := newEnv(t, Config{})
+	e.connect(t, e.chat(t, 100, "en"), "https://gitlab.com/g/a", "")
 	gl := `{"object_kind":"release","action":"create","tag":"v1","project":{"path_with_namespace":"g/a","web_url":"https://gitlab.com/g/a"}}`
 	h := map[string]string{"X-Gitlab-Event": "Release Hook", "X-Gitlab-Event-UUID": "u-1"}
 
@@ -320,7 +363,8 @@ func TestGitLabRedeliveryUsesIdempotencyKey(t *testing.T) {
 }
 
 func TestFailedDeliveryCanBeRetried(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100})
+	e := newEnv(t, Config{})
+	e.hello(t)
 	e.sender.failTopicIDs[0] = true
 	h := ghHeaders("star")
 	h["X-GitHub-Delivery"] = "d-1"
@@ -342,7 +386,7 @@ func TestFailedDeliveryCanBeRetried(t *testing.T) {
 }
 
 func TestRejectedAndIgnoredAreLogged(t *testing.T) {
-	e := newEnv(t, Config{DefaultChatID: 100, WebhookSecret: "global"})
+	e := newEnv(t, Config{WebhookSecret: "global"})
 
 	e.post(t, ghHeaders("star"), starPayload)
 	if d := lastDelivery(t, e); d.Status != storage.DeliveryRejected || d.HTTPStatus != http.StatusUnauthorized {
@@ -374,11 +418,10 @@ func TestPruneDeliveriesStopsWithContext(t *testing.T) {
 
 func TestUseTopicsOffRoutesToMain(t *testing.T) {
 	e := newEnv(t, Config{})
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "en", IsForum: true}))
-	must(t, e.store.SaveTopic(storage.TopicInfo{TopicID: 55, ChatID: 200, Name: "Stars", EventType: "star"}))
-	must(t, e.store.SetEventTopic(200, "star", 55))
-	must(t, e.store.SetChatSettings(200, storage.FormatClassic, false))
-	must(t, e.store.SaveRepo(storage.RepoInfo{ChatID: 200, RepoURL: "https://github.com/octo/hello", Platform: "GitHub"}))
+	d := e.chat(t, 200, "en")
+	e.topic(t, d, 55, "star")
+	must(t, e.store.SetDestinationSettings(d.ID, storage.FormatClassic, false))
+	e.connect(t, d, "https://github.com/octo/hello", "")
 
 	if rec := e.post(t, ghHeaders("star"), starPayload); rec.Code != http.StatusOK {
 		t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
@@ -393,10 +436,9 @@ func TestUseTopicsOffRoutesToMain(t *testing.T) {
 
 func TestDeletedTopicFallsBackToMain(t *testing.T) {
 	e := newEnv(t, Config{})
-	must(t, e.store.SaveChat(storage.ChatConfig{ChatID: 200, Language: "en", IsForum: true}))
-	must(t, e.store.SaveTopic(storage.TopicInfo{TopicID: 55, ChatID: 200, Name: "Stars", EventType: "star"}))
-	must(t, e.store.SetEventTopic(200, "star", 55))
-	must(t, e.store.SaveRepo(storage.RepoInfo{ChatID: 200, RepoURL: "https://github.com/octo/hello", Platform: "GitHub"}))
+	d := e.chat(t, 200, "en")
+	e.topic(t, d, 55, "star")
+	e.connect(t, d, "https://github.com/octo/hello", "")
 	e.sender.failTopicIDs[55] = true
 
 	e.post(t, ghHeaders("star"), starPayload)
@@ -410,7 +452,8 @@ func TestDeletedTopicFallsBackToMain(t *testing.T) {
 
 func TestMetricsCountAttemptsByFormat(t *testing.T) {
 	m := metrics.New("test")
-	e := newEnv(t, Config{DefaultChatID: 100, Metrics: m})
+	e := newEnv(t, Config{Metrics: m})
+	e.hello(t)
 	e.sender.reply = []notify.Attempt{
 		{Format: notify.FormatRich, Err: errors.New("can't parse")},
 		{Format: notify.FormatClassic},
@@ -436,7 +479,8 @@ func TestMetricsCountAttemptsByFormat(t *testing.T) {
 // were not delivered, not attempts that a later attempt replaced.
 func TestMetricsCountFinalFailureOnly(t *testing.T) {
 	m := metrics.New("test")
-	e := newEnv(t, Config{DefaultChatID: 100, Metrics: m})
+	e := newEnv(t, Config{Metrics: m})
+	e.hello(t)
 	e.sender.reply = []notify.Attempt{
 		{Format: notify.FormatRich, Err: errors.New("can't parse")},
 		{Format: notify.FormatClassic, Err: errors.New("button url")},
