@@ -22,6 +22,10 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - Prometheus metrics at `/metrics` (`METRICS_ENABLED`, default on): webhooks by platform/event/status, webhook
   handling time, send attempts by result, build info and start time. `METRICS_ADDR` serves them on a separate
   address such as `127.0.0.1:9090`. No new dependencies. Grafana dashboard in `docs/grafana-dashboard.json`.
+- Docker image on GitHub Container Registry for `linux/amd64`, `linux/arm64` and `linux/arm/v7`:
+  `ghcr.io/marensovich/github-gitlab-notifier` with tags `X.Y.Z`, `X.Y`, `latest` (stable releases only) and
+  `edge` (every push to `development`). `docker-compose.yml` now pulls this image; `--build` still builds locally.
+  The Dockerfile cross-compiles in the build stage instead of emulating the target platform.
 
 ### Changed
 
