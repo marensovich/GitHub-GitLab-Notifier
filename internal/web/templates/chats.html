@@ -1,0 +1,38 @@
+{{define "title"}}Chats{{end}}
+{{define "content"}}
+<h1>Chats</h1>
+{{range .Chats}}
+<section class="card">
+  <div class="card-head">
+    <h2 class="mono">{{chatID .ChatID}}</h2>
+    <div class="tags">
+      <span class="badge">{{.Language}}</span>
+      {{if .IsForum}}<span class="badge">forum</span>{{end}}
+      <span class="badge">{{len .Repos}} repo{{if ne (len .Repos) 1}}s{{end}}</span>
+    </div>
+  </div>
+  {{if .Err}}<p class="alerts warn">Could not read topics: {{.Err}}</p>{{end}}
+
+  <h3>Repositories</h3>
+  {{if .Repos}}<ul class="plain mono">{{range .Repos}}<li>{{.}}</li>{{end}}</ul>
+  {{else}}<p class="muted">None.</p>{{end}}
+
+  <h3>Topics and routing</h3>
+  {{if .Topics}}
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Topic</th><th>ID</th><th>Events routed here</th></tr></thead>
+    <tbody>
+    {{range .Topics}}
+      <tr><td>{{.Name}}</td><td class="mono">{{.ID}}</td>
+        <td>{{range .Events}}<span class="badge">{{.}}</span> {{else}}<span class="muted">—</span>{{end}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}<p class="muted">No topics — notifications go to the main chat.</p>{{end}}
+</section>
+{{else}}
+<p class="empty">No chats yet. Add the bot to a group and run <code>/connect</code>.</p>
+{{end}}
+{{end}}

@@ -313,6 +313,31 @@ func (s *Store) GetTopicByEvent(chatID int64, eventType string) int {
 	return topicID
 }
 
+// GetEventMappings returns the event type → topic ID routing of a chat.
+//
+// Возвращает привязку типов событий к темам в чате.
+func (s *Store) GetEventMappings(chatID int64) (map[string]int, error) {
+	rows, err := s.db.Query(
+		"SELECT event_type, topic_id FROM event_mapping WHERE chat_id = ?",
+		chatID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	mappings := make(map[string]int)
+	for rows.Next() {
+		var eventType string
+		var topicID int
+		if err := rows.Scan(&eventType, &topicID); err != nil {
+			return nil, err
+		}
+		mappings[eventType] = topicID
+	}
+	return mappings, rows.Err()
+}
+
 // SetEventTopic maps an event type to a topic in a chat.
 //
 // Привязывает тип события к теме в чате.

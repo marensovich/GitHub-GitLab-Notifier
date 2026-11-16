@@ -6,6 +6,14 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Local read-only web panel (`PANEL_ADDRESS`, e.g. `127.0.0.1:8081`): overview with warnings for repositories
+  without a webhook secret, the list of connected repositories and their chats, and every chat with its topics
+  and event routing. It listens only on loopback unless `PANEL_ALLOW_REMOTE=true`, rejects non-loopback `Host`
+  headers, accepts only `GET`/`HEAD`, never shows secrets, and needs no internet access. Open it through an SSH
+  tunnel: `ssh -L 8081:127.0.0.1:8081 user@server`.
+
 ## [1.0.1] — 2026-10-30
 
 ### Security

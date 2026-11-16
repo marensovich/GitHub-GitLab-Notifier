@@ -1,0 +1,28 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{{template "title" .}} · Notifier panel</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="/">Notifier <span>panel</span></a>
+      <nav>
+        <a href="/" {{if eq .Nav.Active "overview"}}aria-current="page"{{end}}>Overview</a>
+        <a href="/repos" {{if eq .Nav.Active "repos"}}aria-current="page"{{end}}>Repositories</a>
+        <a href="/chats" {{if eq .Nav.Active "chats"}}aria-current="page"{{end}}>Chats</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    {{template "content" .}}
+  </main>
+  <footer class="wrap foot">
+    GitHub-GitLab Notifier {{.Nav.Version}} · read-only · local access only
+  </footer>
+</body>
+</html>{{end}}
