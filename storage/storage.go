@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -43,9 +44,9 @@ type RepoInfo struct {
 	Secret   string `json:"secret"`
 }
 
-// Open opens or creates a SQLite database and creates tables.
+// Open opens or creates a SQLite database and migrates its schema.
 //
-// Открывает или создаёт базу данных SQLite и создаёт таблицы.
+// Открывает или создаёт базу данных SQLite и применяет миграции.
 func Open(path string) (*Store, error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -59,67 +60,22 @@ func Open(path string) (*Store, error) {
 
 	// Проверяем соединение
 	if err := db.Ping(); err != nil {
+		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	store := &Store{db: db}
-
-	// Создаём таблицы
-	if err := store.createTables(); err != nil {
-		return nil, fmt.Errorf("failed to create tables: %w", err)
+	// Применяем миграции схемы
+	list, err := loadMigrations(embeddedMigrations, "migrations")
+	if err == nil {
+		err = migrate(context.Background(), db, list)
+	}
+	if err != nil {
+		db.Close()
+		return nil, err
 	}
 
 	log.Println("✅ Storage initialized (SQLite)")
-	return store, nil
-}
-
-// createTables creates all required tables if they don't exist.
-//
-// Создаёт все необходимые таблицы, если они не существуют.
-func (s *Store) createTables() error {
-	schema := `
-	CREATE TABLE IF NOT EXISTS chats (
-		chat_id INTEGER PRIMARY KEY,
-		language TEXT NOT NULL DEFAULT 'ru',
-		is_forum INTEGER NOT NULL DEFAULT 0,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-
-	CREATE TABLE IF NOT EXISTS topics (
-		topic_id INTEGER NOT NULL,
-		chat_id INTEGER NOT NULL,
-		name TEXT NOT NULL,
-		event_type TEXT NOT NULL DEFAULT '',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		PRIMARY KEY (chat_id, topic_id),
-		FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS repos (
-		repo_url TEXT PRIMARY KEY,
-		chat_id INTEGER NOT NULL,
-		platform TEXT NOT NULL DEFAULT 'GitHub',
-		secret TEXT NOT NULL DEFAULT '',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS event_mapping (
-		chat_id INTEGER NOT NULL,
-		event_type TEXT NOT NULL,
-		topic_id INTEGER NOT NULL,
-		PRIMARY KEY (chat_id, event_type),
-		FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
-		FOREIGN KEY (chat_id, topic_id) REFERENCES topics(chat_id, topic_id) ON DELETE CASCADE
-	);
-
-	CREATE INDEX IF NOT EXISTS idx_topics_chat ON topics(chat_id);
-	CREATE INDEX IF NOT EXISTS idx_repos_chat ON repos(chat_id);
-	CREATE INDEX IF NOT EXISTS idx_event_mapping_chat ON event_mapping(chat_id);
-	`
-
-	_, err := s.db.Exec(schema)
-	return err
+	return &Store{db: db}, nil
 }
 
 // Close closes the database.
