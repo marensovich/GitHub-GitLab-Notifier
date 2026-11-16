@@ -5,6 +5,7 @@ go 1.26.11
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mymmrac/telego v1.13.0
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.50.1
 )
 
