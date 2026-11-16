@@ -96,3 +96,34 @@ func TestEventMapping(t *testing.T) {
 		t.Errorf("unmapped event: got %d, want 0", got)
 	}
 }
+
+func TestGetEventMappings(t *testing.T) {
+	s := openTest(t)
+
+	if err := s.SaveChat(ChatConfig{ChatID: 1, Language: "en", IsForum: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, topic := range []TopicInfo{{TopicID: 10, ChatID: 1, Name: "Pushes"}, {TopicID: 20, ChatID: 1, Name: "CI/CD"}} {
+		if err := s.SaveTopic(topic); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for event, topic := range map[string]int{"push": 10, "pipeline": 20, "workflow_run": 20} {
+		if err := s.SetEventTopic(1, event, topic); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got, err := s.GetEventMappings(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 || got["push"] != 10 || got["pipeline"] != 20 || got["workflow_run"] != 20 {
+		t.Errorf("GetEventMappings(1) = %v", got)
+	}
+
+	empty, err := s.GetEventMappings(2)
+	if err != nil || len(empty) != 0 {
+		t.Errorf("GetEventMappings(2) = %v, %v; want empty", empty, err)
+	}
+}

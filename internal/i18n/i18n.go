@@ -174,6 +174,8 @@ const (
 	MsgServerStarted       = "server_started"
 	MsgServerFailed        = "server_failed"
 	MsgShuttingDown        = "shutting_down"
+	MsgPanelStarted        = "panel_started"
+	MsgPanelFailed         = "panel_failed"
 	MsgWebhookUnauthorized = "webhook_unauthorized"
 	MsgMethodNotAllowed    = "method_not_allowed"
 	MsgFailedToReadBody    = "failed_to_read_body"

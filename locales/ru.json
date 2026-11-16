@@ -37,6 +37,8 @@
   "error_event": "❌ Ошибка обработки события <code>%s</code>",
   "server_started": "🚀 Сервер слушает %s (версия %s)",
   "server_failed": "❌ Ошибка запуска сервера: %v",
+  "panel_started": "🖥 Веб-панель слушает http://%s (открывайте через SSH-туннель)",
+  "panel_failed": "❌ Ошибка веб-панели: %v",
   "bot_token_is_not_set": "❌ BOT_TOKEN не задан",
   "failed_to_create_bot": "❌ Не удалось создать бота: %w",
   "failed_to_get_bot_info": "❌ Не удалось получить информацию о боте: %w",

@@ -33,6 +33,7 @@ happens in your repo.
 - [Building from source](#-building-from-source)
 - [Bot commands](#-bot-commands)
 - [Environment variables](#environment-variables)
+- [Web panel](#-web-panel)
 - [Webhook security](#-webhook-security)
 - [How notifications are routed](#-how-notifications-are-routed)
 - [HTTPS with a reverse proxy](#-https-with-a-reverse-proxy)
@@ -315,8 +316,38 @@ The commands also appear in Telegram's **Menu** button.
 | `PROXY_PORT`            | No       | —                  | Proxy port                                                          |
 | `PROXY_TYPE`            | No       | `HTTP`             | `HTTP` or `SOCKS` (SOCKS5)                                          |
 | `TELEGRAM_API_URL`      | No       | —                  | Self-hosted [Telegram Bot API server](https://github.com/tdlib/telegram-bot-api) |
+| `PANEL_ADDRESS`         | No       | — (disabled)       | Local web panel address, e.g. `127.0.0.1:8081` — see [Web panel](#-web-panel) |
+| `PANEL_ALLOW_REMOTE`    | No       | `false`            | Allow the panel on a non-loopback address                           |
 
 ¹ Required for `/connect` to generate the webhook URL.
+
+---
+
+## 🖥 Web panel
+
+A small read-only panel shows what the bot is connected to: repositories and the chat each one posts to,
+whether a webhook secret protects it, and every chat with its topics and which events are routed to them.
+It is not tied to Telegram and has no login, so it only listens on a loopback address.
+
+Enable it in `.env` and restart the bot:
+
+```env
+PANEL_ADDRESS=127.0.0.1:8081
+```
+
+Open it from your computer through an SSH tunnel:
+
+```bash
+ssh -L 8081:127.0.0.1:8081 user@your-server
+```
+
+then go to <http://localhost:8081>.
+
+- The bot refuses to start if `PANEL_ADDRESS` is not a loopback address (`127.0.0.1`, `::1`, `localhost`),
+  unless `PANEL_ALLOW_REMOTE=true` — use that only behind your own authentication.
+- Requests with a non-loopback `Host` header are rejected, which blocks DNS rebinding.
+- Only `GET`/`HEAD` are accepted; webhook secrets are never displayed, only whether one is set.
+- Everything is embedded in the binary — the panel works without internet access.
 
 ---
 
@@ -388,7 +419,8 @@ Then set `SERVER_ADDRESS=127.0.0.1`, `DOMAIN=bot.example.com` and `USE_HTTPS=tru
 │   │   └── testdata/          # real-world webhook payloads used by tests
 │   ├── i18n/                  # translation loading and lookup
 │   ├── platform/              # platforms, event types, topics
-│   └── server/                # HTTP webhook endpoint, signatures, routing
+│   ├── server/                # HTTP webhook endpoint, signatures, routing
+│   └── web/                   # local read-only web panel (templates and CSS embedded)
 ├── storage/                   # SQLite: chats, topics, repos, event mapping
 ├── scripts/install.sh         # Linux systemd installer
 ├── Dockerfile, docker-compose.yml

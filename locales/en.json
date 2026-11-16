@@ -37,6 +37,8 @@
   "error_event": "❌ Error processing event <code>%s</code>",
   "server_started": "🚀 Server listening on %s (version %s)",
   "server_failed": "❌ Server failed: %v",
+  "panel_started": "🖥 Web panel listening on http://%s (open it through an SSH tunnel)",
+  "panel_failed": "❌ Web panel failed: %v",
   "bot_token_is_not_set": "❌ BOT_TOKEN is not set",
   "failed_to_create_bot": "❌ Failed to create bot: %w",
   "failed_to_get_bot_info": "❌ Failed to get bot info: %w",

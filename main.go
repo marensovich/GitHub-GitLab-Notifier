@@ -5,6 +5,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/server"
+	"GitHub-GitLab-Notifier/internal/web"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
 	"embed"
@@ -93,6 +94,8 @@ func main() {
 		Version:       Version,
 	}, d, store, b)
 
+	panel := startPanel(lang, store)
+
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
 
@@ -108,7 +111,42 @@ func main() {
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			log.Printf(i18n.T(lang, i18n.MsgServerFailed), err)
 		}
+		if panel != nil {
+			if err := panel.Shutdown(shutdownCtx); err != nil {
+				log.Printf(i18n.T(lang, i18n.MsgPanelFailed), err)
+			}
+		}
 	}
+}
+
+// startPanel starts the local web panel when PANEL_ADDRESS is set.
+// A misconfigured address stops the bot; a panel that fails later only
+// logs the error, so notifications keep flowing.
+func startPanel(lang i18n.Lang, store *storage.Store) *web.Server {
+	addr := os.Getenv("PANEL_ADDRESS")
+	if addr == "" {
+		return nil
+	}
+	allowRemote, _ := strconv.ParseBool(os.Getenv("PANEL_ALLOW_REMOTE"))
+
+	panel, err := web.New(web.Config{
+		Addr:            addr,
+		AllowRemote:     allowRemote,
+		GlobalSecretSet: os.Getenv("WEBHOOK_SECRET") != "",
+		Version:         Version,
+		StartedAt:       time.Now(),
+	}, store)
+	if err != nil {
+		log.Fatalf(i18n.T(lang, i18n.MsgPanelFailed), err)
+	}
+
+	go func() {
+		log.Printf(i18n.T(lang, i18n.MsgPanelStarted), addr)
+		if err := panel.ListenAndServe(); err != nil {
+			log.Printf(i18n.T(lang, i18n.MsgPanelFailed), err)
+		}
+	}()
+	return panel
 }
 
 func firstNonEmpty(values ...string) string {
