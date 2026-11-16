@@ -109,7 +109,7 @@ func main() {
 	metricsSrv := startMetrics(lang, m, metricsEnabled, metricsAddr)
 	go srv.PruneDeliveries(ctx)
 
-	panel := startPanel(lang, store)
+	panel := startPanel(lang, store, b.RichAvailable)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
@@ -140,7 +140,7 @@ func main() {
 // startPanel starts the local web panel when PANEL_ADDRESS is set.
 // A misconfigured address stops the bot; a panel that fails later only
 // logs the error, so notifications keep flowing.
-func startPanel(lang i18n.Lang, store *storage.Store) *web.Server {
+func startPanel(lang i18n.Lang, store *storage.Store, richAvailable func() bool) *web.Server {
 	addr := os.Getenv("PANEL_ADDRESS")
 	if addr == "" {
 		return nil
@@ -153,6 +153,7 @@ func startPanel(lang i18n.Lang, store *storage.Store) *web.Server {
 		GlobalSecretSet: os.Getenv("WEBHOOK_SECRET") != "",
 		Version:         Version,
 		StartedAt:       time.Now(),
+		RichAvailable:   richAvailable,
 	}, store)
 	if err != nil {
 		log.Fatalf(i18n.T(lang, i18n.MsgPanelFailed), err)

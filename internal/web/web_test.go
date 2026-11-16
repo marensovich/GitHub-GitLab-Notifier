@@ -245,4 +245,24 @@ func TestChatsPageShowsSettings(t *testing.T) {
 	if n := strings.Count(body, "topics off"); n != 1 {
 		t.Errorf("only the forum chat has topic routing to turn off, got %d badges", n)
 	}
+	if strings.Contains(body, "Rich messages are off") {
+		t.Error("the rich-off notice is shown while rich messages are on")
+	}
+}
+
+func TestChatsPageShowsRichOff(t *testing.T) {
+	src := newSource()
+	src.chats = []storage.ChatConfig{
+		{ChatID: 42, Language: "en", Format: storage.FormatRich, UseTopics: true},
+	}
+	cfg := Config{RichAvailable: func() bool { return false }}
+	body := get(t, newServer(t, cfg, src).Handler(), http.MethodGet, "/chats", "localhost").Body.String()
+	for _, want := range []string{
+		"Rich messages are off",
+		`<span class="badge warn">look: rich → classic</span>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("chats: missing %q", want)
+		}
+	}
 }

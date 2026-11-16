@@ -125,8 +125,79 @@ func TestConfigureNonForumSkipsTopics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.UseTopics {
-		t.Error("non-forum chat must store use_topics = false")
+	if !got.UseTopics {
+		t.Error("/configure changed use_topics before any button was pressed")
+	}
+
+	press(b, chat(false), 5, "cfg1:format:classic")
+	got, _ = b.store.GetChat(-100)
+	if got.UseTopics || got.Format != storage.FormatClassic {
+		t.Errorf("after the press: %+v, want classic without topics", got)
+	}
+}
+
+// pressReplying presses a setup button whose message replies to /configure
+// sent by from (with senderChat set for an anonymous administrator).
+func pressReplying(b *Bot, c telego.Chat, userID int64, data string, from telego.User, senderChat *telego.Chat) {
+	b.consume(telego.Update{CallbackQuery: &telego.CallbackQuery{
+		ID:   "q",
+		From: telego.User{ID: userID},
+		Data: data,
+		Message: &telego.Message{MessageID: 10, Chat: c, ReplyToMessage: &telego.Message{
+			MessageID: 1, Chat: c, From: &from, SenderChat: senderChat, Text: "/configure",
+		}},
+	}})
+}
+
+func lastAnswer(f *fakeAPI) map[string]any {
+	var answer map[string]any
+	for _, c := range f.calls {
+		if c.method == "answerCallbackQuery" {
+			answer = c.body
+		}
+	}
+	return answer
+}
+
+func TestConfigureAnonymousAdminGetsExplanation(t *testing.T) {
+	b, fake := newConfigureBot(t, map[string][]string{
+		"getChatMember": {apiError(400, "Bad Request: member list is inaccessible")},
+	})
+	c := chat(true)
+	runConfigure(b, c)
+	pressReplying(b, c, 5, "cfg1:format:classic",
+		telego.User{ID: 1087968824, IsBot: true, Username: "GroupAnonymousBot"}, &c)
+
+	answer := lastAnswer(fake)
+	text, _ := answer["text"].(string)
+	if answer["show_alert"] != true || !strings.Contains(text, "anonymous") {
+		t.Errorf("want an alert explaining the anonymous /configure, got %v", answer)
+	}
+}
+
+func TestConfigureTopicFailureKeepsButtons(t *testing.T) {
+	b, fake := newConfigureBot(t, map[string][]string{
+		"createForumTopic": {apiError(400, "Bad Request: not enough rights to create a topic")},
+	})
+	c := chat(true)
+	runConfigure(b, c)
+	press(b, c, 5, "cfg1:topics:yes")
+
+	keyboard := lastKeyboard(t, fake)
+	if len(keyboard) == 0 || !strings.HasPrefix(keyboard[0]["callback_data"].(string), "cfg1:topics:") {
+		t.Errorf("after a failed topic creation want the topics buttons again, got %v", keyboard)
+	}
+	answered, created := -1, -1
+	for i, call := range fake.calls {
+		if call.method == "answerCallbackQuery" && answered < 0 {
+			answered = i
+		}
+		if call.method == "createForumTopic" && created < 0 {
+			created = i
+		}
+	}
+	if answered < 0 || created < 0 || answered > created {
+		t.Errorf("the press must be answered before topics are created (answer %d, create %d)", answered, created)
 	}
 }
 
@@ -267,5 +338,8 @@ func TestStatusShowsRichSwitchedOff(t *testing.T) {
 	text := statusText(t, b, fake, c)
 	if !strings.Contains(text, "Look: classic (the new look is off on this server)") {
 		t.Errorf("/status should say the new look is off:\n%s", text)
+	}
+	if !strings.Contains(text, "Topics: off, everything goes to the main chat") {
+		t.Errorf("a chat that is not a forum has no topic routing:\n%s", text)
 	}
 }

@@ -6,6 +6,29 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `notifier_messages_sent_total` has a new `result="retried"` for a failed attempt that a later one replaced (a
+  rich message sent again as classic, a keyboard sent again as links). `result="error"` now counts only messages
+  that were not delivered, so the "Failed sends, 24h" stat no longer includes recovered sends.
+- The web panel says when rich messages are off (`RICH_MESSAGES=false` or no `sendRichMessage` on the Bot API
+  server) and marks the chats that get classic messages instead of the look they chose.
+
+### Fixed
+
+- Very large events (hundreds of labels, huge bodies) could exceed Telegram's limits: the classic message is now
+  kept within 4096 characters and the rich message within 32 768 characters of HTML, dropping listed items, the
+  quote, notes and then long field values, in that order. The heading, item, repository and buttons always stay.
+- A rejected rich message is logged once per kind of error instead of once per byte offset, and the set of logged
+  errors is bounded.
+- `/configure`:
+  - a failed topic creation keeps the buttons, so the choice can be made again without running the command;
+  - the button stops spinning while the topics are being created;
+  - in a regular group nothing is saved until a button is pressed;
+  - when the bot cannot check who is an administrator and the command came from an anonymous administrator,
+    the alert explains what to do instead of saying "only administrators".
+- `/status` in a regular group says that topic routing is off.
+
 ## [1.1.0] — 2026-11-17
 
 ### Added
