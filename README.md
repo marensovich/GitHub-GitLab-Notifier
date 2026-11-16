@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/marensovich/GitHub-GitLab-Notifier/actions/workflows/ci.yml/badge.svg)](https://github.com/marensovich/GitHub-GitLab-Notifier/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/marensovich/GitHub-GitLab-Notifier?sort=semver)](https://github.com/marensovich/GitHub-GitLab-Notifier/releases)
+[![Docker](https://img.shields.io/badge/ghcr.io-amd64%20%7C%20arm64%20%7C%20armv7-2496ED?logo=docker&logoColor=white)](https://github.com/marensovich/GitHub-GitLab-Notifier/pkgs/container/github-gitlab-notifier)
 ![Go](https://img.shields.io/badge/go-%2300ADD8.svg?logo=go&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?logo=telegram&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -233,13 +234,32 @@ the data directory writable). Ports below 1024 get only `CAP_NET_BIND_SERVICE`.
 
 ## 🐳 Running with Docker
 
+A ready image for `linux/amd64`, `linux/arm64` (Raspberry Pi 4/5, ARM VPS) and `linux/arm/v7` is published to
+GitHub Container Registry: `ghcr.io/marensovich/github-gitlab-notifier` (distroless, non-root, ~24 MB).
+
+With Docker Compose (uses the `docker-compose.yml` from this repository):
+
 ```bash
 cp .env.example .env    # fill in BOT_TOKEN, DOMAIN, ...
 docker compose up -d
 ```
 
-The image is built from the included `Dockerfile` (distroless, non-root, ~24 MB). The database is stored in the
-`data` volume. Logs: `docker compose logs -f`.
+Or with plain Docker:
+
+```bash
+docker run -d --name notifier --restart unless-stopped \
+  --env-file .env -p 8080:8080 -v notifier-data:/data \
+  ghcr.io/marensovich/github-gitlab-notifier:latest
+```
+
+| Tag               | What                                                         |
+|:------------------|:-------------------------------------------------------------|
+| `latest`          | Latest stable release                                        |
+| `1.1`, `1.1.0`    | A minor line (gets patch updates) or an exact version        |
+| `edge`            | Latest `development` build — may be unstable                 |
+
+The database is stored in the `/data` volume. Logs: `docker compose logs -f`. Update: `docker compose pull &&
+docker compose up -d`. To build the image yourself from a checkout: `docker compose up -d --build`.
 
 ---
 

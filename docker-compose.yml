@@ -1,10 +1,14 @@
 # Run with: docker compose up -d
 # Configuration is read from .env (copy .env.example and fill it in).
+#
+# The image comes from GitHub Container Registry (amd64, arm64, arm/v7).
+# Pin a version instead of "latest" if you prefer updating by hand, e.g. :1.1.
+# To build it from this checkout instead: docker compose up -d --build
 services:
   notifier:
+    image: ghcr.io/marensovich/github-gitlab-notifier:latest
     build:
       context: .
-    image: github-gitlab-notifier:latest
     container_name: github-gitlab-notifier
     restart: unless-stopped
     env_file: .env
