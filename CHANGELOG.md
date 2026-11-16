@@ -6,6 +6,8 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-11-17
+
 ### Changed
 
 - `notifier_messages_sent_total` has a new `result="retried"` for a failed attempt that a later one replaced (a
@@ -182,7 +184,8 @@ FreeBSD (amd64, arm64).
 - Wrong IP from VPN in `/connect` output
 - HTML parsing error in `/help` (unsupported `<url>` tag)
 
-[Unreleased]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/marensovich/GitHub-GitLab-Notifier/compare/v.0.0.1...v1.0.0
