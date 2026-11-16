@@ -13,6 +13,10 @@ and the project follows [Semantic Versioning](https://semver.org/).
   and event routing. It listens only on loopback unless `PANEL_ALLOW_REMOTE=true`, rejects non-loopback `Host`
   headers, accepts only `GET`/`HEAD`, never shows secrets, and needs no internet access. Open it through an SSH
   tunnel: `ssh -L 8081:127.0.0.1:8081 user@server`.
+- Delivery log and deduplication: every incoming webhook is recorded (metadata only) with its result —
+  `delivered`, `ignored`, `rejected`, `failed` or `duplicate`. A redelivery of an already delivered webhook
+  (`X-GitHub-Delivery`, GitLab `Idempotency-Key` / `X-Gitlab-Event-UUID`) is answered with `200 DUPLICATE` and
+  not posted again. The log is pruned hourly after `DELIVERIES_RETENTION_DAYS` (default 14, `0` keeps it).
 
 ### Changed
 

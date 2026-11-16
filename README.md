@@ -311,6 +311,7 @@ The commands also appear in Telegram's **Menu** button.
 | `WEBHOOK_SECRET`        | No       | —                  | Global secret; when set, unsigned webhooks are rejected             |
 | `DB_PATH`               | No       | `data/notifier.db` | SQLite database file                                                |
 | `NOTIFY_UNKNOWN_EVENTS` | No       | `false`            | Post a short message for unsupported events                         |
+| `DELIVERIES_RETENTION_DAYS` | No   | `14`               | Days to keep the webhook delivery log; `0` keeps it forever         |
 | `PROXY_ENABLED`         | No       | `false`            | Use a proxy for the Telegram API                                    |
 | `PROXY_HOST`            | No       | —                  | Proxy host                                                          |
 | `PROXY_PORT`            | No       | —                  | Proxy port                                                          |
@@ -361,6 +362,15 @@ Every repository connected with `/connect` gets its own random **secret**:
 A request with a wrong signature/token is rejected with `401`. Webhooks created without a secret keep working,
 unless you set the global `WEBHOOK_SECRET` — then **every** webhook must be signed with either the repository secret or
 `WEBHOOK_SECRET`. This is recommended for public servers.
+
+### Redeliveries
+
+Each incoming webhook is written to a delivery log in the database — only metadata (delivery ID, event, repository,
+result, time), never the payload. If GitHub (**Redeliver**) or GitLab (**Resend request**, automatic retries) sends a
+delivery that was already posted, the bot answers `200 DUPLICATE` and posts nothing. A delivery whose messages all
+failed to send is not treated as delivered, so redelivering it tries again. The delivery ID comes from
+`X-GitHub-Delivery`, and from `Idempotency-Key` or `X-Gitlab-Event-UUID` on GitLab; requests without one are never
+dropped. The log is pruned after `DELIVERIES_RETENTION_DAYS` (14 by default).
 
 ---
 

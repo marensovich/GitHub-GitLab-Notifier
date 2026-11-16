@@ -87,12 +87,14 @@ func main() {
 	d := dispatcher.NewDispatcher(lang, notifyUnknown)
 
 	srv := server.New(server.Config{
-		Addr:          net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
-		DefaultChatID: chatID,
-		DefaultLang:   lang,
-		WebhookSecret: os.Getenv("WEBHOOK_SECRET"),
-		Version:       Version,
+		Addr:                net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
+		DefaultChatID:       chatID,
+		DefaultLang:         lang,
+		WebhookSecret:       os.Getenv("WEBHOOK_SECRET"),
+		Version:             Version,
+		DeliveriesRetention: deliveriesRetention(lang),
 	}, d, store, b)
+	go srv.PruneDeliveries(ctx)
 
 	panel := startPanel(lang, store)
 
@@ -147,6 +149,19 @@ func startPanel(lang i18n.Lang, store *storage.Store) *web.Server {
 		}
 	}()
 	return panel
+}
+
+// deliveriesRetention reads DELIVERIES_RETENTION_DAYS (default 14, 0 = keep forever).
+func deliveriesRetention(lang i18n.Lang) time.Duration {
+	raw := os.Getenv("DELIVERIES_RETENTION_DAYS")
+	if raw == "" {
+		return 14 * 24 * time.Hour
+	}
+	days, err := strconv.Atoi(raw)
+	if err != nil || days < 0 {
+		log.Fatal(i18n.Tf(lang, i18n.MsgInvalidRetention, raw))
+	}
+	return time.Duration(days) * 24 * time.Hour
 }
 
 func firstNonEmpty(values ...string) string {

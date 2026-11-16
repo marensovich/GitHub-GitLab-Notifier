@@ -4,6 +4,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/storage"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -238,5 +240,122 @@ func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func lastDelivery(t *testing.T, e *env) storage.Delivery {
+	t.Helper()
+	list, err := e.store.RecentDeliveries(1)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("no delivery logged: %v", err)
+	}
+	return list[0]
+}
+
+func TestRedeliveryIsSentOnce(t *testing.T) {
+	e := newEnv(t, Config{DefaultChatID: 100})
+	h := ghHeaders("star")
+	h["X-GitHub-Delivery"] = "d-1"
+
+	if rec := e.post(t, h, starPayload); rec.Body.String() != "OK" {
+		t.Fatalf("first delivery: %d %q", rec.Code, rec.Body.String())
+	}
+	if d := lastDelivery(t, e); d.Status != storage.DeliveryDelivered || d.DeliveryID != "d-1" || d.Event != "star" || d.HTTPStatus != 200 {
+		t.Errorf("first delivery logged as %+v", d)
+	}
+
+	rec := e.post(t, h, starPayload)
+	if rec.Code != http.StatusOK || rec.Body.String() != "DUPLICATE" {
+		t.Errorf("redelivery: %d %q, want 200 DUPLICATE", rec.Code, rec.Body.String())
+	}
+	if len(e.sender.sent) != 1 {
+		t.Errorf("want 1 message, got %d", len(e.sender.sent))
+	}
+	if d := lastDelivery(t, e); d.Status != storage.DeliveryDuplicate {
+		t.Errorf("redelivery logged as %q", d.Status)
+	}
+
+	// Another delivery ID, or none at all, is a new event.
+	h["X-GitHub-Delivery"] = "d-2"
+	e.post(t, h, starPayload)
+	e.post(t, ghHeaders("star"), starPayload)
+	e.post(t, ghHeaders("star"), starPayload)
+	if len(e.sender.sent) != 4 {
+		t.Errorf("want 4 messages, got %d", len(e.sender.sent))
+	}
+}
+
+func TestGitLabRedeliveryUsesIdempotencyKey(t *testing.T) {
+	e := newEnv(t, Config{DefaultChatID: 100})
+	gl := `{"object_kind":"release","action":"create","tag":"v1","project":{"path_with_namespace":"g/a","web_url":"https://gitlab.com/g/a"}}`
+	h := map[string]string{"X-Gitlab-Event": "Release Hook", "X-Gitlab-Event-UUID": "u-1"}
+
+	e.post(t, h, gl)
+	if rec := e.post(t, h, gl); rec.Body.String() != "DUPLICATE" {
+		t.Errorf("same event UUID: %q, want DUPLICATE", rec.Body.String())
+	}
+
+	h["Idempotency-Key"] = "k-1"
+	h["X-Gitlab-Event-UUID"] = "u-2"
+	e.post(t, h, gl)
+	h["X-Gitlab-Event-UUID"] = "u-3" // a retry keeps the key
+	if rec := e.post(t, h, gl); rec.Body.String() != "DUPLICATE" {
+		t.Errorf("same idempotency key: %q, want DUPLICATE", rec.Body.String())
+	}
+	if len(e.sender.sent) != 2 {
+		t.Errorf("want 2 messages, got %d", len(e.sender.sent))
+	}
+}
+
+func TestFailedDeliveryCanBeRetried(t *testing.T) {
+	e := newEnv(t, Config{DefaultChatID: 100})
+	e.sender.failTopicIDs[0] = true
+	h := ghHeaders("star")
+	h["X-GitHub-Delivery"] = "d-1"
+
+	if rec := e.post(t, h, starPayload); rec.Code != http.StatusOK {
+		t.Fatalf("failed send: got %d, want 200", rec.Code)
+	}
+	if d := lastDelivery(t, e); d.Status != storage.DeliveryFailed || d.Error == "" {
+		t.Errorf("failed send logged as %+v", d)
+	}
+
+	e.sender.failTopicIDs[0] = false
+	if rec := e.post(t, h, starPayload); rec.Body.String() != "OK" {
+		t.Errorf("retry after failure: %q, want OK", rec.Body.String())
+	}
+	if len(e.sender.sent) != 1 {
+		t.Errorf("want 1 message after retry, got %d", len(e.sender.sent))
+	}
+}
+
+func TestRejectedAndIgnoredAreLogged(t *testing.T) {
+	e := newEnv(t, Config{DefaultChatID: 100, WebhookSecret: "global"})
+
+	e.post(t, ghHeaders("star"), starPayload)
+	if d := lastDelivery(t, e); d.Status != storage.DeliveryRejected || d.HTTPStatus != http.StatusUnauthorized {
+		t.Errorf("unsigned webhook logged as %+v", d)
+	}
+
+	h := ghHeaders("check_suite")
+	h["X-Hub-Signature-256"] = sign("global", starPayload)
+	e.post(t, h, starPayload)
+	d := lastDelivery(t, e)
+	if d.Status != storage.DeliveryIgnored || d.RepoURL != "https://github.com/Octo/Hello" {
+		t.Errorf("skipped event logged as %+v", d)
+	}
+}
+
+func TestPruneDeliveriesStopsWithContext(t *testing.T) {
+	e := newEnv(t, Config{DeliveriesRetention: time.Hour})
+	must(t, e.store.RecordDelivery(storage.Delivery{Platform: "GitHub", ReceivedAt: time.Now().Add(-2 * time.Hour), Status: storage.DeliveryIgnored, HTTPStatus: 200}))
+	must(t, e.store.RecordDelivery(storage.Delivery{Platform: "GitHub", ReceivedAt: time.Now(), Status: storage.DeliveryIgnored, HTTPStatus: 200}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	e.srv.PruneDeliveries(ctx) // prunes once, then returns because ctx is done
+
+	if list, _ := e.store.RecentDeliveries(10); len(list) != 1 {
+		t.Errorf("want 1 delivery left, got %d", len(list))
 	}
 }
