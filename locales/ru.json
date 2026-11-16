@@ -94,6 +94,7 @@
   "item_branches": "🌿 <code>%s</code> → <code>%s</code>\n",
   "item_actor": "👤 %s\n",
   "item_body": "\n<blockquote>%s</blockquote>\n",
+  "item_confidential": "🔒 <b>Конфиденциально</b> — в GitLab видно только участникам проекта\n",
   "ping_zen": "\n\n<i>%s</i>",
   "ci_branch": "🌿 <code>%s</code> · %s\n",
   "ci_commit": "📝 %s\n",

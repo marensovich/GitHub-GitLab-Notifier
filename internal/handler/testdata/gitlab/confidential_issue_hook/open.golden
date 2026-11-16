@@ -6,6 +6,7 @@ topic: issues
 
 <a href="https://gitlab.example.com/group/app/-/issues/23">#23</a> <b>New API: create/update/delete file</b>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+🔒 <b>Confidential</b> — visible only to project members in GitLab
 
 <blockquote>Create new API for manipulations with repository</blockquote>
 
@@ -15,5 +16,6 @@ topic: issues
 
 <a href="https://gitlab.example.com/group/app/-/issues/23">#23</a> <b>New API: create/update/delete file</b>
 👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+🔒 <b>Конфиденциально</b> — в GitLab видно только участникам проекта
 
 <blockquote>Create new API for manipulations with repository</blockquote>

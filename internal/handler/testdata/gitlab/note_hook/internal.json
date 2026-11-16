@@ -1,0 +1,21 @@
+{
+  "object_kind": "note",
+  "user": {
+    "name": "Dev One",
+    "username": "dev1"
+  },
+  "project": {
+    "path_with_namespace": "group/app",
+    "web_url": "https://gitlab.example.com/group/app"
+  },
+  "object_attributes": {
+    "note": "Internal: the customer is on v1.4.",
+    "noteable_type": "Issue",
+    "url": "https://gitlab.example.com/group/app/-/issues/23#note_1301",
+    "internal": true
+  },
+  "issue": {
+    "iid": 23,
+    "title": "New API: create/update/delete file"
+  }
+}
