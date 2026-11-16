@@ -12,18 +12,20 @@ func Rich(lang i18n.Lang, n Notification) string {
 
 	sb.WriteString("<h4>" + esc(strings.TrimSpace(n.Emoji+" "+n.Heading)) + "</h4>\n")
 
-	item := n.Item
+	// Without an item the repository takes its place, so the table leaves
+	// out the repository row instead of showing it twice.
+	item, repoRow := n.Item, n.Repo.Text != ""
 	if item.Text == "" {
-		item = n.Repo
+		item, repoRow = n.Repo, false
 	}
 	if item.Text != "" {
 		sb.WriteString("<p><b>" + link(item, maxTitle) + "</b></p>\n")
 	}
 
 	fields := nonEmpty(n.Fields)
-	if n.Repo.Text != "" || len(fields) > 0 {
+	if repoRow || len(fields) > 0 {
 		sb.WriteString("<table compact>\n")
-		if n.Repo.Text != "" {
+		if repoRow {
 			sb.WriteString("<tr><td>" + esc(i18n.T(lang, i18n.MsgFieldRepo)) + "</td><td>" + link(n.Repo, maxTitle) + "</td></tr>\n")
 		}
 		for _, f := range fields {

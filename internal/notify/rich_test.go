@@ -154,4 +154,7 @@ func TestEmptyOptionalParts(t *testing.T) {
 	if !strings.Contains(out, `<p><b><a href="https://github.com/octo/hello">octo/hello</a></b></p>`) {
 		t.Errorf("repo should be the item when Item is empty:\n%s", out)
 	}
+	if c := strings.Count(out, "octo/hello</a>"); c != 1 {
+		t.Errorf("repo shown %d times, want once:\n%s", c, out)
+	}
 }

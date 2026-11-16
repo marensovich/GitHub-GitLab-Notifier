@@ -78,6 +78,8 @@ const (
 	MsgDisconnectNotFound          = "disconnect_not_found"
 	MsgDisconnectSuccess           = "disconnect_success"
 	MsgStatusHeader                = "status_header"
+	MsgStatusSettings              = "status_settings"
+	MsgStatusRichOff               = "status_rich_off"
 	MsgStatusYes                   = "status_yes"
 	MsgStatusNo                    = "status_no"
 	MsgStatusTopicsHeader          = "status_topics_header"

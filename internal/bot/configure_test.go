@@ -221,3 +221,51 @@ func TestConfigurePrivateChatOwnerMayPress(t *testing.T) {
 		t.Errorf("private chat owner could not choose classic: %+v", got)
 	}
 }
+
+// statusText runs /status in c and returns the text of the reply.
+func statusText(t *testing.T, b *Bot, f *fakeAPI, c telego.Chat) string {
+	t.Helper()
+	b.consume(telego.Update{Message: &telego.Message{
+		MessageID: 1, Chat: c, From: &telego.User{ID: 5}, Text: "/status",
+	}})
+	for i := len(f.calls) - 1; i >= 0; i-- {
+		if f.calls[i].method == "sendMessage" {
+			text, _ := f.calls[i].body["text"].(string)
+			return text
+		}
+	}
+	t.Fatal("no reply to /status")
+	return ""
+}
+
+func TestStatusShowsChatSettings(t *testing.T) {
+	b, fake := newConfigureBot(t, nil)
+	c := chat(true)
+	if err := b.store.SaveChat(storage.ChatConfig{ChatID: c.ID, Language: "en", IsForum: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.store.SetChatSettings(c.ID, storage.FormatClassic, false); err != nil {
+		t.Fatal(err)
+	}
+
+	text := statusText(t, b, fake, c)
+	for _, want := range []string{"Look: classic", "Topics: off, everything goes to the main chat"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("/status lacks %q:\n%s", want, text)
+		}
+	}
+}
+
+func TestStatusShowsRichSwitchedOff(t *testing.T) {
+	b, fake := newConfigureBot(t, nil)
+	b.rich = false
+	c := chat(false)
+	if err := b.store.SaveChat(storage.ChatConfig{ChatID: c.ID, Language: "en"}); err != nil {
+		t.Fatal(err)
+	}
+
+	text := statusText(t, b, fake, c)
+	if !strings.Contains(text, "Look: classic (the new look is off on this server)") {
+		t.Errorf("/status should say the new look is off:\n%s", text)
+	}
+}
