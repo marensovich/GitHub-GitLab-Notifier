@@ -45,19 +45,18 @@ func TestDeliveriesLog(t *testing.T) {
 	must(s.RecordDelivery(Delivery{Platform: "GitLab", Event: "Push Hook", ReceivedAt: now, Status: DeliveryDelivered, HTTPStatus: 200}))
 
 	for _, c := range []struct {
-		platform, id string
-		want         bool
+		platform, id, want string
 	}{
-		{"GitHub", "a", true},
-		{"GitLab", "a", false}, // IDs are per platform
-		{"GitHub", "b", false}, // failed, so a redelivery must go through
-		{"GitHub", "", false},
-		{"GitLab", "", false}, // empty IDs never dedupe
+		{"GitHub", "a", DeliveryDelivered},
+		{"GitLab", "a", ""}, // IDs are per platform
+		{"GitHub", "b", DeliveryFailed},
+		{"GitHub", "", ""},
+		{"GitLab", "", ""}, // empty IDs never dedupe
 	} {
-		got, err := s.WasDelivered(c.platform, c.id)
+		got, _, err := s.DeliveryState(c.platform, c.id)
 		must(err)
 		if got != c.want {
-			t.Errorf("WasDelivered(%s, %q) = %v, want %v", c.platform, c.id, got, c.want)
+			t.Errorf("DeliveryState(%s, %q) = %q, want %q", c.platform, c.id, got, c.want)
 		}
 	}
 
@@ -77,5 +76,11 @@ func TestDeliveriesLog(t *testing.T) {
 	}
 	if list, _ := s.RecentDeliveries(10); len(list) != 2 {
 		t.Errorf("after prune: %d deliveries, want 2", len(list))
+	}
+
+	// A logged duplicate is not a state of its own.
+	must(s.RecordDelivery(Delivery{DeliveryID: "b", Platform: "GitHub", Event: "push", ReceivedAt: now, Status: DeliveryDuplicate, HTTPStatus: 200}))
+	if got, _, _ := s.DeliveryState("GitHub", "b"); got != DeliveryFailed {
+		t.Errorf("after a duplicate row: %q, want failed", got)
 	}
 }

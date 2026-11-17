@@ -8,7 +8,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/messenger"
 	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
-	"GitHub-GitLab-Notifier/internal/notify"
+	"GitHub-GitLab-Notifier/internal/outbox"
 	"GitHub-GitLab-Notifier/internal/server"
 	"GitHub-GitLab-Notifier/internal/web"
 	"GitHub-GitLab-Notifier/storage"
@@ -99,6 +99,10 @@ func main() {
 	m := metrics.New(Version)
 	metricsEnabled, metricsAddr := metricsConfig()
 
+	// The webhook server stores messages; the outbox sends and retries them.
+	o := outbox.New(store, map[string]messenger.Messenger{telegram.Name: tg}, m, time.Now)
+	go o.Run(ctx)
+
 	srv := server.New(server.Config{
 		Addr:                net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
 		DefaultLang:         lang,
@@ -111,7 +115,7 @@ func main() {
 			"db":       store.Ping,
 			"telegram": tg.Health,
 		},
-	}, d, store, telegramSender{tg})
+	}, d, store, o)
 	metricsSrv := startMetrics(lang, m, metricsEnabled, metricsAddr)
 	go srv.PruneDeliveries(ctx)
 
@@ -251,18 +255,6 @@ func telegramConfig() config.Telegram {
 		cfg.Proxy = scheme + "://" + net.JoinHostPort(host, port)
 	}
 	return cfg
-}
-
-// telegramSender lets the webhook server send through the Telegram adapter
-// until the outbox takes over delivery.
-type telegramSender struct{ tg *telegram.Telegram }
-
-func (s telegramSender) SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
-	to := messenger.Target{ChatID: strconv.FormatInt(chatID, 10)}
-	if topicID > 0 {
-		to.ThreadID = strconv.Itoa(topicID)
-	}
-	return s.tg.Send(context.Background(), to, format, lang, n)
 }
 
 func firstNonEmpty(values ...string) string {

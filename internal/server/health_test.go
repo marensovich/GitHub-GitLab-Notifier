@@ -65,9 +65,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	m := metrics.New("v9")
 	e := newEnv(t, Config{Metrics: m, ServeMetrics: true})
 	e.hello(t)
-	e.sender.failTopicIDs[0] = true
 	e.post(t, ghHeaders("star"), starPayload)
-	e.sender.failTopicIDs[0] = false
 	e.post(t, ghHeaders("star"), starPayload)
 	e.post(t, ghHeaders("check_suite"), starPayload)
 
@@ -77,11 +75,8 @@ func TestMetricsEndpoint(t *testing.T) {
 	}
 	out := rec.Body.String()
 	for _, want := range []string{
-		`notifier_webhooks_total{platform="GITHUB",event="star",status="delivered"} 1`,
-		`notifier_webhooks_total{platform="GITHUB",event="star",status="failed"} 1`,
+		`notifier_webhooks_total{platform="GITHUB",event="star",status="queued"} 2`,
 		`notifier_webhooks_total{platform="GITHUB",event="check_suite",status="ignored"} 1`,
-		`notifier_messages_sent_total{messenger="telegram",format="rich",result="ok"} 1`,
-		`notifier_messages_sent_total{messenger="telegram",format="rich",result="error"} 1`,
 		`notifier_webhook_duration_seconds_count 3`,
 		`notifier_build_info{version="v9"} 1`,
 	} {

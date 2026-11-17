@@ -72,6 +72,17 @@ type Messenger struct {
 	HealthErr error
 	// Log names every call in order ("Reply", "Answer", "CreateThread", ...).
 	Log []string
+	// Attempts, when set, is what Send reports; a last attempt with an
+	// error fails the send.
+	Attempts []notify.Attempt
+}
+
+// SentList returns a copy of the sent notifications; safe while the
+// messenger is used by another goroutine.
+func (m *Messenger) SentList() []Sent {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]Sent(nil), m.Sent...)
 }
 
 // RichAvailable reports whether the rich look is available (see RichOff).
@@ -113,8 +124,13 @@ func (m *Messenger) Send(_ context.Context, t messenger.Target, look string, lan
 			return nil, err
 		}
 	}
+	if len(m.Attempts) > 0 {
+		if err := m.Attempts[len(m.Attempts)-1].Err; err != nil {
+			return m.Attempts, err
+		}
+	}
 	m.Sent = append(m.Sent, Sent{Target: t, Look: look, Lang: lang, N: n})
-	return nil, nil
+	return m.Attempts, nil
 }
 
 func (m *Messenger) Reply(_ context.Context, c messenger.Command, r messenger.Reply) (any, error) {

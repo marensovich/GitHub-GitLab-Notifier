@@ -1,12 +1,12 @@
 // Package server implements the HTTP endpoint that receives GitHub and
-// GitLab webhooks and forwards them as Telegram notifications.
+// GitLab webhooks and queues their notifications in the outbox.
 package server
 
 import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/metrics"
-	"GitHub-GitLab-Notifier/internal/notify"
+	"GitHub-GitLab-Notifier/internal/outbox"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
@@ -16,11 +16,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -30,10 +28,9 @@ import (
 // but notification-relevant events are far smaller).
 const maxPayloadSize = 10 << 20
 
-// Sender delivers a notification to a Telegram chat (optionally to a forum
-// topic) in a format, and reports every attempt it made.
-type Sender interface {
-	SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error)
+// Queue is told when new messages were stored in the outbox.
+type Queue interface {
+	Notify()
 }
 
 // Config holds the server settings.
@@ -69,7 +66,7 @@ type Server struct {
 	cfg        Config
 	dispatcher *dispatcher.Dispatcher
 	store      *storage.Store
-	sender     Sender
+	queue      Queue
 	http       *http.Server
 
 	// inflight holds delivery IDs being processed right now, so two copies
@@ -80,12 +77,12 @@ type Server struct {
 	started time.Time
 }
 
-// New creates a webhook server.
-func New(cfg Config, d *dispatcher.Dispatcher, store *storage.Store, sender Sender) *Server {
+// New creates a webhook server that stores messages and wakes q.
+func New(cfg Config, d *dispatcher.Dispatcher, store *storage.Store, q Queue) *Server {
 	if cfg.Metrics == nil {
 		cfg.Metrics = metrics.New(cfg.Version)
 	}
-	s := &Server{cfg: cfg, dispatcher: d, store: store, sender: sender, inflight: map[string]bool{}, started: time.Now()}
+	s := &Server{cfg: cfg, dispatcher: d, store: store, queue: q, inflight: map[string]bool{}, started: time.Now()}
 	s.http = &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           s.Handler(),
@@ -228,10 +225,11 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		if err := s.store.RecordDelivery(entry); err != nil {
 			log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
 		}
-		if status != http.StatusOK {
+		if status >= http.StatusMultipleChoices {
 			http.Error(w, text, status)
 			return
 		}
+		w.WriteHeader(status)
 		w.Write([]byte(text))
 	}
 
@@ -248,31 +246,53 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer s.release(p, id)
-		if s.alreadyDelivered(p, id) {
+		switch status, rowID := s.deliveryState(p, id); status {
+		case storage.DeliveryQueued, storage.DeliveryDelivered:
 			log.Print(i18n.Tf(lang, i18n.MsgWebhookDuplicate, p, eventName, id))
 			reply(http.StatusOK, "DUPLICATE", storage.DeliveryDuplicate, "")
 			return
+		case storage.DeliveryFailed:
+			// Redelivering a failed webhook sends its failed messages again.
+			n, err := s.store.RequeueDead(rowID)
+			if err != nil {
+				log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
+			}
+			if n > 0 {
+				reply(http.StatusAccepted, "REQUEUED", storage.DeliveryDuplicate, "")
+				s.queue.Notify()
+				return
+			}
+			// Nothing left to requeue (pruned): process it as a new one.
 		}
 	}
 
-	out := s.deliver(p, eventName, body, repo)
-	switch {
-	case out.notConnected:
-		// Nobody subscribed to this repository: its events are not sent
-		// anywhere (1.x broadcast them to every chat).
-		reply(http.StatusOK, "SKIPPED", storage.DeliveryIgnored, "not connected")
-	case out.sent > 0 && out.failed > 0:
-		reply(http.StatusOK, "OK", storage.DeliveryDelivered,
-			fmt.Sprintf("%d of %d sends failed: %v", out.failed, out.sent+out.failed, out.err))
-	case out.sent > 0:
-		reply(http.StatusOK, "OK", storage.DeliveryDelivered, "")
-	case out.failed > 0:
-		// Still 200: GitLab disables hooks that keep failing, and the sender
-		// is not at fault. Redelivering the webhook tries again.
-		reply(http.StatusOK, "SKIPPED", storage.DeliveryFailed, out.err.Error())
-	default:
-		reply(http.StatusOK, "SKIPPED", storage.DeliveryIgnored, "")
+	var items []storage.OutboxItem
+	if repo != nil {
+		items = s.items(p, eventName, body, repo)
 	}
+	switch {
+	case items == nil && !s.dispatcher.Dispatch(lang, p, eventName, body).Skip:
+		// Nobody connected this repository: its events are not sent anywhere
+		// (1.x broadcast them to every chat).
+		reply(http.StatusAccepted, "SKIPPED", storage.DeliveryIgnored, "not connected")
+		return
+	case len(items) == 0:
+		reply(http.StatusOK, "SKIPPED", storage.DeliveryIgnored, "")
+		return
+	}
+
+	// 202: the messages are stored and the outbox sends them. A failed send
+	// is retried there, so GitLab never sees an error and disables the hook.
+	entry.HTTPStatus, entry.Duration = http.StatusAccepted, time.Since(start)
+	if _, err := s.store.EnqueueDelivery(entry, items); err != nil {
+		log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
+		reply(http.StatusInternalServerError, "Internal Server Error", storage.DeliveryFailed, err.Error())
+		return
+	}
+	s.cfg.Metrics.ObserveWebhook(entry.Platform, entry.Event, storage.DeliveryQueued, entry.Duration)
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("QUEUED"))
+	s.queue.Notify()
 }
 
 // deliveryID returns the ID the platform gives this delivery, which stays
@@ -309,15 +329,16 @@ func (s *Server) release(p platform.Platform, id string) {
 	s.mu.Unlock()
 }
 
-// alreadyDelivered checks the log. If the log cannot be read the delivery
-// is processed: a possible duplicate is better than a lost notification.
-func (s *Server) alreadyDelivered(p platform.Platform, id string) bool {
-	done, err := s.store.WasDelivered(string(p), id)
+// deliveryState returns the logged status of a delivery ID. If the log
+// cannot be read the delivery is processed: a possible duplicate is better
+// than a lost notification.
+func (s *Server) deliveryState(p platform.Platform, id string) (string, int64) {
+	status, rowID, err := s.store.DeliveryState(string(p), id)
 	if err != nil {
 		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
-		return false
+		return "", 0
 	}
-	return done
+	return status, rowID
 }
 
 // PruneDeliveries removes log entries older than DeliveriesRetention right
@@ -410,106 +431,49 @@ func validGitHubSignature(secret string, body []byte, header string) bool {
 	return hmac.Equal(got, mac.Sum(nil))
 }
 
-// target is a chat that should receive a notification.
-type target struct {
-	dest      storage.Destination
-	chatID    int64
-	lang      i18n.Lang
-	format    string
-	useTopics bool
-}
-
-// targets returns the Telegram chats subscribed to a repository; an
-// unknown repository has none.
-func (s *Server) targets(repo *storage.Repo) []target {
-	if repo == nil {
-		return nil
-	}
+// items formats the event for every destination subscribed to the
+// repository: one outbox row each. It returns nil when nobody is
+// subscribed and an empty list when the event is not sent to anyone.
+func (s *Server) items(p platform.Platform, eventName string, body []byte, repo *storage.Repo) []storage.OutboxItem {
 	subs, err := s.store.Subscribers(repo.ID)
 	if err != nil {
 		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+	}
+	if len(subs) == 0 {
 		return nil
 	}
-	var result []target
-	for _, d := range subs {
-		if d.Messenger != "telegram" {
-			continue
-		}
-		chatID, err := strconv.ParseInt(d.ChatID, 10, 64)
-		if err != nil {
-			continue
-		}
-		format := d.Format
-		if format == "" {
-			format = storage.FormatRich
-		}
-		result = append(result, target{d, chatID, s.langOrDefault(d.Language), format, d.UseThreads})
-	}
-	return result
-}
-
-// outcome counts the messages of one delivery.
-type outcome struct {
-	notConnected bool
-	sent, failed int
-	err          error // last send error
-}
-
-// deliver formats the event for each target chat and sends it.
-func (s *Server) deliver(p platform.Platform, eventName string, body []byte, repo *storage.Repo) outcome {
 	results := make(map[i18n.Lang]dispatcher.Result)
-	var out outcome
-
-	targets := s.targets(repo)
-	if len(targets) == 0 {
-		out.notConnected = true
-		return out
-	}
-	for _, t := range targets {
-		res, ok := results[t.lang]
+	items := []storage.OutboxItem{}
+	for _, d := range subs {
+		lang := s.langOrDefault(d.Language)
+		res, ok := results[lang]
 		if !ok {
-			res = s.dispatcher.Dispatch(t.lang, p, eventName, body)
-			results[t.lang] = res
+			res = s.dispatcher.Dispatch(lang, p, eventName, body)
+			results[lang] = res
 		}
 		if res.Skip {
 			continue
 		}
 
-		topicID := 0
-		if t.useTopics && res.Topic != platform.TopicGeneral {
-			topicID, _ = strconv.Atoi(s.store.ThreadFor(t.dest.ID, string(res.Topic)))
+		thread := ""
+		if d.UseThreads && res.Topic != platform.TopicGeneral {
+			thread = s.store.ThreadFor(d.ID, string(res.Topic))
 		}
-
-		err := s.send(t, topicID, res.Notification)
-		if err != nil && topicID != 0 {
-			// The topic may have been deleted or closed: fall back to the general chat.
-			err = s.send(t, 0, res.Notification)
+		look := d.Format
+		if look == "" && d.Messenger == "telegram" {
+			look = storage.FormatRich
 		}
+		payload, err := json.Marshal(outbox.Payload{Lang: lang, Look: look, N: res.Notification})
 		if err != nil {
-			out.failed++
-			out.err = err
+			log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
 			continue
 		}
-		out.sent++
-		log.Print(i18n.Tf(s.cfg.DefaultLang, i18n.MsgWebhookNotificationSent, t.chatID))
+		items = append(items, storage.OutboxItem{
+			DestinationID: d.ID, ThreadID: thread, EventType: eventName,
+			Payload: payload, NextAttemptAt: time.Now(),
+		})
 	}
-	return out
-}
-
-// send sends one notification and counts every attempt by format.
-func (s *Server) send(t target, topicID int, n notify.Notification) error {
-	attempts, err := s.sender.SendNotification(t.chatID, topicID, t.format, t.lang, n)
-	for i, a := range attempts {
-		if a.Err != nil && i < len(attempts)-1 {
-			s.cfg.Metrics.MessageRetried("telegram", a.Format)
-		} else {
-			s.cfg.Metrics.MessageSent("telegram", a.Format, a.Err)
-		}
-		if i > 0 && a.Format == notify.FormatClassic && attempts[i-1].Format == notify.FormatRich {
-			s.cfg.Metrics.RichFallback()
-		}
-	}
-	return err
+	return items
 }
 
 func (s *Server) langOrDefault(language string) i18n.Lang {
