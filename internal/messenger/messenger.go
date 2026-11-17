@@ -53,6 +53,12 @@ type Command struct {
 // Press is a press of a reply button.
 type Press struct {
 	Messenger, ChatID, UserID, Data string
+	IsPrivate, IsForum              bool
+	// OriginUserID is who sent the command the pressed message answers
+	// ("" when unknown); OriginAnonymous is set when it was sent by an
+	// anonymous administrator, so nobody can be matched to it.
+	OriginUserID    string
+	OriginAnonymous bool
 	// Ref is adapter-private: the message the button belongs to.
 	Ref any
 }

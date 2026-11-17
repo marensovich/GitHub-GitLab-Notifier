@@ -178,13 +178,7 @@ func (t *Telegram) consume(ctx context.Context, h messenger.Handler, u telego.Up
 		if q.Message == nil {
 			return
 		}
-		h.HandlePress(ctx, messenger.Press{
-			Messenger: Name,
-			ChatID:    strconv.FormatInt(q.Message.GetChat().ID, 10),
-			UserID:    strconv.FormatInt(q.From.ID, 10),
-			Data:      q.Data,
-			Ref:       q,
-		})
+		h.HandlePress(ctx, press(q))
 		return
 	}
 	if u.Message == nil {
@@ -199,6 +193,31 @@ func (t *Telegram) consume(ctx context.Context, h messenger.Handler, u telego.Up
 		log.Printf(i18n.T(t.lang, i18n.MsgNewMessage), userName, u.Message.Chat.ID, u.Message.Text)
 		h.HandleCommand(ctx, c)
 	}
+}
+
+// press turns a button press into a Press, with the sender of the command
+// the pressed message replies to.
+func press(q *telego.CallbackQuery) messenger.Press {
+	chat := q.Message.GetChat()
+	p := messenger.Press{
+		Messenger: Name,
+		ChatID:    strconv.FormatInt(chat.ID, 10),
+		UserID:    strconv.FormatInt(q.From.ID, 10),
+		Data:      q.Data,
+		IsPrivate: chat.Type == telego.ChatTypePrivate,
+		IsForum:   chat.IsForum,
+		Ref:       q,
+	}
+	if m := q.Message.Message(); m != nil && m.ReplyToMessage != nil {
+		cmd := m.ReplyToMessage
+		switch {
+		case cmd.SenderChat != nil && cmd.SenderChat.ID == chat.ID:
+			p.OriginAnonymous = true
+		case cmd.From != nil:
+			p.OriginUserID = strconv.FormatInt(cmd.From.ID, 10)
+		}
+	}
+	return p
 }
 
 // command turns a message into a command, or reports false when it is not

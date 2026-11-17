@@ -68,6 +68,8 @@ const (
 	MsgConnectFailed               = "connect_failed"
 	MsgConnectLogged               = "connect_logged"
 	MsgConnectNoDomain             = "connect_no_domain"
+	MsgConnectNeedsSecret          = "connect_needs_secret"
+	MsgConnectAdminOnly            = "connect_admin_only"
 	MsgWebhookReceived             = "webhook_received"
 	MsgNoChatsConfigured           = "no_chats_configured"
 	MsgWebhookNotificationSent     = "webhook_notification_sent"

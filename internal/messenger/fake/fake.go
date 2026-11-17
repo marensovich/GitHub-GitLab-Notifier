@@ -61,8 +61,24 @@ type Messenger struct {
 	Admins map[string]bool
 	// NoThreadRights lists chats where the bot cannot manage threads.
 	NoThreadRights map[string]bool
+	// AdminErr, when set, is returned by IsChatAdmin (the member list
+	// cannot be read).
+	AdminErr error
+	// ThreadErr, when set, fails CreateThread.
+	ThreadErr error
+	// RichOff makes RichAvailable report false.
+	RichOff bool
 	// HealthErr is returned by Health.
 	HealthErr error
+	// Log names every call in order ("Reply", "Answer", "CreateThread", ...).
+	Log []string
+}
+
+// RichAvailable reports whether the rich look is available (see RichOff).
+func (m *Messenger) RichAvailable() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return !m.RichOff
 }
 
 var _ messenger.Messenger = (*Messenger)(nil)
@@ -104,6 +120,7 @@ func (m *Messenger) Send(_ context.Context, t messenger.Target, look string, lan
 func (m *Messenger) Reply(_ context.Context, c messenger.Command, r messenger.Reply) (any, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.Log = append(m.Log, "Reply")
 	m.Replies = append(m.Replies, Replied{Command: c, Reply: r})
 	return len(m.Replies), nil
 }
@@ -111,6 +128,7 @@ func (m *Messenger) Reply(_ context.Context, c messenger.Command, r messenger.Re
 func (m *Messenger) Edit(_ context.Context, p messenger.Press, r messenger.Reply) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.Log = append(m.Log, "Edit")
 	m.Edits = append(m.Edits, Edited{Press: p, Reply: r})
 	return nil
 }
@@ -118,6 +136,7 @@ func (m *Messenger) Edit(_ context.Context, p messenger.Press, r messenger.Reply
 func (m *Messenger) Answer(_ context.Context, p messenger.Press, text string, alert bool) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.Log = append(m.Log, "Answer")
 	m.Answers = append(m.Answers, Answered{Press: p, Text: text, Alert: alert})
 	return nil
 }
@@ -125,6 +144,10 @@ func (m *Messenger) Answer(_ context.Context, p messenger.Press, text string, al
 func (m *Messenger) IsChatAdmin(_ context.Context, chatID, userID string) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.Log = append(m.Log, "IsChatAdmin")
+	if m.AdminErr != nil {
+		return false, m.AdminErr
+	}
 	return m.Admins[chatID+"/"+userID], nil
 }
 
@@ -137,6 +160,10 @@ func (m *Messenger) CanManageThreads(_ context.Context, chatID string) (bool, er
 func (m *Messenger) CreateThread(_ context.Context, chatID, name string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.Log = append(m.Log, "CreateThread")
+	if m.ThreadErr != nil {
+		return "", m.ThreadErr
+	}
 	id := strconv.Itoa(1000 + len(m.Threads))
 	m.Threads = append(m.Threads, Thread{ChatID: chatID, ThreadID: id, Name: name})
 	return id, nil

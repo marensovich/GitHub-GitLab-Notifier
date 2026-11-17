@@ -180,3 +180,18 @@ func TestFindOrder(t *testing.T) {
 		t.Error("Find of a missing flag path succeeded")
 	}
 }
+
+func TestPublicURLFromEnv(t *testing.T) {
+	tests := []struct{ domain, https, want string }{
+		{"bot.example.com", "true", "https://bot.example.com"},
+		{"https://bot.example.com/", "", "https://bot.example.com"},
+		{"1.2.3.4:8080", "false", "http://1.2.3.4:8080"},
+		{" bot.example.com ", "yes", "https://bot.example.com"},
+		{"", "true", ""},
+	}
+	for _, tt := range tests {
+		if got := PublicURLFromEnv(tt.domain, tt.https); got != tt.want {
+			t.Errorf("PublicURLFromEnv(%q, %q) = %q, want %q", tt.domain, tt.https, got, tt.want)
+		}
+	}
+}

@@ -116,3 +116,19 @@ func TestReplyKeyboard(t *testing.T) {
 		t.Errorf("button = %v", btn)
 	}
 }
+
+func TestPressCarriesOrigin(t *testing.T) {
+	forum := telego.Chat{ID: -100, Type: telego.ChatTypeSupergroup, IsForum: true}
+	p := press(&telego.CallbackQuery{ID: "q", From: telego.User{ID: 6}, Data: "cfg1:format:rich",
+		Message: &telego.Message{MessageID: 10, Chat: forum, ReplyToMessage: &telego.Message{
+			Chat: forum, From: &telego.User{ID: 5}, Text: "/configure"}}})
+	if p.ChatID != "-100" || p.UserID != "6" || p.OriginUserID != "5" || p.OriginAnonymous || !p.IsForum || p.IsPrivate {
+		t.Errorf("press = %+v", p)
+	}
+	p = press(&telego.CallbackQuery{ID: "q", From: telego.User{ID: 6},
+		Message: &telego.Message{MessageID: 10, Chat: forum, ReplyToMessage: &telego.Message{
+			Chat: forum, From: &telego.User{ID: 1087968824}, SenderChat: &forum, Text: "/configure"}}})
+	if !p.OriginAnonymous || p.OriginUserID != "" {
+		t.Errorf("anonymous origin not detected: %+v", p)
+	}
+}

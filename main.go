@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GitHub-GitLab-Notifier/internal/bot"
+	"GitHub-GitLab-Notifier/internal/commands"
 	"GitHub-GitLab-Notifier/internal/config"
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
@@ -80,11 +80,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	b, err := bot.NewBot(lang, store, Version, tg.RichAvailable)
-	if err != nil {
-		log.Fatal(err)
+	// Until config.yaml replaces .env, the core gets the settings it needs
+	// from the environment.
+	cfg := &config.Config{
+		Server:   config.Server{PublicURL: config.PublicURLFromEnv(os.Getenv("DOMAIN"), os.Getenv("USE_HTTPS"))},
+		Defaults: config.Defaults{Language: string(lang)},
 	}
-	b.Start(ctx)
+	core := commands.New(store, cfg, Version, map[string]messenger.Messenger{telegram.Name: tg})
+	go func() {
+		if err := tg.Run(ctx, core); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	notifyUnknown, _ := strconv.ParseBool(os.Getenv("NOTIFY_UNKNOWN_EVENTS"))
 	d := dispatcher.NewDispatcher(lang, notifyUnknown)

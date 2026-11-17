@@ -269,3 +269,20 @@ func Mask(s, secret string) string {
 	}
 	return strings.ReplaceAll(s, secret, "***")
 }
+
+// PublicURLFromEnv builds server.public_url from the 1.x DOMAIN and
+// USE_HTTPS variables ("" when DOMAIN is empty). USE_HTTPS defaults to true.
+func PublicURLFromEnv(domain, useHTTPS string) string {
+	domain = strings.TrimSpace(domain)
+	domain = strings.TrimPrefix(domain, "https://")
+	domain = strings.TrimPrefix(domain, "http://")
+	domain = strings.TrimRight(domain, "/")
+	if domain == "" {
+		return ""
+	}
+	switch strings.ToLower(strings.TrimSpace(useHTTPS)) {
+	case "", "true", "1", "yes":
+		return "https://" + domain
+	}
+	return "http://" + domain
+}
