@@ -6,6 +6,50 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Foundation of 2.0: one core for several messengers. This release still sends to Telegram only; Discord and MAX
+adapters come next on top of it.
+
+### Breaking changes
+
+- Configuration moved from `.env` to `config.yaml` (template: `config.example.yaml`). `${VAR}` and
+  `${VAR:-default}` take values from the environment. Convert a 1.x file once with
+  `notifier migrate-config --from notifier.env --to config.yaml`; `install.sh update` does it for you and keeps the
+  old file as `notifier.env.1x`.
+- `serve` no longer reads `.env`. A `.env` passed to `--config`, or one left without `config.yaml`, stops with the
+  command to run. Without any `config.yaml`, a process environment with `BOT_TOKEN` (Docker `env_file`) still
+  starts from the 1.x variables, with a warning.
+- `--db` and `--lang` still work but are deprecated; `.env.example` is gone.
+- The database schema is upgraded on first start. Before that, a 1.x database is copied once to
+  `<db>.1x-backup`, so a downgrade has something to go back to.
+- Repositories that were in the 1.x database without a chat are dropped by the upgrade.
+
+### Added
+
+- Subcommands: `serve` (default), `version`, `config check`, `migrate-config`, `db backup <path>`, `help`.
+- Send queue (outbox): every notification is stored first and sent by one worker per messenger, in order per
+  chat, with per-chat and global rate limits. Failures are retried with growing delays for up to 10 attempts; a
+  `429` delays only that chat; a deleted topic falls back to the main chat; a chat the bot lost access to is
+  marked inactive. Messages are not lost on restart. Redelivering a failed webhook from GitHub/GitLab queues it
+  again.
+- Web panel: chats grouped by messenger with their titles and an "inactive" mark; the overview shows the send
+  queue, the last messages given up on and repositories that kept sending webhooks in the last 7 days without
+  any chat subscribed. Error texts on the panel never show the token or webhook secret.
+- `/healthz` reports one check per messenger next to the database.
+
+### Changed
+
+- Repositories, chats (destinations) and subscriptions are stored per messenger; a repository can be connected to
+  several chats.
+- Chat commands are handled by the core, the same way for every messenger.
+- Webhooks are answered with `202 QUEUED` once stored; a repository nobody is connected to gets `202 SKIPPED`
+  ("not connected") and is listed on the panel.
+- The Docker image runs `serve` from `/` and reads `/etc/notifier/config.yaml`.
+
+### Fixed
+
+- The bot token no longer appears in error texts (logs, `/healthz`, the stored send errors) when a request to
+  the Telegram API fails at the network level.
+
 ## [1.1.1] — 2026-11-17
 
 ### Changed
