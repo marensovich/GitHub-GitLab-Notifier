@@ -54,6 +54,9 @@ type Config struct {
 	ServeMetrics bool
 	// Checks are run by GET /healthz, by name ("db", "telegram").
 	Checks map[string]Check
+	// Routes are more handlers, mounted on their paths as they are (the
+	// Discord interactions endpoint).
+	Routes map[string]http.Handler
 }
 
 // Check reports whether a dependency works; nil means healthy.
@@ -114,6 +117,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/webhook/health", s.handleHealthz)
 	if s.cfg.ServeMetrics {
 		mux.Handle("/metrics", s.cfg.Metrics.Handler())
+	}
+	for path, h := range s.cfg.Routes {
+		mux.Handle(path, h)
 	}
 	return mux
 }

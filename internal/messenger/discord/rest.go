@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,28 @@ const APIBase = "https://discord.com/api/v10"
 type client struct {
 	base, token, userAgent string
 	http                   *http.Client
+
+	mu      sync.Mutex
+	lastOK  time.Time // last answer from Discord
+	lastErr error     // why the last call got no answer, if it did not
+}
+
+// markContact records the outcome of a call: err is nil when Discord
+// answered at time at.
+func (c *client) markContact(at time.Time, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err != nil {
+		c.lastErr = err
+		return
+	}
+	c.lastOK, c.lastErr = at, nil
+}
+
+func (c *client) contact() (time.Time, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.lastOK, c.lastErr
 }
 
 func newClient(base, token, version string) *client {
@@ -79,12 +102,19 @@ func (c *client) do(ctx context.Context, method, path string, body, out any) err
 		if errors.As(err, &ue) {
 			err = ue.Err
 		}
-		return fmt.Errorf("discord: %s %s: %w", method, path, err)
+		err = fmt.Errorf("discord: %s %s: %w", method, shown(path), err)
+		c.markContact(time.Time{}, err)
+		return err
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return fmt.Errorf("discord: %s %s: %w", method, path, err)
+		return fmt.Errorf("discord: %s %s: %w", method, shown(path), err)
+	}
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode >= 500 {
+		c.markContact(time.Time{}, fmt.Errorf("discord: HTTP %d", resp.StatusCode))
+	} else {
+		c.markContact(time.Now(), nil)
 	}
 	if resp.StatusCode >= 300 {
 		var e struct {

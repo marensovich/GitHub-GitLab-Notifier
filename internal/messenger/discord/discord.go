@@ -3,7 +3,6 @@ package discord
 import (
 	"context"
 	"crypto/ed25519"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 	"GitHub-GitLab-Notifier/internal/config"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/messenger"
-	"GitHub-GitLab-Notifier/internal/notify"
 )
 
 // Name is the messenger name used in the database and the config.
@@ -166,22 +164,16 @@ func (d *Discord) channel(ctx context.Context, id string) (channelInfo, error) {
 	return ch, nil
 }
 
-var errLater = errors.New("discord: not implemented yet")
+// InteractionsPath is where Discord posts interactions; it goes after
+// server.public_url in the developer portal.
+const InteractionsPath = "/discord/interactions"
 
-// Send implements messenger.Messenger.
-func (d *Discord) Send(ctx context.Context, t messenger.Target, look string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
-	return nil, errLater
+// invitePermissions: view channels, send messages, embed links, read
+// message history, create public threads, send messages in threads.
+const invitePermissions = "309237730304"
+
+// InviteURL adds the bot and its slash commands to a server.
+func (d *Discord) InviteURL() string {
+	return "https://discord.com/oauth2/authorize?client_id=" + d.appID +
+		"&scope=bot+applications.commands&permissions=" + invitePermissions
 }
-
-// CanManageThreads implements messenger.Messenger.
-func (d *Discord) CanManageThreads(ctx context.Context, chatID string) (bool, error) {
-	return false, errLater
-}
-
-// CreateThread implements messenger.Messenger.
-func (d *Discord) CreateThread(ctx context.Context, chatID, name string) (string, error) {
-	return "", errLater
-}
-
-// Health implements messenger.Messenger.
-func (d *Discord) Health(ctx context.Context) error { return errLater }

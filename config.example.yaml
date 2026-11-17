@@ -57,7 +57,11 @@ messengers:
     rich_messages: true
   discord:
     enabled: false
-    # Bot token, application ID and public key from the Discord developer portal.
+    # From https://discord.com/developers/applications → your application:
+    # Bot → Reset Token; General Information → Application ID and Public Key.
+    # Discord sends slash commands to <server.public_url>/discord/interactions:
+    # paste that as the Interactions Endpoint URL (General Information) once
+    # the bot runs. The invite link is printed in the log on start.
     token: "${DISCORD_TOKEN:-}"
     application_id: ""
     public_key: ""

@@ -143,6 +143,19 @@ func TestHealth(t *testing.T) {
 	}
 }
 
+func TestExtraRoutes(t *testing.T) {
+	e := newEnv(t, Config{Routes: map[string]http.Handler{
+		"/discord/interactions": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("interactions"))
+		}),
+	}})
+	rec := httptest.NewRecorder()
+	e.srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/discord/interactions", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "interactions" {
+		t.Errorf("got %d %q", rec.Code, rec.Body.String())
+	}
+}
+
 func TestUnconnectedRepoIsDropped(t *testing.T) {
 	e := newEnv(t, Config{})
 	// Chats exist, but none is subscribed to the repository.
