@@ -164,7 +164,9 @@ func (t *Telegram) registerCommands(ctx context.Context, l messenger.CommandList
 	for _, lang := range i18n.Supported {
 		var commands []telego.BotCommand
 		for _, c := range l.Commands(lang) {
-			commands = append(commands, telego.BotCommand{Command: c.Name, Description: c.Description})
+			// Ephemeral: the command and the answer are seen only by the
+			// sender and the bot.
+			commands = append(commands, telego.BotCommand{Command: c.Name, Description: c.Description, IsEphemeral: true})
 		}
 		params := &telego.SetMyCommandsParams{Commands: commands}
 		if lang != i18n.EN {
@@ -211,7 +213,13 @@ func press(q *telego.CallbackQuery) messenger.Press {
 		IsForum:   chat.IsForum,
 		Ref:       q,
 	}
-	if m := q.Message.Message(); m != nil && m.ReplyToMessage != nil {
+	m := q.Message.Message()
+	if m != nil && m.EphemeralMessageID != 0 && m.ReceiverUser != nil {
+		// Only its receiver sees an ephemeral answer.
+		p.OriginUserID = strconv.FormatInt(m.ReceiverUser.ID, 10)
+		return p
+	}
+	if m != nil && m.ReplyToMessage != nil {
 		cmd := m.ReplyToMessage
 		switch {
 		case cmd.SenderChat != nil && cmd.SenderChat.ID == chat.ID:

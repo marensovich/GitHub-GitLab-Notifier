@@ -39,6 +39,8 @@ of it.
   created by `/configure` and again when deleted), slash commands whose answers only the sender sees, and
   `/discord/interactions` for Discord to call, checked against the application's public key. Mentions in
   commit messages never ping anyone. The invite link and the endpoint URL are printed on start.
+- Telegram: bot commands are ephemeral, so in a group only the sender sees the command and the bot's answer
+  (Telegram clients that support ephemeral messages; older ones get the usual reply).
 
 ### Changed
 
