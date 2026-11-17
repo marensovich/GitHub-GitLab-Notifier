@@ -94,7 +94,7 @@ func TestRenderColor(t *testing.T) {
 		"✅": 0x2EA043, "🟢": 0x2EA043, "🟣": 0x2EA043,
 		"❌": 0xCF222E, "🔴": 0xCF222E, "🚫": 0xCF222E, "💔": 0xCF222E,
 		"⚠️": 0xD29922,
-		"🚀": 0x5865F2, "": 0x5865F2,
+		"🚀":  0x5865F2, "": 0x5865F2,
 	} {
 		n := sample()
 		n.Emoji = emoji
