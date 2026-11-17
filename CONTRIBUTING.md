@@ -25,7 +25,7 @@ Write them in English and explain *why* in the body.
 - Optional: `shellcheck`, Docker
 
 ```bash
-cp .env.example .env
+cp config.example.yaml config.yaml   # set messengers.telegram.token
 make run
 ```
 

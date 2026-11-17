@@ -181,6 +181,18 @@ func TestFindOrder(t *testing.T) {
 	}
 }
 
+// Docker creates a directory when a bind-mounted config.yaml is missing on
+// the host; Find must not pick it.
+func TestFindSkipsDirectories(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.Mkdir("config.yaml", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Find(""); !errors.Is(err, ErrNotFound) {
+		t.Errorf("Find with a config.yaml directory = %v, want ErrNotFound", err)
+	}
+}
+
 func TestPublicURLFromEnv(t *testing.T) {
 	tests := []struct{ domain, https, want string }{
 		{"bot.example.com", "true", "https://bot.example.com"},

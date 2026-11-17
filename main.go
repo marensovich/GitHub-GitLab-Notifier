@@ -15,20 +15,14 @@ import (
 	"context"
 	"embed"
 	"errors"
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 //go:embed locales/*.json
@@ -40,86 +34,83 @@ var (
 )
 
 func main() {
-	showVersion := flag.Bool("version", false, "Show version and exit")
-	langFlag := flag.String("lang", "", "Default language (ru, en). Overrides BOT_LANG")
-	envFile := flag.String("config", ".env", "Path to the .env configuration file")
-	dbPath := flag.String("db", "", "Path to the SQLite database. Overrides DB_PATH (default data/notifier.db)")
-	flag.Parse()
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
 
-	if *showVersion {
-		fmt.Printf("GitHub-GitLab-Notifier %s (built %s)\n", Version, BuildTime)
-		os.Exit(0)
-	}
-
+// serve runs the bot until SIGINT or SIGTERM.
+func serve(cfg *config.Config) error {
 	locales, _ := fs.Sub(embeddedLocales, "locales")
 	if err := i18n.LoadFS(locales); err != nil {
-		log.Fatalf("❌ %v", err)
+		return err
 	}
+	lang := i18n.Lang(cfg.Defaults.Language)
 
-	envErr := godotenv.Load(*envFile)
-
-	lang := i18n.Lang(firstNonEmpty(*langFlag, os.Getenv("BOT_LANG"), string(i18n.EN)))
-	if !i18n.Valid(lang) {
-		fmt.Printf("Invalid language: %s. Supported: %v\n", lang, i18n.Supported)
-		os.Exit(1)
-	}
-	if envErr != nil {
-		log.Println(i18n.T(lang, i18n.MsgEnvFileNotFound))
-	}
-
-	store, err := storage.Open(firstNonEmpty(*dbPath, os.Getenv("DB_PATH"), "data/notifier.db"))
+	store, err := storage.Open(cfg.Storage.Path)
 	if err != nil {
-		log.Fatalf("❌ %v", err)
+		return err
 	}
 	defer store.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	tg, err := telegram.New(telegramConfig(), lang, Version)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Until config.yaml replaces .env, the core gets the settings it needs
-	// from the environment.
-	cfg := &config.Config{
-		Server:   config.Server{PublicURL: config.PublicURLFromEnv(os.Getenv("DOMAIN"), os.Getenv("USE_HTTPS"))},
-		Defaults: config.Defaults{Language: string(lang)},
-	}
-	core := commands.New(store, cfg, Version, map[string]messenger.Messenger{telegram.Name: tg})
-	go func() {
-		if err := tg.Run(ctx, core); err != nil {
-			log.Fatal(err)
+	// Adapters of the enabled messengers.
+	ms := map[string]messenger.Messenger{}
+	checks := map[string]server.Check{"db": store.Ping}
+	var tg *telegram.Telegram
+	if t := cfg.Messengers.Telegram; t != nil && t.Enabled {
+		if tg, err = telegram.New(*t, lang, Version); err != nil {
+			return err
 		}
-	}()
+		ms[telegram.Name] = tg
+		checks[telegram.Name] = tg.Health
+	}
+	for _, name := range cfg.Enabled() {
+		if ms[name] == nil {
+			log.Printf("⚠️ %s is enabled in the configuration but not available in this build yet", name)
+		}
+	}
+	if len(ms) == 0 {
+		return errors.New("no messenger to run: enable telegram in config.yaml")
+	}
 
-	notifyUnknown, _ := strconv.ParseBool(os.Getenv("NOTIFY_UNKNOWN_EVENTS"))
-	d := dispatcher.NewDispatcher(lang, notifyUnknown)
+	core := commands.New(store, cfg, Version, ms)
+	if tg != nil {
+		go func() {
+			if err := tg.Run(ctx, core); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
 
+	d := dispatcher.NewDispatcher(lang, cfg.Defaults.NotifyUnknownEvents)
 	m := metrics.New(Version)
-	metricsEnabled, metricsAddr := metricsConfig()
 
 	// The webhook server stores messages; the outbox sends and retries them.
-	o := outbox.New(store, map[string]messenger.Messenger{telegram.Name: tg}, m, time.Now)
+	o := outbox.New(store, ms, m, time.Now)
 	go o.Run(ctx)
 
 	srv := server.New(server.Config{
-		Addr:                net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
+		Addr:                cfg.Server.Listen,
 		DefaultLang:         lang,
-		WebhookSecret:       os.Getenv("WEBHOOK_SECRET"),
+		WebhookSecret:       cfg.Security.WebhookSecret,
 		Version:             Version,
-		DeliveriesRetention: deliveriesRetention(lang),
+		DeliveriesRetention: time.Duration(cfg.RetentionDays()) * 24 * time.Hour,
 		Metrics:             m,
-		ServeMetrics:        metricsEnabled && metricsAddr == "",
-		Checks: map[string]server.Check{
-			"db":       store.Ping,
-			"telegram": tg.Health,
-		},
+		ServeMetrics:        cfg.MetricsEnabled() && cfg.Metrics.Listen == "",
+		Checks:              checks,
 	}, d, store, o)
-	metricsSrv := startMetrics(lang, m, metricsEnabled, metricsAddr)
+	metricsSrv := startMetrics(lang, m, cfg.MetricsEnabled(), cfg.Metrics.Listen)
 	go srv.PruneDeliveries(ctx)
 
-	panel := startPanel(lang, store, tg.RichAvailable)
+	richAvailable := func() bool { return true }
+	if tg != nil {
+		richAvailable = tg.RichAvailable
+	}
+	panel, err := startPanel(lang, cfg, store, richAvailable)
+	if err != nil {
+		return err
+	}
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
@@ -127,7 +118,7 @@ func main() {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			log.Fatalf(i18n.T(lang, i18n.MsgServerFailed), err)
+			return fmt.Errorf(i18n.T(lang, i18n.MsgServerFailed), err)
 		}
 	case <-ctx.Done():
 		log.Println(i18n.T(lang, i18n.MsgShuttingDown))
@@ -145,28 +136,27 @@ func main() {
 			}
 		}
 	}
+	return nil
 }
 
-// startPanel starts the local web panel when PANEL_ADDRESS is set.
-// A misconfigured address stops the bot; a panel that fails later only
-// logs the error, so notifications keep flowing.
-func startPanel(lang i18n.Lang, store *storage.Store, richAvailable func() bool) *web.Server {
-	addr := os.Getenv("PANEL_ADDRESS")
+// startPanel starts the local web panel when panel.listen is set. A
+// misconfigured address stops the bot; a panel that fails later only logs
+// the error, so notifications keep flowing.
+func startPanel(lang i18n.Lang, cfg *config.Config, store *storage.Store, richAvailable func() bool) (*web.Server, error) {
+	addr := cfg.Panel.Listen
 	if addr == "" {
-		return nil
+		return nil, nil
 	}
-	allowRemote, _ := strconv.ParseBool(os.Getenv("PANEL_ALLOW_REMOTE"))
-
 	panel, err := web.New(web.Config{
 		Addr:            addr,
-		AllowRemote:     allowRemote,
-		GlobalSecretSet: os.Getenv("WEBHOOK_SECRET") != "",
+		AllowRemote:     cfg.Panel.AllowRemote,
+		GlobalSecretSet: cfg.Security.WebhookSecret != "",
 		Version:         Version,
 		StartedAt:       time.Now(),
 		RichAvailable:   richAvailable,
 	}, store)
 	if err != nil {
-		log.Fatalf(i18n.T(lang, i18n.MsgPanelFailed), err)
+		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgPanelFailed), err)
 	}
 
 	go func() {
@@ -175,16 +165,7 @@ func startPanel(lang i18n.Lang, store *storage.Store, richAvailable func() bool)
 			log.Printf(i18n.T(lang, i18n.MsgPanelFailed), err)
 		}
 	}()
-	return panel
-}
-
-// metricsConfig reads METRICS_ENABLED (default true) and METRICS_ADDR.
-func metricsConfig() (enabled bool, addr string) {
-	enabled = true
-	if v := os.Getenv("METRICS_ENABLED"); v != "" {
-		enabled, _ = strconv.ParseBool(v)
-	}
-	return enabled, os.Getenv("METRICS_ADDR")
+	return panel, nil
 }
 
 // startMetrics serves /metrics on its own address when METRICS_ADDR is set,
@@ -203,65 +184,4 @@ func startMetrics(lang i18n.Lang, m *metrics.Metrics, enabled bool, addr string)
 		}
 	}()
 	return srv
-}
-
-// deliveriesRetention reads DELIVERIES_RETENTION_DAYS (default 14, 0 = keep forever).
-func deliveriesRetention(lang i18n.Lang) time.Duration {
-	raw := os.Getenv("DELIVERIES_RETENTION_DAYS")
-	if raw == "" {
-		return 14 * 24 * time.Hour
-	}
-	days, err := strconv.Atoi(raw)
-	if err != nil || days < 0 {
-		log.Fatal(i18n.Tf(lang, i18n.MsgInvalidRetention, raw))
-	}
-	return time.Duration(days) * 24 * time.Hour
-}
-
-// richMessages reports whether notifications may be sent as Telegram rich
-// messages (RICH_MESSAGES, on by default). Off sends every chat the classic
-// format, whatever it chose.
-func richMessages() bool {
-	v := os.Getenv("RICH_MESSAGES")
-	if v == "" {
-		return true
-	}
-	on, err := strconv.ParseBool(v)
-	if err != nil {
-		log.Printf("⚠️ RICH_MESSAGES=%q is not a boolean, keeping rich messages on", v)
-		return true
-	}
-	return on
-}
-
-// telegramConfig reads the Telegram settings from the environment, until
-// config.yaml replaces it.
-func telegramConfig() config.Telegram {
-	rich := richMessages()
-	cfg := config.Telegram{
-		Enabled:      true,
-		Token:        os.Getenv("BOT_TOKEN"),
-		APIURL:       os.Getenv("TELEGRAM_API_URL"),
-		RichMessages: &rich,
-	}
-	enabled, _ := strconv.ParseBool(os.Getenv("PROXY_ENABLED"))
-	host, port := os.Getenv("PROXY_HOST"), os.Getenv("PROXY_PORT")
-	if enabled && host != "" && port != "" {
-		scheme := "http"
-		switch strings.ToLower(os.Getenv("PROXY_TYPE")) {
-		case "socks", "socks5":
-			scheme = "socks5"
-		}
-		cfg.Proxy = scheme + "://" + net.JoinHostPort(host, port)
-	}
-	return cfg
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }

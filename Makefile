@@ -25,7 +25,7 @@ run-ru: ## Run with Russian as default language
 run-en: ## Run with English as default language
 	go run . --lang=en
 
-run-args: ## Run with custom arguments: make run-args ARGS="--config prod.env"
+run-args: ## Run with custom arguments: make run-args ARGS="--config prod.yaml"
 	go run . $(ARGS)
 
 build: ## Build a static binary for the current platform

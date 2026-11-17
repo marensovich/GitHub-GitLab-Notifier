@@ -46,6 +46,9 @@ func Open(path string) (*Store, error) {
 	// Применяем миграции схемы
 	list, err := loadMigrations(embeddedMigrations, "migrations")
 	if err == nil {
+		err = backupBefore2x(context.Background(), db, path)
+	}
+	if err == nil {
 		err = migrate(context.Background(), db, list)
 	}
 	if err != nil {

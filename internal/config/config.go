@@ -255,7 +255,8 @@ func Find(flagPath string) (string, error) {
 		return flagPath, nil
 	}
 	for _, p := range []string{"config.yaml", SystemPath} {
-		if _, err := os.Stat(p); err == nil {
+		// A directory is what Docker leaves for a missing bind-mounted file.
+		if info, err := os.Stat(p); err == nil && !info.IsDir() {
 			return p, nil
 		}
 	}
