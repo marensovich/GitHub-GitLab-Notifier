@@ -1,0 +1,93 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🟣 Merge request merged · !3 MS-Viewer update",
+      "url": "https://gitlab.example.com/group/app/-/merge_requests/3",
+      "color": 3055683,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "Branches",
+          "value": "`ms-viewer` → `master`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@dev1"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open MR",
+          "url": "https://gitlab.example.com/group/app/-/merge_requests/3"
+        },
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Files changed",
+          "url": "https://gitlab.example.com/group/app/-/merge_requests/3/diffs"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🟣 Merge request влит · !3 MS-Viewer update",
+      "url": "https://gitlab.example.com/group/app/-/merge_requests/3",
+      "color": 3055683,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "Ветки",
+          "value": "`ms-viewer` → `master`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@dev1"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть MR",
+          "url": "https://gitlab.example.com/group/app/-/merge_requests/3"
+        },
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Файлы",
+          "url": "https://gitlab.example.com/group/app/-/merge_requests/3/diffs"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

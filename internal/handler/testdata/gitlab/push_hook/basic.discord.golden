@@ -1,0 +1,93 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🚀 New push · master",
+      "url": "https://gitlab.example.com/group/app/-/tree/master",
+      "description": "**Commits**\n• [b6568db](https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327) Update Catalan translation — Jordi\n• [da15608](https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7) fixed readme — Dev One\n• *…and 23 more*\n\n**Changed files**\n• ➕ `CHANGELOG`\n• ✏️ `README.md`",
+      "color": 5793266,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "Commits",
+          "value": "**25**",
+          "inline": true
+        },
+        {
+          "name": "E-mail",
+          "value": "`dev1@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@dev1"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Compare",
+          "url": "https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🚀 Новый пуш · master",
+      "url": "https://gitlab.example.com/group/app/-/tree/master",
+      "description": "**Коммиты**\n• [b6568db](https://gitlab.example.com/group/app/-/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327) Update Catalan translation — Jordi\n• [da15608](https://gitlab.example.com/group/app/-/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7) fixed readme — Dev One\n• *…и ещё 23*\n\n**Изменённые файлы**\n• ➕ `CHANGELOG`\n• ✏️ `README.md`",
+      "color": 5793266,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "Коммиты",
+          "value": "**25**",
+          "inline": true
+        },
+        {
+          "name": "E-mail",
+          "value": "`dev1@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@dev1"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Сравнить",
+          "url": "https://gitlab.example.com/group/app/-/compare/95790bf891e76fee5e1747ab589903a6a1f80f22...da1560886d4f094c3e6c9ef40349f7d38b5d27d7"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

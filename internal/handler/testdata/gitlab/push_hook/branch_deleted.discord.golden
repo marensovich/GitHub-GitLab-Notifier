@@ -1,0 +1,53 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🗑️ Deleted branch · feature/old",
+      "color": 5793266,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "E-mail",
+          "value": "`dev1@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@dev1"
+      }
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🗑️ Удалена ветка · feature/old",
+      "color": 5793266,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "E-mail",
+          "value": "`dev1@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@dev1"
+      }
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

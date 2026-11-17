@@ -1,0 +1,93 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "⚠️ Force push · main",
+      "url": "https://github.com/octo/hello/tree/main",
+      "description": "**Commits**\n• [59b20b8](https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5) fix: handle <nil\\> & empty values — [Octo Cat](https://github.com/octocat)\n\n**Changed files**\n• ➕ `new.go`\n• ✏️ `main.go`",
+      "color": 13801762,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Commits",
+          "value": "**1**",
+          "inline": true
+        },
+        {
+          "name": "E-mail",
+          "value": "`octo@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Compare",
+          "url": "https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "⚠️ Force push · main",
+      "url": "https://github.com/octo/hello/tree/main",
+      "description": "**Коммиты**\n• [59b20b8](https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5) fix: handle <nil\\> & empty values — [Octo Cat](https://github.com/octocat)\n\n**Изменённые файлы**\n• ➕ `new.go`\n• ✏️ `main.go`",
+      "color": 13801762,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Коммиты",
+          "value": "**1**",
+          "inline": true
+        },
+        {
+          "name": "E-mail",
+          "value": "`octo@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Сравнить",
+          "url": "https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

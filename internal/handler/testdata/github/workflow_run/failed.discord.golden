@@ -1,0 +1,101 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "❌ CI failed · #57 CI",
+      "url": "https://github.com/octo/hello/actions/runs/1",
+      "color": 13574702,
+      "timestamp": "2026-10-30T10:02:05Z",
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Branch",
+          "value": "`main` · [59b20b8](https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5)"
+        },
+        {
+          "name": "Commit",
+          "value": "fix: handle nil values",
+          "inline": true
+        },
+        {
+          "name": "Duration",
+          "value": "2m 5s",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open run",
+          "url": "https://github.com/octo/hello/actions/runs/1"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "❌ CI упал · #57 CI",
+      "url": "https://github.com/octo/hello/actions/runs/1",
+      "color": 13574702,
+      "timestamp": "2026-10-30T10:02:05Z",
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Ветка",
+          "value": "`main` · [59b20b8](https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5)"
+        },
+        {
+          "name": "Коммит",
+          "value": "fix: handle nil values",
+          "inline": true
+        },
+        {
+          "name": "Длительность",
+          "value": "2m 5s",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть запуск",
+          "url": "https://github.com/octo/hello/actions/runs/1"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

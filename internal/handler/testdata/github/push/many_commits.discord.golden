@@ -1,0 +1,93 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🚀 New push · main",
+      "url": "https://github.com/octo/hello/tree/main",
+      "description": "**Commits**\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000000) chore: step 1 — обновление №1 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000001) chore: step 2 — обновление №2 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000002) chore: step 3 — обновление №3 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000003) chore: step 4 — обновление №4 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000004) chore: step 5 — обновление №5 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000005) chore: step 6 — обновление №6 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000006) chore: step 7 — обновление №7 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000007) chore: step 8 — обновление №8 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000008) chore: step 9 — обновление №9 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000009) chore: step 10 — обновление №10 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000a) chore: step 11 — обновление №11 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000b) chore: step 12 — обновление №12 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000c) chore: step 13 — обновление №13 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000d) chore: step 14 — обновление №14 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000e) chore: step 15 — обновление №15 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000f) chore: step 16 — обновление №16 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000010) chore: step 17 — обновление №17 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000011) chore: step 18 — обновление №18 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000012) chore: step 19 — обновление №19 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000013) chore: step 20 — обновление №20 — [Octo Cat](https://github.com/octocat)\n• *…and 30 more*\n\n**Changed files**\n• ➕ `new.go`\n• ✏️ `main.go`",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Commits",
+          "value": "**50**",
+          "inline": true
+        },
+        {
+          "name": "E-mail",
+          "value": "`octo@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Compare",
+          "url": "https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🚀 Новый пуш · main",
+      "url": "https://github.com/octo/hello/tree/main",
+      "description": "**Коммиты**\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000000) chore: step 1 — обновление №1 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000001) chore: step 2 — обновление №2 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000002) chore: step 3 — обновление №3 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000003) chore: step 4 — обновление №4 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000004) chore: step 5 — обновление №5 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000005) chore: step 6 — обновление №6 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000006) chore: step 7 — обновление №7 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000007) chore: step 8 — обновление №8 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000008) chore: step 9 — обновление №9 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000009) chore: step 10 — обновление №10 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000a) chore: step 11 — обновление №11 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000b) chore: step 12 — обновление №12 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000c) chore: step 13 — обновление №13 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000d) chore: step 14 — обновление №14 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000e) chore: step 15 — обновление №15 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/000000000000000000000000000000000000000f) chore: step 16 — обновление №16 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000010) chore: step 17 — обновление №17 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000011) chore: step 18 — обновление №18 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000012) chore: step 19 — обновление №19 — [Octo Cat](https://github.com/octocat)\n• [0000000](https://github.com/octo/hello/commit/0000000000000000000000000000000000000013) chore: step 20 — обновление №20 — [Octo Cat](https://github.com/octocat)\n• *…и ещё 30*\n\n**Изменённые файлы**\n• ➕ `new.go`\n• ✏️ `main.go`",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Коммиты",
+          "value": "**50**",
+          "inline": true
+        },
+        {
+          "name": "E-mail",
+          "value": "`octo@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Сравнить",
+          "url": "https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

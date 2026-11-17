@@ -1,0 +1,101 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🟣 Pull request merged · #12 Add <dark\\> mode",
+      "url": "https://github.com/octo/hello/pull/12",
+      "color": 3055683,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Branches",
+          "value": "`feature/dark-mode` → `main`",
+          "inline": true
+        },
+        {
+          "name": "Changes",
+          "value": "**+120** / **−8** · files: 5 · commits: 3"
+        }
+      ],
+      "footer": {
+        "text": "@maintainer"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open PR",
+          "url": "https://github.com/octo/hello/pull/12"
+        },
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Files changed",
+          "url": "https://github.com/octo/hello/pull/12/files"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🟣 Pull request влит · #12 Add <dark\\> mode",
+      "url": "https://github.com/octo/hello/pull/12",
+      "color": 3055683,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Ветки",
+          "value": "`feature/dark-mode` → `main`",
+          "inline": true
+        },
+        {
+          "name": "Изменения",
+          "value": "**+120** / **−8** · файлов: 5 · коммитов: 3"
+        }
+      ],
+      "footer": {
+        "text": "@maintainer"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть PR",
+          "url": "https://github.com/octo/hello/pull/12"
+        },
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Файлы",
+          "url": "https://github.com/octo/hello/pull/12/files"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
