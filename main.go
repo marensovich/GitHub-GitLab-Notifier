@@ -56,14 +56,12 @@ func serve(cfg *config.Config) error {
 
 	// Adapters of the enabled messengers.
 	ms := map[string]messenger.Messenger{}
-	checks := map[string]server.Check{"db": store.Ping}
 	var tg *telegram.Telegram
 	if t := cfg.Messengers.Telegram; t != nil && t.Enabled {
 		if tg, err = telegram.New(*t, lang, Version); err != nil {
 			return err
 		}
 		ms[telegram.Name] = tg
-		checks[telegram.Name] = tg.Health
 	}
 	for _, name := range cfg.Enabled() {
 		if ms[name] == nil {
@@ -98,7 +96,7 @@ func serve(cfg *config.Config) error {
 		DeliveriesRetention: time.Duration(cfg.RetentionDays()) * 24 * time.Hour,
 		Metrics:             m,
 		ServeMetrics:        cfg.MetricsEnabled() && cfg.Metrics.Listen == "",
-		Checks:              checks,
+		Checks:              server.Checks(store.Ping, ms),
 	}, d, store, o)
 	metricsSrv := startMetrics(lang, m, cfg.MetricsEnabled(), cfg.Metrics.Listen)
 	go srv.PruneDeliveries(ctx)
@@ -154,6 +152,7 @@ func startPanel(lang i18n.Lang, cfg *config.Config, store *storage.Store, richAv
 		Version:         Version,
 		StartedAt:       time.Now(),
 		RichAvailable:   richAvailable,
+		Secrets:         panelSecrets(cfg),
 	}, store)
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgPanelFailed), err)
@@ -184,4 +183,20 @@ func startMetrics(lang i18n.Lang, m *metrics.Metrics, enabled bool, addr string)
 		}
 	}()
 	return srv
+}
+
+// panelSecrets are the values the panel masks in error texts it shows.
+func panelSecrets(cfg *config.Config) []string {
+	secrets := []string{cfg.Security.WebhookSecret}
+	m := cfg.Messengers
+	if m.Telegram != nil {
+		secrets = append(secrets, m.Telegram.Token)
+	}
+	if m.Discord != nil {
+		secrets = append(secrets, m.Discord.Token, m.Discord.PublicKey)
+	}
+	if m.Max != nil {
+		secrets = append(secrets, m.Max.Token)
+	}
+	return secrets
 }

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"GitHub-GitLab-Notifier/internal/messenger"
+	"GitHub-GitLab-Notifier/internal/messenger/fake"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"context"
 	"encoding/json"
@@ -91,5 +93,28 @@ func TestMetricsEndpoint(t *testing.T) {
 	off := newEnv(t, Config{})
 	if rec := getPath(off, http.MethodGet, "/metrics"); rec.Code != http.StatusNotFound {
 		t.Errorf("/metrics without ServeMetrics: %d, want 404", rec.Code)
+	}
+}
+
+func TestHealthPerMessenger(t *testing.T) {
+	tg := fake.New("telegram", messenger.Caps{})
+	dc := fake.New("discord", messenger.Caps{})
+	dc.HealthErr = errors.New("gateway closed")
+	checks := Checks(func(context.Context) error { return nil }, map[string]messenger.Messenger{"telegram": tg, "discord": dc})
+
+	e := newEnv(t, Config{Checks: checks})
+	rec := getPath(e, http.MethodGet, "/healthz")
+	var body struct {
+		Checks map[string]struct {
+			OK    bool
+			Error string
+		}
+	}
+	must(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	if rec.Code != http.StatusServiceUnavailable || len(body.Checks) != 3 {
+		t.Fatalf("got %d %+v", rec.Code, body.Checks)
+	}
+	if !body.Checks["db"].OK || !body.Checks["telegram"].OK || body.Checks["discord"].Error != "gateway closed" {
+		t.Errorf("checks = %+v", body.Checks)
 	}
 }

@@ -5,6 +5,7 @@ package server
 import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/messenger"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/outbox"
 	"GitHub-GitLab-Notifier/internal/platform"
@@ -57,6 +58,15 @@ type Config struct {
 
 // Check reports whether a dependency works; nil means healthy.
 type Check func(ctx context.Context) error
+
+// Checks returns the health checks: "db" and one per messenger, by name.
+func Checks(db Check, ms map[string]messenger.Messenger) map[string]Check {
+	checks := map[string]Check{"db": db}
+	for name, m := range ms {
+		checks[name] = m.Health
+	}
+	return checks
+}
 
 // checkTimeout bounds each health check.
 const checkTimeout = 2 * time.Second

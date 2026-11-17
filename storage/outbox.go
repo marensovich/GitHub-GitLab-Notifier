@@ -228,3 +228,21 @@ func (s *Store) RequeueDead(deliveryRowID int64) (int, error) {
 	}
 	return int(n), tx.Commit()
 }
+
+// DeadItems returns the rows given up on, the most recent first.
+func (s *Store) DeadItems(limit int) ([]OutboxItem, error) {
+	rows, err := s.db.Query("SELECT "+outboxColumns+" FROM outbox WHERE state = ? ORDER BY finished_at DESC, id DESC LIMIT ?", OutboxDead, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []OutboxItem
+	for rows.Next() {
+		it, err := scanOutbox(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, *it)
+	}
+	return list, rows.Err()
+}

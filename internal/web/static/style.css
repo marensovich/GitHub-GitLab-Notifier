@@ -67,6 +67,8 @@ h3 { font-size: 14px; margin: 16px 0 6px; color: var(--muted); text-transform: u
 .card { margin-bottom: 16px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .card-head h2 { margin: 0; }
+h2.group { text-transform: capitalize; margin-top: 32px; }
+.chat-title { margin: 0; font-size: 16px; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }

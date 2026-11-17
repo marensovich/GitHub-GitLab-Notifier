@@ -41,7 +41,17 @@ type Source interface {
 	Threads(destID int64) ([]storage.Thread, error)
 	Routes(destID int64) (map[string]string, error)
 	SubscriptionsOf(destID int64) ([]storage.Repo, error)
+	OutboxCounts() (pending, dead int, err error)
+	DeadItems(limit int) ([]storage.OutboxItem, error)
+	UnconnectedRepos(since time.Time) ([]storage.RepoCount, error)
 }
+
+// unconnectedWindow is how far back the overview looks for webhooks of
+// repositories nobody subscribed to.
+const unconnectedWindow = 7 * 24 * time.Hour
+
+// deadShown is how many messages given up on the overview lists.
+const deadShown = 20
 
 // Config holds the panel settings.
 type Config struct {
@@ -57,9 +67,11 @@ type Config struct {
 	Version   string
 	StartedAt time.Time
 	// RichAvailable reports whether rich messages can be sent right now
-	// (RICH_MESSAGES is on and the Bot API server supports them); nil
+	// (rich_messages is on and the Bot API server supports them); nil
 	// means they can.
 	RichAvailable func() bool
+	// Secrets are masked in every error text the panel shows.
+	Secrets []string
 }
 
 // Server is the panel HTTP server.
@@ -169,6 +181,8 @@ type repoRow struct {
 type chatRow struct {
 	Messenger string
 	ChatID    string
+	Title     string
+	Inactive  bool
 	Language  string
 	Format    string
 	RichOff   bool // the chat chose rich, but it gets classic messages
@@ -176,6 +190,20 @@ type chatRow struct {
 	Repos     []string
 	Topics    []topicRow
 	Err       string
+}
+
+// chatGroup is the chats of one messenger.
+type chatGroup struct {
+	Name  string
+	Chats []chatRow
+}
+
+// deadRow is a message given up on.
+type deadRow struct {
+	Chat     string
+	Event    string
+	Attempts int
+	Error    string
 }
 
 type topicRow struct {
@@ -229,11 +257,29 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	idle := 0
+	labels := map[int64]string{}
 	for _, d := range snap.dests {
 		if len(snap.subs[d.ID]) == 0 {
 			idle++
 		}
+		labels[d.ID] = d.Messenger + " " + d.ChatID
 	}
+
+	errs := snap.errors
+	pending, dead, err := s.src.OutboxCounts()
+	errs = append(errs, err)
+	items, err := s.src.DeadItems(deadShown)
+	errs = append(errs, err)
+	deadRows := make([]deadRow, 0, len(items))
+	for _, it := range items {
+		chat := labels[it.DestinationID]
+		if chat == "" {
+			chat = "deleted chat"
+		}
+		deadRows = append(deadRows, deadRow{Chat: chat, Event: it.EventType, Attempts: it.Attempts, Error: s.mask(it.LastError)})
+	}
+	unconnected, err := s.src.UnconnectedRepos(time.Now().Add(-unconnectedWindow))
+	errs = append(errs, err)
 
 	s.render(w, http.StatusOK, "overview", map[string]any{
 		"Nav":         nav{Active: "overview", Version: s.cfg.Version},
@@ -246,7 +292,12 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		"Unprotected": unprotected,
 		"IdleChats":   idle,
 		"Orphans":     orphans,
-		"Err":         errors.Join(snap.errors...),
+		"Pending":     pending,
+		"Dead":        dead,
+		"DeadItems":   deadRows,
+		"Unconnected": unconnected,
+		"Attention":   unprotected > 0 || orphans > 0 || len(unconnected) > 0 || dead > 0,
+		"Err":         s.maskErr(errors.Join(errs...)),
 	})
 }
 
@@ -255,7 +306,7 @@ func (s *Server) handleRepos(w http.ResponseWriter, r *http.Request) {
 	s.render(w, http.StatusOK, "repos", map[string]any{
 		"Nav":   nav{Active: "repos", Version: s.cfg.Version},
 		"Repos": s.rows(snap),
-		"Err":   errors.Join(snap.errors...),
+		"Err":   s.maskErr(errors.Join(snap.errors...)),
 	})
 }
 
@@ -268,8 +319,8 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 		if format == "" && d.Messenger == "telegram" {
 			format = storage.FormatRich
 		}
-		row := chatRow{Messenger: d.Messenger, ChatID: d.ChatID, Language: d.Language,
-			Format: format, RichOff: richOff && format == storage.FormatRich, UseTopics: d.UseThreads}
+		row := chatRow{Messenger: d.Messenger, ChatID: d.ChatID, Title: d.Title, Inactive: d.Inactive,
+			Language: d.Language, Format: format, RichOff: richOff && format == storage.FormatRich, UseTopics: d.UseThreads}
 		for _, repo := range snap.subs[d.ID] {
 			row.Repos = append(row.Repos, repo.URL)
 		}
@@ -278,7 +329,7 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 		threads, err := s.src.Threads(d.ID)
 		routes, routeErr := s.src.Routes(d.ID)
 		if err = errors.Join(err, routeErr); err != nil {
-			row.Err = err.Error()
+			row.Err = s.mask(err.Error())
 		}
 		events := map[string][]string{}
 		for event, thread := range routes {
@@ -299,12 +350,39 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 		return lessID(rows[i].ChatID, rows[j].ChatID)
 	})
 
+	var groups []chatGroup
+	for _, row := range rows {
+		if len(groups) == 0 || groups[len(groups)-1].Name != row.Messenger {
+			groups = append(groups, chatGroup{Name: row.Messenger})
+		}
+		g := &groups[len(groups)-1]
+		g.Chats = append(g.Chats, row)
+	}
+
 	s.render(w, http.StatusOK, "chats", map[string]any{
 		"Nav":     nav{Active: "chats", Version: s.cfg.Version},
-		"Chats":   rows,
+		"Groups":  groups,
 		"RichOff": richOff,
-		"Err":     errors.Join(snap.errors...),
+		"Err":     s.maskErr(errors.Join(snap.errors...)),
 	})
+}
+
+// mask hides the configured secrets in a text shown on a page.
+func (s *Server) mask(text string) string {
+	for _, secret := range s.cfg.Secrets {
+		if secret != "" {
+			text = strings.ReplaceAll(text, secret, "***")
+		}
+	}
+	return text
+}
+
+// maskErr returns the masked text of err, or "" for nil.
+func (s *Server) maskErr(err error) string {
+	if err == nil {
+		return ""
+	}
+	return s.mask(err.Error())
 }
 
 // lessID orders numeric IDs by value and anything else as text.

@@ -104,3 +104,34 @@ func (s *Store) PruneDeliveries(before time.Time) (int64, error) {
 	}
 	return res.RowsAffected()
 }
+
+// RepoCount is a repository URL with a number of deliveries.
+type RepoCount struct {
+	URL   string
+	Count int
+}
+
+// UnconnectedRepos counts, per repository, the webhooks received since a
+// time that nobody was subscribed to, the most frequent first.
+//
+// Репозитории, чьи вебхуки приходят, но никуда не отправляются.
+func (s *Store) UnconnectedRepos(since time.Time) ([]RepoCount, error) {
+	rows, err := s.db.Query(`
+		SELECT repo_url, COUNT(*) AS n FROM deliveries
+		WHERE status = ? AND error = 'not connected' AND received_at >= ? AND repo_url != ''
+		GROUP BY repo_url ORDER BY n DESC, repo_url
+	`, DeliveryIgnored, since.UnixMilli())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []RepoCount
+	for rows.Next() {
+		var rc RepoCount
+		if err := rows.Scan(&rc.URL, &rc.Count); err != nil {
+			return nil, err
+		}
+		list = append(list, rc)
+	}
+	return list, rows.Err()
+}

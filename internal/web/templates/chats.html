@@ -2,19 +2,23 @@
 {{define "content"}}
 <h1>Chats</h1>
 {{if .Err}}<p class="alerts warn">Could not read everything: {{.Err}}</p>{{end}}
-{{if .RichOff}}<p class="alerts warn">Rich messages are off (<code>RICH_MESSAGES=false</code>, or the Bot API server has no <code>sendRichMessage</code>): every chat gets the classic look.</p>{{end}}
+{{if .RichOff}}<p class="alerts warn">Rich messages are off (<code>rich_messages: false</code>, or the Bot API server has no <code>sendRichMessage</code>): every Telegram chat gets the classic look.</p>{{end}}
+{{range .Groups}}
+<h2 class="group">{{.Name}}</h2>
 {{range .Chats}}
 <section class="card">
   <div class="card-head">
-    <h2 class="mono">{{.ChatID}}</h2>
+    <h3 class="chat-title">{{with .Title}}{{.}} {{end}}<span class="mono">{{.ChatID}}</span></h3>
     <div class="tags">
       <span class="badge">{{.Messenger}}</span>
+      {{if .Inactive}}<span class="badge warn">inactive</span>{{end}}
       {{with .Language}}<span class="badge">{{.}}</span>{{end}}
       {{if .RichOff}}<span class="badge warn">look: rich → classic</span>{{else}}<span class="badge">look: {{.Format}}</span>{{end}}
       {{if and .Topics (not .UseTopics)}}<span class="badge warn">topics off</span>{{end}}
       <span class="badge">{{len .Repos}} repo{{if ne (len .Repos) 1}}s{{end}}</span>
     </div>
   </div>
+  {{if .Inactive}}<p class="muted">The bot was removed from this chat or the chat is gone; nothing is sent here until it works again.</p>{{end}}
   {{if .Err}}<p class="alerts warn">Could not read topics: {{.Err}}</p>{{end}}
 
   <h3>Repositories</h3>
@@ -37,6 +41,7 @@
   </div>
   {{else}}<p class="muted">No topics — notifications go to the main chat.</p>{{end}}
 </section>
+{{end}}
 {{else}}
 <p class="empty">No chats yet. Add the bot to a group and run <code>/connect</code>.</p>
 {{end}}
