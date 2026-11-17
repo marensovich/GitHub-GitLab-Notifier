@@ -61,9 +61,10 @@ type Outbox struct {
 	makeThread  ThreadMaker
 }
 
-// ThreadMaker creates the thread for an event category (topic) of a
-// destination and returns its ID.
-type ThreadMaker func(ctx context.Context, destID int64, topic string) (threadID string, err error)
+// ThreadMaker returns the thread for an event category (topic) of a
+// destination, creating it unless a thread other than failed (the one the
+// message could not reach, "" when it had none) is already stored.
+type ThreadMaker func(ctx context.Context, destID int64, topic, failed string) (threadID string, err error)
 
 // SetThreadMaker sets what creates a missing thread in a chat that takes
 // messages only in threads; call it before Run.
@@ -222,7 +223,7 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 	}
 
 	if messenger.Classify(err) == messenger.ClassNeedsThread && o.makeThread != nil {
-		id, makeErr := o.makeThread(ctx, d.ID, p.Topic)
+		id, makeErr := o.makeThread(ctx, d.ID, p.Topic, it.ThreadID)
 		if makeErr != nil {
 			err = fmt.Errorf("%w (creating a thread: %v)", err, makeErr)
 		} else {

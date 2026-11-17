@@ -211,6 +211,23 @@ func TestFallsBackToGeneralWhenTopicSendFails(t *testing.T) {
 	}
 }
 
+// A forum without a main chat keeps one thread for events without a
+// category; they go there instead of making a new one each time.
+func TestGeneralEventsUseTheGeneralRoute(t *testing.T) {
+	e := newEnv(t, Config{})
+	d := e.chat(t, 200, "en")
+	e.topic(t, d, 66, storage.GeneralRoute)
+	e.connect(t, d, "https://github.com/octo/hello", "")
+	ping, err := os.ReadFile("../handler/testdata/github/ping/basic.json")
+	must(t, err)
+
+	e.post(t, ghHeaders("ping"), string(ping))
+
+	if len(e.sent()) != 1 || e.sent()[0].topicID != 66 {
+		t.Fatalf("want the general thread 66, got %+v", e.sent())
+	}
+}
+
 func TestSkippedEventsSendNothing(t *testing.T) {
 	e := newEnv(t, Config{})
 

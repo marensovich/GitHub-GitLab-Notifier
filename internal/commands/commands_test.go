@@ -596,17 +596,33 @@ func TestMakeThread(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	id, err := e.core.MakeThread(ctx, d.ID, "push")
+	id, err := e.core.MakeThread(ctx, d.ID, "push", "")
 	if err != nil || id == "" || e.m.Threads[0].Name != "🚀 Pushes" || e.store.ThreadFor(d.ID, "push") != id {
 		t.Fatalf("MakeThread = %q, %v; threads %+v", id, err, e.m.Threads)
 	}
-	// It is called when the thread is gone: a new one replaces it.
-	again, err := e.core.MakeThread(ctx, d.ID, "push")
+	// Another queued message without a thread uses the stored one.
+	if same, err := e.core.MakeThread(ctx, d.ID, "push", ""); err != nil || same != id || len(e.m.Threads) != 1 {
+		t.Errorf("queued message: %q, %v; %d threads, want the stored one", same, err, len(e.m.Threads))
+	}
+	// The stored thread is gone: a new one replaces it.
+	again, err := e.core.MakeThread(ctx, d.ID, "push", id)
 	threads, _ := e.store.Threads(d.ID)
 	if err != nil || again == id || e.store.ThreadFor(d.ID, "push") != again || len(threads) != 1 {
-		t.Errorf("second call = %q, %v; stored %+v, want the old thread replaced", again, err, threads)
+		t.Errorf("gone thread = %q, %v; stored %+v, want the old thread replaced", again, err, threads)
 	}
-	if _, err := e.core.MakeThread(ctx, d.ID, ""); err != nil || e.m.Threads[2].Name != GeneralThreadName {
-		t.Errorf("general thread: %v, %+v", err, e.m.Threads)
+	// Other messages that were queued for the gone thread follow the new one.
+	if next, err := e.core.MakeThread(ctx, d.ID, "push", id); err != nil || next != again || len(e.m.Threads) != 2 {
+		t.Errorf("second gone message: %q, %v; %d threads", next, err, len(e.m.Threads))
+	}
+	// Events without a category share one general thread.
+	general, err := e.core.MakeThread(ctx, d.ID, "", "")
+	if err != nil || e.m.Threads[2].Name != GeneralThreadName {
+		t.Fatalf("general thread: %v, %+v", err, e.m.Threads)
+	}
+	if g, err := e.core.MakeThread(ctx, d.ID, "", ""); err != nil || g != general || len(e.m.Threads) != 3 {
+		t.Errorf("second general event: %q, %v; %d threads", g, err, len(e.m.Threads))
+	}
+	if e.store.ThreadFor(d.ID, storage.GeneralRoute) != general {
+		t.Errorf("general route %q", e.store.ThreadFor(d.ID, storage.GeneralRoute))
 	}
 }

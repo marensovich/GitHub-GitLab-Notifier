@@ -472,8 +472,13 @@ func (s *Server) items(p platform.Platform, eventName string, body []byte, repo 
 		}
 
 		thread := ""
-		if d.UseThreads && res.Topic != platform.TopicGeneral {
-			thread = s.store.ThreadFor(d.ID, string(res.Topic))
+		if d.UseThreads {
+			route := string(res.Topic)
+			if res.Topic == platform.TopicGeneral {
+				// Only a forum without a main chat has a general thread.
+				route = storage.GeneralRoute
+			}
+			thread = s.store.ThreadFor(d.ID, route)
 		}
 		look := d.Format
 		if look == "" && d.Messenger == "telegram" {

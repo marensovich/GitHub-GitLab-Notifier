@@ -184,11 +184,20 @@ func (c *Core) configureForum(r *request, d *storage.Destination) {
 // forum that has no main chat.
 const GeneralThreadName = "💬 General"
 
-// MakeThread creates the thread for an event category in a destination and
-// routes the category to it. The outbox calls it when a forum without a
-// main chat has no thread for a message, or the thread was deleted, so a
-// thread of the same name is replaced rather than reused.
-func (c *Core) MakeThread(ctx context.Context, destID int64, topic string) (string, error) {
+// MakeThread returns the thread for an event category in a destination.
+// The outbox calls it when a forum without a main chat had no thread for a
+// message (failed is "") or the message's thread is gone (failed is its
+// ID). A stored thread other than failed is used as it is: an earlier
+// message already made it. Otherwise a new thread is created, replaces any
+// stored one of the same name and gets the category's route.
+func (c *Core) MakeThread(ctx context.Context, destID int64, topic, failed string) (string, error) {
+	route := topic
+	if route == "" {
+		route = storage.GeneralRoute
+	}
+	if id := c.store.ThreadFor(destID, route); id != "" && id != failed {
+		return id, nil
+	}
 	d, err := c.store.DestinationByID(destID)
 	if err != nil {
 		return "", err
@@ -219,7 +228,7 @@ func (c *Core) MakeThread(ctx context.Context, destID int64, topic string) (stri
 			}
 		}
 	}
-	if err := c.store.SaveThread(storage.Thread{DestinationID: d.ID, ThreadID: id, Name: name}, topic); err != nil {
+	if err := c.store.SaveThread(storage.Thread{DestinationID: d.ID, ThreadID: id, Name: name}, route); err != nil {
 		return "", err
 	}
 	log.Print(i18n.Tf(c.defaultLang(), i18n.MsgTopicCreated, name, id))
