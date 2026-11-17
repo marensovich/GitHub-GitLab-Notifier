@@ -143,6 +143,19 @@ func TestHealth(t *testing.T) {
 	}
 }
 
+func TestExtraRoutes(t *testing.T) {
+	e := newEnv(t, Config{Routes: map[string]http.Handler{
+		"/discord/interactions": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("interactions"))
+		}),
+	}})
+	rec := httptest.NewRecorder()
+	e.srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/discord/interactions", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "interactions" {
+		t.Errorf("got %d %q", rec.Code, rec.Body.String())
+	}
+}
+
 func TestUnconnectedRepoIsDropped(t *testing.T) {
 	e := newEnv(t, Config{})
 	// Chats exist, but none is subscribed to the repository.
@@ -195,6 +208,23 @@ func TestFallsBackToGeneralWhenTopicSendFails(t *testing.T) {
 
 	if len(e.sent()) != 1 || e.sent()[0].topicID != 0 {
 		t.Fatalf("want fallback to general chat, got %+v", e.sent())
+	}
+}
+
+// A forum without a main chat keeps one thread for events without a
+// category; they go there instead of making a new one each time.
+func TestGeneralEventsUseTheGeneralRoute(t *testing.T) {
+	e := newEnv(t, Config{})
+	d := e.chat(t, 200, "en")
+	e.topic(t, d, 66, storage.GeneralRoute)
+	e.connect(t, d, "https://github.com/octo/hello", "")
+	ping, err := os.ReadFile("../handler/testdata/github/ping/basic.json")
+	must(t, err)
+
+	e.post(t, ghHeaders("ping"), string(ping))
+
+	if len(e.sent()) != 1 || e.sent()[0].topicID != 66 {
+		t.Fatalf("want the general thread 66, got %+v", e.sent())
 	}
 }
 

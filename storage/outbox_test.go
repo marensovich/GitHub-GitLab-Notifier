@@ -213,3 +213,14 @@ func must(t *testing.T, err error) {
 		t.Fatal(err)
 	}
 }
+
+func TestSetOutboxThread(t *testing.T) {
+	s, a, _ := outboxStore(t)
+	enqueue(t, s, "d1", a)
+	it := claim(t, s, nil)
+	must(t, s.SetOutboxThread(it.ID, "55"))
+	must(t, s.MarkRetry(it.ID, 1, t0, "x"))
+	if again := claim(t, s, nil); again == nil || again.ThreadID != "55" {
+		t.Fatalf("claimed %+v, want thread 55", again)
+	}
+}

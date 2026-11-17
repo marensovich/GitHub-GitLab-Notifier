@@ -34,6 +34,11 @@ type env struct {
 
 func newEnv(t *testing.T, caps messenger.Caps) *env {
 	t.Helper()
+	return newEnvNamed(t, "telegram", caps)
+}
+
+func newEnvNamed(t *testing.T, name string, caps messenger.Caps) *env {
+	t.Helper()
 	store, err := storage.Open(filepath.Join(t.TempDir(), "core.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -44,9 +49,9 @@ func newEnv(t *testing.T, caps messenger.Caps) *env {
 		Defaults: config.Defaults{Language: "en"},
 		Admins:   []string{"telegram:900"},
 	}
-	m := fake.New("telegram", caps)
+	m := fake.New(name, caps)
 	m.Admins["-100/5"] = true
-	return &env{core: New(store, cfg, "2.0.0-test", map[string]messenger.Messenger{"telegram": m}), m: m, store: store, cfg: cfg}
+	return &env{core: New(store, cfg, "2.0.0-test", map[string]messenger.Messenger{name: m}), m: m, store: store, cfg: cfg}
 }
 
 // in is a command in the forum chat -100 sent by admin 5.
@@ -543,5 +548,81 @@ func TestUnknownMessengerIgnored(t *testing.T) {
 	e.run(c)
 	if len(e.m.Replies) != 0 {
 		t.Error("a command from a messenger without an adapter must be ignored")
+	}
+}
+
+var discordCaps = messenger.Caps{Threads: true, ForumOnlyThreads: true, ButtonsPerRow: 5}
+
+func discordIn(text string, forum bool) messenger.Command {
+	c := in(text)
+	c.Messenger, c.IsForum = "discord", forum
+	return c
+}
+
+func TestThreadsOnlyInForums(t *testing.T) {
+	e := newEnvNamed(t, "discord", messenger.Caps{Threads: true, ButtonsPerRow: 5})
+	e.run(discordIn("/configure", false))
+	if ch := e.lastChoices(); len(ch) != 0 {
+		t.Errorf("text channel got buttons %v, want only the summary", ch)
+	}
+	e.run(discordIn("/configure", true))
+	if ch := e.lastChoices(); len(ch) == 0 || !strings.HasPrefix(ch[0].Data, "cfg1:topics:") {
+		t.Errorf("forum got %v, want the topics step", ch)
+	}
+}
+
+func TestForumOnlyConfigureCreatesThreads(t *testing.T) {
+	e := newEnvNamed(t, "discord", discordCaps)
+	e.run(discordIn("/configure", true))
+	if len(e.m.Threads) != len(platform.Topics) {
+		t.Fatalf("created %d threads, want %d", len(e.m.Threads), len(platform.Topics))
+	}
+	if ch := e.lastChoices(); len(ch) != 0 {
+		t.Errorf("forum-only chat got buttons %v", ch)
+	}
+	d, err := e.store.GetDestination("discord", "-100")
+	if err != nil || d == nil || !d.UseThreads {
+		t.Fatalf("destination %+v, %v; want use_threads", d, err)
+	}
+	if got := e.store.ThreadFor(d.ID, "push"); got == "" {
+		t.Error("push is not routed to a thread")
+	}
+}
+
+func TestMakeThread(t *testing.T) {
+	e := newEnvNamed(t, "discord", discordCaps)
+	d, err := e.store.EnsureDestination("discord", "-100", storage.Destination{UseThreads: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	id, err := e.core.MakeThread(ctx, d.ID, "push", "")
+	if err != nil || id == "" || e.m.Threads[0].Name != "🚀 Pushes" || e.store.ThreadFor(d.ID, "push") != id {
+		t.Fatalf("MakeThread = %q, %v; threads %+v", id, err, e.m.Threads)
+	}
+	// Another queued message without a thread uses the stored one.
+	if same, err := e.core.MakeThread(ctx, d.ID, "push", ""); err != nil || same != id || len(e.m.Threads) != 1 {
+		t.Errorf("queued message: %q, %v; %d threads, want the stored one", same, err, len(e.m.Threads))
+	}
+	// The stored thread is gone: a new one replaces it.
+	again, err := e.core.MakeThread(ctx, d.ID, "push", id)
+	threads, _ := e.store.Threads(d.ID)
+	if err != nil || again == id || e.store.ThreadFor(d.ID, "push") != again || len(threads) != 1 {
+		t.Errorf("gone thread = %q, %v; stored %+v, want the old thread replaced", again, err, threads)
+	}
+	// Other messages that were queued for the gone thread follow the new one.
+	if next, err := e.core.MakeThread(ctx, d.ID, "push", id); err != nil || next != again || len(e.m.Threads) != 2 {
+		t.Errorf("second gone message: %q, %v; %d threads", next, err, len(e.m.Threads))
+	}
+	// Events without a category share one general thread.
+	general, err := e.core.MakeThread(ctx, d.ID, "", "")
+	if err != nil || e.m.Threads[2].Name != GeneralThreadName {
+		t.Fatalf("general thread: %v, %+v", err, e.m.Threads)
+	}
+	if g, err := e.core.MakeThread(ctx, d.ID, "", ""); err != nil || g != general || len(e.m.Threads) != 3 {
+		t.Errorf("second general event: %q, %v; %d threads", g, err, len(e.m.Threads))
+	}
+	if e.store.ThreadFor(d.ID, storage.GeneralRoute) != general {
+		t.Errorf("general route %q", e.store.ThreadFor(d.ID, storage.GeneralRoute))
 	}
 }

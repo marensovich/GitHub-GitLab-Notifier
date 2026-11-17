@@ -15,6 +15,9 @@ var (
 	ErrChatGone = errors.New("chat gone")
 	// ErrRejected: the messenger refused this message; retrying won't help.
 	ErrRejected = errors.New("message rejected")
+	// ErrNeedsThread: the chat takes messages only in threads and none was
+	// given (a Discord forum channel).
+	ErrNeedsThread = errors.New("chat needs a thread")
 )
 
 // RateLimited is returned when the messenger asks to slow down.
@@ -41,6 +44,7 @@ const (
 	ClassThreadNotFound
 	ClassChatGone
 	ClassRejected
+	ClassNeedsThread
 	ClassTemporary
 )
 
@@ -56,6 +60,8 @@ func (c Class) String() string {
 		return "chat gone"
 	case ClassRejected:
 		return "rejected"
+	case ClassNeedsThread:
+		return "needs thread"
 	}
 	return "temporary"
 }
@@ -74,6 +80,8 @@ func Classify(err error) Class {
 		return ClassChatGone
 	case errors.Is(err, ErrRejected):
 		return ClassRejected
+	case errors.Is(err, ErrNeedsThread):
+		return ClassNeedsThread
 	}
 	return ClassTemporary
 }

@@ -6,8 +6,8 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-Foundation of 2.0: one core for several messengers. This release still sends to Telegram only; Discord and MAX
-adapters come next on top of it.
+Foundation of 2.0: one core for several messengers, with Telegram and Discord. The MAX adapter comes next on top
+of it.
 
 ### Breaking changes
 
@@ -35,6 +35,12 @@ adapters come next on top of it.
   queue, the last messages given up on and repositories that kept sending webhooks in the last 7 days without
   any chat subscribed. Error texts on the panel never show the token or webhook secret.
 - `/healthz` reports one check per messenger next to the database.
+- Discord: notifications as embeds with link buttons in text channels and forums (one post per event category,
+  created by `/configure` and again when deleted), slash commands whose answers only the sender sees, and
+  `/discord/interactions` for Discord to call, checked against the application's public key. Mentions in
+  commit messages never ping anyone. The invite link and the endpoint URL are printed on start.
+- Telegram: bot commands are ephemeral, so in a group only the sender sees the command and the bot's answer
+  (Telegram clients that support ephemeral messages; older ones get the usual reply).
 
 ### Changed
 

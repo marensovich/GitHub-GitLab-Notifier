@@ -7,6 +7,7 @@ package outbox
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -42,6 +43,8 @@ type Payload struct {
 	Lang i18n.Lang
 	Look string
 	N    notify.Notification
+	// Topic is the event category (platform.Topic); "" is general.
+	Topic string
 }
 
 // Outbox sends the queued rows.
@@ -55,7 +58,17 @@ type Outbox struct {
 	// sendTimeout bounds one send, so a hung request cannot stop the
 	// messenger's worker.
 	sendTimeout time.Duration
+	makeThread  ThreadMaker
 }
+
+// ThreadMaker returns the thread for an event category (topic) of a
+// destination, creating it unless a thread other than failed (the one the
+// message could not reach, "" when it had none) is already stored.
+type ThreadMaker func(ctx context.Context, destID int64, topic, failed string) (threadID string, err error)
+
+// SetThreadMaker sets what creates a missing thread in a chat that takes
+// messages only in threads; call it before Run.
+func (o *Outbox) SetThreadMaker(f ThreadMaker) { o.makeThread = f }
 
 // sendTimeout is how long one send may take before it counts as failed.
 const sendTimeout = 30 * time.Second
@@ -207,6 +220,20 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 		to.ThreadID = ""
 		attempts, err = m.Send(ctx, to, p.Look, p.Lang, p.N)
 		o.count(name, attempts)
+	}
+
+	if messenger.Classify(err) == messenger.ClassNeedsThread && o.makeThread != nil {
+		id, makeErr := o.makeThread(ctx, d.ID, p.Topic, it.ThreadID)
+		if makeErr != nil {
+			err = fmt.Errorf("%w (creating a thread: %v)", err, makeErr)
+		} else {
+			if err := o.store.SetOutboxThread(it.ID, id); err != nil {
+				log.Printf("❌ outbox: %v", err)
+			}
+			to.ThreadID = id
+			attempts, err = m.Send(ctx, to, p.Look, p.Lang, p.N)
+			o.count(name, attempts)
+		}
 	}
 
 	switch messenger.Classify(err) {

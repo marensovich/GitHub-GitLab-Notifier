@@ -6,6 +6,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/messenger"
+	"GitHub-GitLab-Notifier/internal/messenger/discord"
 	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/outbox"
@@ -21,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -63,13 +65,24 @@ func serve(cfg *config.Config) error {
 		}
 		ms[telegram.Name] = tg
 	}
+	var dc *discord.Discord
+	routes := map[string]http.Handler{}
+	if c := cfg.Messengers.Discord; c != nil && c.Enabled {
+		if dc, err = discord.New(*c, lang, Version); err != nil {
+			return err
+		}
+		ms[discord.Name] = dc
+		routes[discord.InteractionsPath] = dc
+		log.Printf("🔗 Discord: set the Interactions Endpoint URL to %s", strings.TrimRight(cfg.Server.PublicURL, "/")+discord.InteractionsPath)
+		log.Printf("🔗 Discord: invite the bot with %s", dc.InviteURL())
+	}
 	for _, name := range cfg.Enabled() {
 		if ms[name] == nil {
 			log.Printf("⚠️ %s is enabled in the configuration but not available in this build yet", name)
 		}
 	}
 	if len(ms) == 0 {
-		return errors.New("no messenger to run: enable telegram in config.yaml")
+		return errors.New("no messenger to run: enable telegram or discord in config.yaml")
 	}
 
 	core := commands.New(store, cfg, Version, ms)
@@ -80,12 +93,20 @@ func serve(cfg *config.Config) error {
 			}
 		}()
 	}
+	if dc != nil {
+		go func() {
+			if err := dc.Run(ctx, core); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
 
 	d := dispatcher.NewDispatcher(lang, cfg.Defaults.NotifyUnknownEvents)
 	m := metrics.New(Version)
 
 	// The webhook server stores messages; the outbox sends and retries them.
 	o := outbox.New(store, ms, m, time.Now)
+	o.SetThreadMaker(core.MakeThread)
 	go o.Run(ctx)
 
 	srv := server.New(server.Config{
@@ -97,6 +118,7 @@ func serve(cfg *config.Config) error {
 		Metrics:             m,
 		ServeMetrics:        cfg.MetricsEnabled() && cfg.Metrics.Listen == "",
 		Checks:              server.Checks(store.Ping, ms),
+		Routes:              routes,
 	}, d, store, o)
 	metricsSrv := startMetrics(lang, m, cfg.MetricsEnabled(), cfg.Metrics.Listen)
 	go srv.PruneDeliveries(ctx)

@@ -54,6 +54,9 @@ type Config struct {
 	ServeMetrics bool
 	// Checks are run by GET /healthz, by name ("db", "telegram").
 	Checks map[string]Check
+	// Routes are more handlers, mounted on their paths as they are (the
+	// Discord interactions endpoint).
+	Routes map[string]http.Handler
 }
 
 // Check reports whether a dependency works; nil means healthy.
@@ -114,6 +117,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/webhook/health", s.handleHealthz)
 	if s.cfg.ServeMetrics {
 		mux.Handle("/metrics", s.cfg.Metrics.Handler())
+	}
+	for path, h := range s.cfg.Routes {
+		mux.Handle(path, h)
 	}
 	return mux
 }
@@ -466,14 +472,19 @@ func (s *Server) items(p platform.Platform, eventName string, body []byte, repo 
 		}
 
 		thread := ""
-		if d.UseThreads && res.Topic != platform.TopicGeneral {
-			thread = s.store.ThreadFor(d.ID, string(res.Topic))
+		if d.UseThreads {
+			route := string(res.Topic)
+			if res.Topic == platform.TopicGeneral {
+				// Only a forum without a main chat has a general thread.
+				route = storage.GeneralRoute
+			}
+			thread = s.store.ThreadFor(d.ID, route)
 		}
 		look := d.Format
 		if look == "" && d.Messenger == "telegram" {
 			look = storage.FormatRich
 		}
-		payload, err := json.Marshal(outbox.Payload{Lang: lang, Look: look, N: res.Notification})
+		payload, err := json.Marshal(outbox.Payload{Lang: lang, Look: look, N: res.Notification, Topic: string(res.Topic)})
 		if err != nil {
 			log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
 			continue

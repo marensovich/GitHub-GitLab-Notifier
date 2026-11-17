@@ -1,0 +1,83 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "📦 New release · v1.2.0 — Dark mode",
+      "url": "https://github.com/octo/hello/releases/tag/v1.2.0",
+      "description": "> ## Changes\n> - Dark mode",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Tag",
+          "value": "`v1.2.0`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@maintainer"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open release",
+          "url": "https://github.com/octo/hello/releases/tag/v1.2.0"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "📦 Новый релиз · v1.2.0 — Dark mode",
+      "url": "https://github.com/octo/hello/releases/tag/v1.2.0",
+      "description": "> ## Changes\n> - Dark mode",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Тег",
+          "value": "`v1.2.0`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@maintainer"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть релиз",
+          "url": "https://github.com/octo/hello/releases/tag/v1.2.0"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

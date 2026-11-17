@@ -29,6 +29,7 @@ happens in your repo.
 - [Screenshots](#-screenshots)
 - [Supported events](#-supported-events)
 - [Quick start](#-quick-start)
+- [Discord](#-discord)
 - [Installation on Linux (systemd)](#-installation-on-linux-systemd)
 - [Running with Docker](#-running-with-docker)
 - [Building from source](#-building-from-source)
@@ -158,6 +159,39 @@ chat the classic look.
 | Triggers     | Push, Tag push, Merge request, Issues, Comments, Pipeline, Releases          |
 
 GitHub immediately sends a `ping` event — a "Webhook connected" message appears in the chat. 🎉
+
+---
+
+## 💬 Discord
+
+The same bot can post to Discord channels and forums, next to Telegram or on its own. Discord reaches the bot
+over HTTPS, so `server.public_url` must be reachable from the internet.
+
+1. Open the [Discord developer portal](https://discord.com/developers/applications) → **New Application**.
+2. **Bot** → **Reset Token** and copy it. No privileged intents are needed.
+3. **General Information**: copy the **Application ID** and the **Public Key**.
+4. Fill in `config.yaml` and restart the bot:
+
+   ```yaml
+   messengers:
+     discord:
+       enabled: true
+       token: "${DISCORD_TOKEN}"
+       application_id: "112233445566778899"
+       public_key: "<64 hex characters>"
+   ```
+
+5. Back in **General Information**, set **Interactions Endpoint URL** to
+   `<server.public_url>/discord/interactions` and save; Discord checks it right away, so the bot must be running.
+6. Invite the bot with the link from the log (`🔗 Discord: invite the bot with …`). It asks for: view channels,
+   send messages, embed links, read message history, create public threads and send messages in threads.
+
+Commands are slash commands (`/connect`, `/configure`, `/status`, …) and work in server channels only. Only the
+person who typed a command sees the answer. `/configure` needs the **Manage Channels** permission.
+
+In a **forum channel** every category of events gets its own post, created by `/configure` (type it inside any
+post of the forum); a post that is deleted is created again with the next event. In a text channel everything
+goes to the channel.
 
 ---
 

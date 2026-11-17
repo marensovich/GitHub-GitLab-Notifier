@@ -1,0 +1,81 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🍴 New fork · fan/hello",
+      "url": "https://github.com/fan/hello",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Forks",
+          "value": "**7**",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@fan"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open fork",
+          "url": "https://github.com/fan/hello"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🍴 Новый форк · fan/hello",
+      "url": "https://github.com/fan/hello",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "Форки",
+          "value": "**7**",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@fan"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть форк",
+          "url": "https://github.com/fan/hello"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

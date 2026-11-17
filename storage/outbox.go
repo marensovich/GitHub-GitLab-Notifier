@@ -174,8 +174,11 @@ func (s *Store) MarkRetry(id int64, attempts int, next time.Time, errText string
 }
 
 // ClearOutboxThread makes a row go to the main chat from now on.
-func (s *Store) ClearOutboxThread(id int64) error {
-	_, err := s.db.Exec("UPDATE outbox SET thread_id = '' WHERE id = ?", id)
+func (s *Store) ClearOutboxThread(id int64) error { return s.SetOutboxThread(id, "") }
+
+// SetOutboxThread changes the thread a row goes to.
+func (s *Store) SetOutboxThread(id int64, threadID string) error {
+	_, err := s.db.Exec("UPDATE outbox SET thread_id = ? WHERE id = ?", threadID, id)
 	return err
 }
 

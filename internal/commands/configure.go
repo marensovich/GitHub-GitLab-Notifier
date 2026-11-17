@@ -54,6 +54,8 @@ func (c *Core) configure(r *request) {
 		return
 	}
 	switch {
+	case threadsInChat(r.m, r.cmd.IsForum) && r.m.Caps().ForumOnlyThreads:
+		c.configureForum(r, d)
 	case threadsInChat(r.m, r.cmd.IsForum):
 		text, choices := topicsStep(r.lang, d.UseThreads)
 		c.reply(r, text, choices)
@@ -95,6 +97,11 @@ func (c *Core) HandlePress(ctx context.Context, p messenger.Press) {
 	switch step {
 	case stepTopics:
 		useThreads := value == "yes"
+		if !useThreads && m.Caps().ForumOnlyThreads && threadsInChat(m, p.IsForum) {
+			// A forum without a main chat cannot turn threads off.
+			c.answer(ctx, m, p, "", false)
+			return
+		}
 		intro := ""
 		if useThreads {
 			// Creating threads takes a few seconds: stop the button's
@@ -145,6 +152,87 @@ func (c *Core) HandlePress(ctx context.Context, p messenger.Press) {
 		c.edit(ctx, m, p, summary(lang, value, useThreads), nil)
 	}
 	c.answer(ctx, m, p, "", false)
+}
+
+// configureForum sets up a forum that has no main chat: there is nothing
+// to choose, so its threads are created at once.
+func (c *Core) configureForum(r *request, d *storage.Destination) {
+	if !r.cmd.IsPrivate {
+		admin, err := r.m.IsChatAdmin(r.ctx, r.cmd.ChatID, r.cmd.UserID)
+		if err != nil {
+			log.Print(i18n.Tf(c.defaultLang(), i18n.MsgFailedToCheckBotAdminStatus, err))
+		}
+		if err != nil || !admin {
+			c.reply(r, i18n.T(r.lang, i18n.MsgCfgNotAdmin), nil)
+			return
+		}
+	}
+	created, skipped, err := c.createThreads(r.ctx, r.m, d, r.lang)
+	if err != nil {
+		c.reply(r, err.Error(), nil)
+		return
+	}
+	if err := c.store.SetDestinationSettings(d.ID, d.Format, true); err != nil {
+		log.Print(i18n.Tf(c.defaultLang(), i18n.MsgFailedToSaveChatConfig, err))
+		c.reply(r, i18n.T(r.lang, i18n.MsgCfgFailed), nil)
+		return
+	}
+	c.reply(r, topicsResult(r.lang, created, skipped)+"\n\n"+summary(r.lang, d.Format, true), nil)
+}
+
+// GeneralThreadName names the thread for events without a category, in a
+// forum that has no main chat.
+const GeneralThreadName = "💬 General"
+
+// MakeThread returns the thread for an event category in a destination.
+// The outbox calls it when a forum without a main chat had no thread for a
+// message (failed is "") or the message's thread is gone (failed is its
+// ID). A stored thread other than failed is used as it is: an earlier
+// message already made it. Otherwise a new thread is created, replaces any
+// stored one of the same name and gets the category's route.
+func (c *Core) MakeThread(ctx context.Context, destID int64, topic, failed string) (string, error) {
+	route := topic
+	if route == "" {
+		route = storage.GeneralRoute
+	}
+	if id := c.store.ThreadFor(destID, route); id != "" && id != failed {
+		return id, nil
+	}
+	d, err := c.store.DestinationByID(destID)
+	if err != nil {
+		return "", err
+	}
+	if d == nil {
+		return "", fmt.Errorf("destination %d not found", destID)
+	}
+	m := c.ms[d.Messenger]
+	if m == nil {
+		return "", fmt.Errorf("messenger %s is not running", d.Messenger)
+	}
+	name := GeneralThreadName
+	for _, def := range platform.Topics {
+		if string(def.Topic) == topic {
+			name = def.Name
+		}
+	}
+	id, err := m.CreateThread(ctx, d.ChatID, name)
+	if err != nil {
+		return "", err
+	}
+	if old, err := c.store.Threads(d.ID); err == nil {
+		for _, t := range old {
+			if t.Name == name && t.ThreadID != id {
+				if err := c.store.DeleteThread(d.ID, t.ThreadID); err != nil {
+					log.Printf("❌ %s: %v", d.Messenger, err)
+				}
+			}
+		}
+	}
+	if err := c.store.SaveThread(storage.Thread{DestinationID: d.ID, ThreadID: id, Name: name}, route); err != nil {
+		return "", err
+	}
+	log.Print(i18n.Tf(c.defaultLang(), i18n.MsgTopicCreated, name, id))
+	return id, nil
 }
 
 // canConfigure reports why the user who pressed a button may not change the

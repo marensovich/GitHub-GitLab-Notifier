@@ -1,0 +1,77 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "📦 New release · Release 1.0",
+      "url": "https://gitlab.example.com/group/app/-/releases/v1.0.0",
+      "description": "> First stable release",
+      "color": 5793266,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "Tag",
+          "value": "`v1.0.0`",
+          "inline": true
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open release",
+          "url": "https://gitlab.example.com/group/app/-/releases/v1.0.0"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "📦 Новый релиз · Release 1.0",
+      "url": "https://gitlab.example.com/group/app/-/releases/v1.0.0",
+      "description": "> First stable release",
+      "color": 5793266,
+      "author": {
+        "name": "group/app",
+        "url": "https://gitlab.example.com/group/app"
+      },
+      "fields": [
+        {
+          "name": "Тег",
+          "value": "`v1.0.0`",
+          "inline": true
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть релиз",
+          "url": "https://gitlab.example.com/group/app/-/releases/v1.0.0"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

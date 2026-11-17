@@ -357,3 +357,48 @@ func TestHungSendTimesOut(t *testing.T) {
 		t.Errorf("status %q, want queued for a retry", e.status(t, id))
 	}
 }
+
+func TestNeedsThreadCreatesThread(t *testing.T) {
+	e := newEnv(t, plainCaps)
+	e.m.Fail(func(_ int, to messenger.Target) error {
+		if to.ThreadID == "" {
+			return messenger.ErrNeedsThread
+		}
+		return nil
+	})
+	var topics, failed []string
+	e.o.SetThreadMaker(func(_ context.Context, destID int64, topic, failedThread string) (string, error) {
+		topics = append(topics, topic)
+		failed = append(failed, failedThread)
+		return "77", nil
+	})
+	id := e.enqueue(t, "x", "", e.a)
+	e.drain()
+	sent := e.m.SentList()
+	if len(sent) != 1 || sent[0].Target.ThreadID != "77" || e.status(t, id) != storage.DeliveryDelivered || len(topics) != 1 {
+		t.Fatalf("sent %+v, status %q, maker calls %v", sent, e.status(t, id), topics)
+	}
+
+	// A message for a thread that is gone names that thread.
+	e.m.Fail(func(_ int, to messenger.Target) error {
+		switch to.ThreadID {
+		case "":
+			return messenger.ErrNeedsThread
+		case "55":
+			return messenger.ErrThreadNotFound
+		}
+		return nil
+	})
+	e.enqueue(t, "z", "55", e.a)
+	e.drain()
+	if len(failed) != 2 || failed[0] != "" || failed[1] != "55" {
+		t.Errorf("maker got failed threads %q, want [\"\" \"55\"]", failed)
+	}
+
+	e.o.SetThreadMaker(func(context.Context, int64, string, string) (string, error) { return "", errors.New("no rights") })
+	id = e.enqueue(t, "y", "", e.a)
+	e.drain()
+	if e.status(t, id) != storage.DeliveryQueued {
+		t.Errorf("status %q, want queued after a maker error", e.status(t, id))
+	}
+}

@@ -1,0 +1,67 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "⚪ Issue closed as not planned · #10 App crashes on start",
+      "url": "https://github.com/octo/hello/issues/10",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "footer": {
+        "text": "@maintainer"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Open issue",
+          "url": "https://github.com/octo/hello/issues/10"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "⚪ Issue закрыт как не запланированный · #10 App crashes on start",
+      "url": "https://github.com/octo/hello/issues/10",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "footer": {
+        "text": "@maintainer"
+      }
+    }
+  ],
+  "components": [
+    {
+      "type": 1,
+      "components": [
+        {
+          "type": 2,
+          "style": 5,
+          "label": "Открыть issue",
+          "url": "https://github.com/octo/hello/issues/10"
+        }
+      ]
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

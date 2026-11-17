@@ -142,6 +142,10 @@ func (s *Store) updateDest(id int64, query string, args ...any) error {
 	return nil
 }
 
+// GeneralRoute is the route key of events without a category, used where
+// such events need a thread of their own (a forum without a main chat).
+const GeneralRoute = "general"
+
 // SaveThread stores a thread and routes eventType to it ("" = no route).
 func (s *Store) SaveThread(t Thread, eventType string) error {
 	tx, err := s.db.Begin()

@@ -1,0 +1,53 @@
+--- en ---
+{
+  "embeds": [
+    {
+      "title": "🗑️ Deleted branch · feature/old",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "E-mail",
+          "value": "`octo@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}
+
+--- ru ---
+{
+  "embeds": [
+    {
+      "title": "🗑️ Удалена ветка · feature/old",
+      "color": 5793266,
+      "author": {
+        "name": "octo/hello",
+        "url": "https://github.com/octo/hello"
+      },
+      "fields": [
+        {
+          "name": "E-mail",
+          "value": "`octo@example.com`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "@octocat"
+      }
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

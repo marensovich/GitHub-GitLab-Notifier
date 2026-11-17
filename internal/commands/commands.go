@@ -146,7 +146,7 @@ func (c *Core) ensure(r *request) (*storage.Destination, error) {
 // threadsInChat reports whether events of this chat can go to threads:
 // the messenger has them and, on Telegram, the chat is a forum.
 func threadsInChat(m messenger.Messenger, isForum bool) bool {
-	return m.Caps().Threads && (m.Name() != config.MessengerTelegram || isForum)
+	return m.Caps().Threads && isForum
 }
 
 // status shows the chat settings, threads and subscriptions.
