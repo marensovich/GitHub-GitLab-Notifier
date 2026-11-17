@@ -330,3 +330,30 @@ func TestOutboxGauges(t *testing.T) {
 		}
 	}
 }
+
+func TestRejectedGivesUpAtOnce(t *testing.T) {
+	e := newEnv(t, plainCaps)
+	e.m.Fail(func(int, messenger.Target) error { return messenger.ErrRejected })
+	id := e.enqueue(t, "x", "", e.a)
+	e.drain()
+	if e.status(t, id) != storage.DeliveryFailed {
+		t.Fatalf("status %q, want failed after one rejected attempt", e.status(t, id))
+	}
+}
+
+func TestHungSendTimesOut(t *testing.T) {
+	e := newEnv(t, plainCaps)
+	e.o.sendTimeout = 50 * time.Millisecond
+	e.m.Hang = true
+	id := e.enqueue(t, "x", "", e.a)
+	done := make(chan struct{})
+	go func() { e.drain(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a hung send blocked the worker")
+	}
+	if e.status(t, id) != storage.DeliveryQueued {
+		t.Errorf("status %q, want queued for a retry", e.status(t, id))
+	}
+}

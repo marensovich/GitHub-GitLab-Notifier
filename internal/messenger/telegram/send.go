@@ -40,7 +40,7 @@ func (t *Telegram) Send(ctx context.Context, to messenger.Target, look string, l
 		return nil, err
 	}
 	attempts, err := t.send(ctx, chat, topic, look, lang, n)
-	return attempts, classify(err)
+	return attempts, t.redact(classify(err))
 }
 
 func (t *Telegram) send(ctx context.Context, chatID int64, topicID int, look string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {

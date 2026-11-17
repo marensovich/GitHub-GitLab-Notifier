@@ -3,9 +3,12 @@
 # Secrets such as ${TELEGRAM_TOKEN} come from the environment or the optional .env.
 #
 # Upgrading from 1.x with only a .env: the container still starts from the 1.x
-# variables and logs a warning. To convert them once, run
-#   docker compose run --rm -v "$PWD:/conf" notifier migrate-config --from /conf/.env --to /conf/config.yaml
-# then restart.
+# variables and logs a warning. To convert them once, run in this directory
+#   rmdir config.yaml 2>/dev/null   # Docker leaves an empty directory for the missing file
+#   docker run --rm -u 0 -v "$PWD:/conf" ghcr.io/marensovich/github-gitlab-notifier:latest \
+#     migrate-config --from /conf/.env --to /conf/config.yaml
+#   sudo chown 65532:65532 config.yaml   # the image runs as nonroot (uid 65532); the file stays 0600
+#   docker compose up -d
 #
 # The image comes from GitHub Container Registry (amd64, arm64, arm/v7).
 # Pin a version instead of "latest" if you prefer updating by hand, e.g. :2.0.

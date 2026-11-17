@@ -75,6 +75,8 @@ type Messenger struct {
 	// Attempts, when set, is what Send reports; a last attempt with an
 	// error fails the send.
 	Attempts []notify.Attempt
+	// Hang makes Send block until its context is done.
+	Hang bool
 }
 
 // SentList returns a copy of the sent notifications; safe while the
@@ -115,8 +117,13 @@ func (m *Messenger) Run(ctx context.Context, _ messenger.Handler) error {
 	return nil
 }
 
-func (m *Messenger) Send(_ context.Context, t messenger.Target, look string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
+func (m *Messenger) Send(ctx context.Context, t messenger.Target, look string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
 	m.mu.Lock()
+	if m.Hang {
+		m.mu.Unlock()
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
 	defer m.mu.Unlock()
 	m.call++
 	if m.fail != nil {

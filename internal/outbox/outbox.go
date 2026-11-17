@@ -52,7 +52,13 @@ type Outbox struct {
 	clock    func() time.Time
 	wake     map[string]chan struct{}
 	limiters map[string]*limiter
+	// sendTimeout bounds one send, so a hung request cannot stop the
+	// messenger's worker.
+	sendTimeout time.Duration
 }
+
+// sendTimeout is how long one send may take before it counts as failed.
+const sendTimeout = 30 * time.Second
 
 // New returns an outbox for the given adapters, keyed by messenger name.
 // The outbox gauges of m are read from the store.
@@ -62,7 +68,7 @@ func New(store *storage.Store, ms map[string]messenger.Messenger, m *metrics.Met
 	}
 	m.SetOutboxCounts(store.OutboxCounts)
 	o := &Outbox{store: store, ms: ms, metrics: m, clock: clock,
-		wake: map[string]chan struct{}{}, limiters: map[string]*limiter{}}
+		wake: map[string]chan struct{}{}, limiters: map[string]*limiter{}, sendTimeout: sendTimeout}
 	for name, msg := range ms {
 		o.wake[name] = make(chan struct{}, 1)
 		o.limiters[name] = newLimiter(msg.Caps())
@@ -187,6 +193,8 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, o.sendTimeout)
+	defer cancel()
 	to := messenger.Target{ChatID: d.ChatID, ThreadID: it.ThreadID}
 	attempts, err := m.Send(ctx, to, p.Look, p.Lang, p.N)
 	o.count(name, attempts)
@@ -226,6 +234,10 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 		if err := o.store.SetDestinationInactive(d.ID, true); err != nil {
 			log.Printf("❌ outbox: %v", err)
 		}
+	case messenger.ClassRejected:
+		// The same message would be refused again.
+		log.Printf("❌ %s: chat %s refused a message, giving up on it: %v", name, d.ChatID, err)
+		o.dead(it, err.Error())
 	default:
 		o.retry(name, it, err)
 	}

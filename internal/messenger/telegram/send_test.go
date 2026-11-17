@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/mymmrac/telego"
 )
@@ -271,5 +272,25 @@ func TestSendButtonURLRefusedResendsAsLinks(t *testing.T) {
 	}
 	if got := formats(attempts); len(got) != 3 || got[2] != "classic" {
 		t.Errorf("attempts = %v", got)
+	}
+}
+
+// A network error quotes the request URL, which holds the bot token.
+func TestErrorsHideToken(t *testing.T) {
+	const token = "123456:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	srv := httptest.NewServer(http.NotFoundHandler())
+	srv.Close()
+	api, err := telego.NewBot(token, telego.WithHTTPClient(&http.Client{}), telego.WithAPIServer(srv.URL), telego.WithDiscardLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := newWithAPI(api, &telego.User{ID: 42, IsBot: true}, i18n.EN, "test", false)
+	_, err = b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatClassic, i18n.EN, sample())
+	if err == nil || strings.Contains(err.Error(), token) || strings.Contains(err.Error(), "AAAAAAAAAA") {
+		t.Errorf("send error = %v", err)
+	}
+	b.lastContact = time.Time{}
+	if err := b.Health(context.Background()); err == nil || strings.Contains(err.Error(), "AAAAAAAAAA") {
+		t.Errorf("health error = %v", err)
 	}
 }

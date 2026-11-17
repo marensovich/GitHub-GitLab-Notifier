@@ -27,7 +27,9 @@ const Name = config.MessengerTelegram
 
 // Telegram is the Telegram adapter.
 type Telegram struct {
-	api     *telego.Bot
+	api *telego.Bot
+	// token is hidden in every error the adapter returns or keeps.
+	token   string
 	self    *telego.User
 	lang    i18n.Lang
 	version string
@@ -69,6 +71,7 @@ func New(cfg config.Telegram, defaultLang i18n.Lang, version string) (*Telegram,
 	}
 	self, err := api.GetMe(context.Background())
 	if err != nil {
+		err = (&Telegram{token: cfg.Token}).redact(err)
 		return nil, fmt.Errorf(i18n.T(defaultLang, i18n.MsgFailedToGetBotInfo), err)
 	}
 	log.Printf(i18n.T(defaultLang, i18n.MsgBotRegistered), self.Username)
@@ -76,7 +79,7 @@ func New(cfg config.Telegram, defaultLang i18n.Lang, version string) (*Telegram,
 }
 
 func newWithAPI(api *telego.Bot, self *telego.User, lang i18n.Lang, version string, rich bool) *Telegram {
-	t := &Telegram{api: api, self: self, lang: lang, version: version, rich: rich}
+	t := &Telegram{api: api, token: api.Token(), self: self, lang: lang, version: version, rich: rich}
 	t.contact(nil)
 	return t
 }
@@ -271,10 +274,29 @@ func (t *Telegram) contact(err error) {
 	t.healthMu.Lock()
 	defer t.healthMu.Unlock()
 	if err != nil {
-		t.lastErr = err
+		t.lastErr = t.redact(err)
 		return
 	}
 	t.lastContact, t.lastErr = time.Now(), nil
+}
+
+// redacted is an error whose text has the bot token cut out; errors.Is and
+// errors.As still see the original.
+type redacted struct {
+	text string
+	err  error
+}
+
+func (r *redacted) Error() string { return r.text }
+func (r *redacted) Unwrap() error { return r.err }
+
+// redact hides the bot token in err's text: net/http errors quote the
+// request URL, which carries it (https://api.telegram.org/bot<token>/...).
+func (t *Telegram) redact(err error) error {
+	if err == nil || t.token == "" || !strings.Contains(err.Error(), t.token) {
+		return err
+	}
+	return &redacted{text: strings.ReplaceAll(err.Error(), t.token, "<token>"), err: err}
 }
 
 // Health reports whether the Telegram API answered recently. When the last

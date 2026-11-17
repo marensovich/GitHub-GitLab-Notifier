@@ -557,6 +557,7 @@ cmd_update() {
 
     cp -f "${INSTALL_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}.bak"
     cp -f "${UNIT_FILE}" "${UNIT_FILE}.bak"
+    snapshot_db
     install_binary "${bin}"
     if ! migrate_legacy_config; then
         warn "Could not convert ${LEGACY_CONFIG}, rolling back"
@@ -567,6 +568,7 @@ cmd_update() {
     sleep 2
     if systemctl is-active --quiet "${SERVICE_NAME}"; then
         rm -f "${UNIT_FILE}.bak"
+        drop_db_snapshot
         success "Service restarted with the new version (previous binary: ${BINARY_NAME}.bak)"
         health_check || true
     else
@@ -575,8 +577,48 @@ cmd_update() {
     fi
 }
 
-# rollback puts back the previous binary, unit and 1.x configuration.
+DB_SNAPSHOT=""
+
+# snapshot_db stops the service and copies the database aside, because the
+# new version may upgrade its schema before it fails to start, and the old
+# binary refuses a newer schema.
+snapshot_db() {
+    local db="${DATA_DIR}/notifier.db" f
+    [[ -f "${db}" ]] || return 0
+    systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+    for f in "${db}" "${db}-wal" "${db}-shm"; do
+        if [[ -f "${f}" ]]; then
+            cp -p "${f}" "${f}.pre-update"
+        fi
+    done
+    DB_SNAPSHOT="${db}"
+}
+
+drop_db_snapshot() {
+    [[ -n "${DB_SNAPSHOT}" ]] || return 0
+    rm -f "${DB_SNAPSHOT}.pre-update" "${DB_SNAPSHOT}-wal.pre-update" "${DB_SNAPSHOT}-shm.pre-update"
+}
+
+# restore_db puts the database from before the update back; the one the new
+# version touched is kept as notifier.db.failed-update.
+restore_db() {
+    [[ -n "${DB_SNAPSHOT}" ]] || return 0
+    local f
+    systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+    mv -f "${DB_SNAPSHOT}" "${DB_SNAPSHOT}.failed-update"
+    rm -f "${DB_SNAPSHOT}-wal" "${DB_SNAPSHOT}-shm"
+    for f in "${DB_SNAPSHOT}" "${DB_SNAPSHOT}-wal" "${DB_SNAPSHOT}-shm"; do
+        if [[ -f "${f}.pre-update" ]]; then
+            mv -f "${f}.pre-update" "${f}"
+        fi
+    done
+    warn "Database restored from before the update (the new version's copy: ${DB_SNAPSHOT}.failed-update)"
+}
+
+# rollback puts back the previous binary, unit, 1.x configuration and
+# database.
 rollback() {
+    restore_db
     mv -f "${INSTALL_DIR}/${BINARY_NAME}.bak" "${INSTALL_DIR}/${BINARY_NAME}"
     if [[ -f "${UNIT_FILE}.bak" ]]; then
         mv -f "${UNIT_FILE}.bak" "${UNIT_FILE}"
