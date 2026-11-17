@@ -1,17 +1,18 @@
-package notify
+package telegram
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"strings"
 )
 
-// Classic renders n as a classic Telegram HTML message (parse mode HTML) and
+// RenderClassic renders n as a classic Telegram HTML message (parse mode HTML) and
 // the inline keyboard that carries its buttons.
 //
 // The text is cut down to Telegram's message limit when needed.
-func Classic(lang i18n.Lang, n Notification) (string, [][]Button) {
-	var kb [][]Button
-	text := fit(n, func(n Notification) string {
+func RenderClassic(lang i18n.Lang, n notify.Notification) (string, [][]notify.Button) {
+	var kb [][]notify.Button
+	text := fit(n, func(n notify.Notification) string {
 		var t string
 		t, kb = classic(lang, n)
 		return t
@@ -19,7 +20,7 @@ func Classic(lang i18n.Lang, n Notification) (string, [][]Button) {
 	return text, kb
 }
 
-func classic(lang i18n.Lang, n Notification) (string, [][]Button) {
+func classic(lang i18n.Lang, n notify.Notification) (string, [][]notify.Button) {
 	var sb strings.Builder
 
 	sb.WriteString(esc(strings.TrimSpace(n.Emoji+" "+n.Heading)) + "\n")
@@ -63,9 +64,9 @@ func classic(lang i18n.Lang, n Notification) (string, [][]Button) {
 		}
 	}
 
-	var kb [][]Button
+	var kb [][]notify.Button
 	if bs := buttons(n.Buttons); len(bs) > 0 {
-		kb = [][]Button{bs}
+		kb = [][]notify.Button{bs}
 	}
 	return strings.TrimRight(sb.String(), "\n"), kb
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"bytes"
@@ -104,8 +105,8 @@ func renderGolden(t *testing.T, h EventHandler, payload []byte) []byte {
 			}
 			fmt.Fprintf(&b, "topic: %s\n", topic)
 		}
-		rich := notify.Rich(lang, n)
-		if err := notify.CheckRichHTML(rich); err != nil {
+		rich := telegram.RenderRich(lang, n)
+		if err := telegram.CheckRichHTML(rich); err != nil {
 			t.Errorf("%s: invalid rich html: %v\n%s", lang, err, rich)
 		}
 		fmt.Fprintf(&b, "\n--- %s rich ---\n%s\n", lang, rich)
@@ -118,8 +119,8 @@ func renderGolden(t *testing.T, h EventHandler, payload []byte) []byte {
 // lists its inline keyboard.
 func renderClassic(t *testing.T, lang i18n.Lang, n notify.Notification) string {
 	t.Helper()
-	text, kb := notify.Classic(lang, n)
-	if err := notify.CheckClassicHTML(text); err != nil {
+	text, kb := telegram.RenderClassic(lang, n)
+	if err := telegram.CheckClassicHTML(text); err != nil {
 		t.Errorf("%s: invalid classic html: %v\n%s", lang, err, text)
 	}
 	var bs []string

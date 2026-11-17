@@ -14,9 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 
 	"github.com/mymmrac/telego"
 	"github.com/mymmrac/telego/telegoutil"
@@ -30,26 +27,12 @@ type Bot struct {
 	lang    i18n.Lang
 	store   legacyStore
 	version string
-	// rich enables rich messages for notifications (RICH_MESSAGES).
-	rich bool
-	// richMissing is set when the Bot API server has no sendRichMessage
-	// (an older self-hosted server); classic messages are sent from then on.
-	richMissing atomic.Bool
-
-	// Last successful call to the Telegram API and the last error, for /healthz.
-	healthMu    sync.Mutex
-	lastContact time.Time
-	lastErr     error
+	// richAvailable reports whether rich messages are sent right now.
+	richAvailable func() bool
 }
 
-// probeInterval is how often the bot calls getMe to check the Telegram API.
-const probeInterval = time.Minute
-
-// staleAfter is how long without a successful API call the bot reports unhealthy.
-const staleAfter = 3 * probeInterval
-
 // NewBot creates a Bot with an optional proxy configured from environment variables.
-func NewBot(lang i18n.Lang, store *storage.Store, version string, rich bool) (*Bot, error) {
+func NewBot(lang i18n.Lang, store *storage.Store, version string, richAvailable func() bool) (*Bot, error) {
 	token := os.Getenv("BOT_TOKEN")
 	if token == "" {
 		return nil, errors.New(i18n.T(lang, i18n.MsgBotTokenIsNotSet))
@@ -72,15 +55,14 @@ func NewBot(lang i18n.Lang, store *storage.Store, version string, rich bool) (*B
 	}
 
 	bot := &Bot{
-		api:     api,
-		token:   token,
-		self:    self,
-		lang:    lang,
-		store:   legacyStore{store},
-		version: version,
-		rich:    rich,
+		api:           api,
+		token:         token,
+		self:          self,
+		lang:          lang,
+		store:         legacyStore{store},
+		version:       version,
+		richAvailable: richAvailable,
 	}
-	bot.contact(nil)
 
 	log.Printf(i18n.T(lang, i18n.MsgBotRegistered), bot.self.Username)
 	return bot, nil
@@ -143,60 +125,11 @@ func (b *Bot) Start(ctx context.Context) {
 			b.consume(update)
 		}
 	}()
-	go b.probe(ctx)
 }
 
-// probe calls getMe every probeInterval so /healthz knows whether the
-// Telegram API is reachable without calling it on every request.
-func (b *Bot) probe(ctx context.Context) {
-	ticker := time.NewTicker(probeInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			callCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			_, err := b.api.GetMe(callCtx)
-			cancel()
-			b.contact(err)
-		}
-	}
-}
-
-// contact records the result of a Telegram API call.
-func (b *Bot) contact(err error) {
-	b.healthMu.Lock()
-	defer b.healthMu.Unlock()
-	if err != nil {
-		b.lastErr = err
-		return
-	}
-	b.lastContact, b.lastErr = time.Now(), nil
-}
-
-// RichAvailable reports whether rich messages are sent right now: they are
-// switched on (RICH_MESSAGES) and the Bot API server supports them.
+// RichAvailable reports whether rich messages are sent right now.
 func (b *Bot) RichAvailable() bool {
-	return b.rich && !b.richMissing.Load()
-}
-
-// CheckTelegram reports whether the Telegram API answered recently.
-func (b *Bot) CheckTelegram(context.Context) error {
-	b.healthMu.Lock()
-	defer b.healthMu.Unlock()
-	return telegramHealth(b.lastContact, b.lastErr, time.Now())
-}
-
-func telegramHealth(lastContact time.Time, lastErr error, now time.Time) error {
-	if now.Sub(lastContact) < staleAfter {
-		return nil
-	}
-	ago := now.Sub(lastContact).Round(time.Second)
-	if lastErr != nil {
-		return fmt.Errorf("no successful Telegram API call for %s: %w", ago, lastErr)
-	}
-	return fmt.Errorf("no successful Telegram API call for %s", ago)
+	return b.richAvailable == nil || b.richAvailable()
 }
 
 // registerCommands publishes the command list shown in the Telegram "Menu" button.

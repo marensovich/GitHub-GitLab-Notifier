@@ -2,9 +2,13 @@ package main
 
 import (
 	"GitHub-GitLab-Notifier/internal/bot"
+	"GitHub-GitLab-Notifier/internal/config"
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/messenger"
+	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/internal/server"
 	"GitHub-GitLab-Notifier/internal/web"
 	"GitHub-GitLab-Notifier/storage"
@@ -20,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -71,7 +76,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	b, err := bot.NewBot(lang, store, Version, richMessages())
+	tg, err := telegram.New(telegramConfig(), lang, Version)
+	if err != nil {
+		log.Fatal(err)
+	}
+	b, err := bot.NewBot(lang, store, Version, tg.RichAvailable)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,13 +102,13 @@ func main() {
 		ServeMetrics:        metricsEnabled && metricsAddr == "",
 		Checks: map[string]server.Check{
 			"db":       store.Ping,
-			"telegram": b.CheckTelegram,
+			"telegram": tg.Health,
 		},
-	}, d, store, b)
+	}, d, store, telegramSender{tg})
 	metricsSrv := startMetrics(lang, m, metricsEnabled, metricsAddr)
 	go srv.PruneDeliveries(ctx)
 
-	panel := startPanel(lang, store, b.RichAvailable)
+	panel := startPanel(lang, store, tg.RichAvailable)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
@@ -212,6 +221,41 @@ func richMessages() bool {
 		return true
 	}
 	return on
+}
+
+// telegramConfig reads the Telegram settings from the environment, until
+// config.yaml replaces it.
+func telegramConfig() config.Telegram {
+	rich := richMessages()
+	cfg := config.Telegram{
+		Enabled:      true,
+		Token:        os.Getenv("BOT_TOKEN"),
+		APIURL:       os.Getenv("TELEGRAM_API_URL"),
+		RichMessages: &rich,
+	}
+	enabled, _ := strconv.ParseBool(os.Getenv("PROXY_ENABLED"))
+	host, port := os.Getenv("PROXY_HOST"), os.Getenv("PROXY_PORT")
+	if enabled && host != "" && port != "" {
+		scheme := "http"
+		switch strings.ToLower(os.Getenv("PROXY_TYPE")) {
+		case "socks", "socks5":
+			scheme = "socks5"
+		}
+		cfg.Proxy = scheme + "://" + net.JoinHostPort(host, port)
+	}
+	return cfg
+}
+
+// telegramSender lets the webhook server send through the Telegram adapter
+// until the outbox takes over delivery.
+type telegramSender struct{ tg *telegram.Telegram }
+
+func (s telegramSender) SendNotification(chatID int64, topicID int, format string, lang i18n.Lang, n notify.Notification) ([]notify.Attempt, error) {
+	to := messenger.Target{ChatID: strconv.FormatInt(chatID, 10)}
+	if topicID > 0 {
+		to.ThreadID = strconv.Itoa(topicID)
+	}
+	return s.tg.Send(context.Background(), to, format, lang, n)
 }
 
 func firstNonEmpty(values ...string) string {

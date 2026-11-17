@@ -1,6 +1,7 @@
-package notify
+package telegram
 
 import (
+	"GitHub-GitLab-Notifier/internal/notify"
 	"html"
 	"unicode/utf16"
 )
@@ -25,10 +26,10 @@ func VisibleLen(s string) int {
 
 // shrinkSteps drop the least important content first. Each step works on a
 // copy, so the caller's notification is never changed.
-var shrinkSteps = []func(*Notification){
+var shrinkSteps = []func(*notify.Notification){
 	// Listed items become a count ("…and N more").
-	func(n *Notification) {
-		sections := make([]Section, len(n.Sections))
+	func(n *notify.Notification) {
+		sections := make([]notify.Section, len(n.Sections))
 		for i, s := range n.Sections {
 			s.More += len(s.Items)
 			s.Items = nil
@@ -36,14 +37,14 @@ var shrinkSteps = []func(*Notification){
 		}
 		n.Sections = sections
 	},
-	func(n *Notification) { n.Quote = "" },
-	func(n *Notification) { n.Notes = nil },
+	func(n *notify.Notification) { n.Quote = "" },
+	func(n *notify.Notification) { n.Notes = nil },
 	// Long field values keep their first parts.
-	func(n *Notification) {
-		fields := make([]Field, len(n.Fields))
+	func(n *notify.Notification) {
+		fields := make([]notify.Field, len(n.Fields))
 		for i, f := range n.Fields {
 			if len(f.Value) > fitFieldParts {
-				f.Value = append(f.Value[:fitFieldParts:fitFieldParts], T("…"))
+				f.Value = append(f.Value[:fitFieldParts:fitFieldParts], notify.T("…"))
 			}
 			fields[i] = f
 		}
@@ -54,7 +55,7 @@ var shrinkSteps = []func(*Notification){
 // fit renders n and, while the result is over limit, renders it again with
 // less content. The heading, the item, the repository and the buttons are
 // never dropped.
-func fit(n Notification, render func(Notification) string, size func(string) int, limit int) string {
+func fit(n notify.Notification, render func(notify.Notification) string, size func(string) int, limit int) string {
 	out := render(n)
 	for _, step := range shrinkSteps {
 		if size(out) <= limit {

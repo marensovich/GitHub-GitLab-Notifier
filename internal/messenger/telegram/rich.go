@@ -1,18 +1,19 @@
-package notify
+package telegram
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"fmt"
 	"strings"
 )
 
-// Rich renders n as the html of a Telegram rich message, cut down to the
+// RenderRich renders n as the html of a Telegram rich message, cut down to the
 // rich message limit when needed.
-func Rich(lang i18n.Lang, n Notification) string {
-	return fit(n, func(n Notification) string { return rich(lang, n) }, runeLen, richMaxHTML)
+func RenderRich(lang i18n.Lang, n notify.Notification) string {
+	return fit(n, func(n notify.Notification) string { return rich(lang, n) }, runeLen, richMaxHTML)
 }
 
-func rich(lang i18n.Lang, n Notification) string {
+func rich(lang i18n.Lang, n notify.Notification) string {
 	var sb strings.Builder
 
 	sb.WriteString("<h4>" + esc(strings.TrimSpace(n.Emoji+" "+n.Heading)) + "</h4>\n")
@@ -73,7 +74,7 @@ func rich(lang i18n.Lang, n Notification) string {
 				sb.WriteString(" ")
 			}
 			sb.WriteString(`<tg-button type="url"`)
-			if b.Style != StyleDefault {
+			if b.Style != notify.StyleDefault {
 				sb.WriteString(` style="` + esc(string(b.Style)) + `"`)
 			}
 			sb.WriteString(` url="` + esc(b.URL) + `">` + esc(b.Label) + `</tg-button>`)

@@ -1,22 +1,23 @@
-package notify
+package telegram
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"strings"
 	"testing"
 )
 
 func TestClassicKeyboard(t *testing.T) {
 	n := samplePR()
-	n.Buttons = append(n.Buttons, Button{Label: "Third", URL: "https://x.io/3"}, Button{Label: "Fourth", URL: "https://x.io/4"})
-	text, kb := Classic(i18n.EN, n)
+	n.Buttons = append(n.Buttons, notify.Button{Label: "Third", URL: "https://x.io/3"}, notify.Button{Label: "Fourth", URL: "https://x.io/4"})
+	text, kb := RenderClassic(i18n.EN, n)
 	if err := CheckClassicHTML(text); err != nil {
 		t.Fatalf("invalid classic html: %v\n%s", err, text)
 	}
 	if len(kb) != 1 || len(kb[0]) != 3 {
 		t.Fatalf("want one row of 3 buttons, got %v", kb)
 	}
-	if kb[0][0].Label != "Open PR" || kb[0][0].Style != StylePrimary {
+	if kb[0][0].Label != "Open PR" || kb[0][0].Style != notify.StylePrimary {
 		t.Errorf("first button = %+v", kb[0][0])
 	}
 	for _, want := range []string{
@@ -38,7 +39,7 @@ func TestClassicKeyboard(t *testing.T) {
 }
 
 func TestClassicEscapesHostileText(t *testing.T) {
-	text, _ := Classic(i18n.EN, hostileNotification())
+	text, _ := RenderClassic(i18n.EN, hostileNotification())
 	if err := CheckClassicHTML(text); err != nil {
 		t.Fatalf("invalid classic html: %v\n%s", err, text)
 	}
@@ -46,12 +47,12 @@ func TestClassicEscapesHostileText(t *testing.T) {
 
 func TestClassicSectionLimit(t *testing.T) {
 	n := samplePR()
-	items := make([][]Part, 8)
+	items := make([][]notify.Part, 8)
 	for i := range items {
-		items[i] = []Part{T("c")}
+		items[i] = []notify.Part{notify.T("c")}
 	}
-	n.Sections = []Section{{Summary: "Commits", Items: items, ClassicMax: 5, More: 2}}
-	text, _ := Classic(i18n.EN, n)
+	n.Sections = []notify.Section{{Summary: "Commits", Items: items, ClassicMax: 5, More: 2}}
+	text, _ := RenderClassic(i18n.EN, n)
 	if got := strings.Count(text, "\n  c"); got != 5 {
 		t.Errorf("want 5 listed items, got %d:\n%s", got, text)
 	}

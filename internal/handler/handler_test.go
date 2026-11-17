@@ -2,7 +2,7 @@ package handler
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
-	"GitHub-GitLab-Notifier/internal/notify"
+	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"errors"
 	"os"
@@ -64,7 +64,7 @@ func runHandlerCases(t *testing.T, cases []handlerCase) {
 				// The classic text plus its buttons line carries every piece of
 				// content, so assertions run against it.
 				msg := renderClassic(t, lang, n)
-				if rich := notify.Rich(lang, n); strings.Contains(rich+msg, "???") || strings.Contains(rich+msg, "%!") {
+				if rich := telegram.RenderRich(lang, n); strings.Contains(rich+msg, "???") || strings.Contains(rich+msg, "%!") {
 					t.Errorf("%s: message has missing translation or bad format verb:\n%s\n%s", lang, msg, rich)
 				}
 				if lang != i18n.EN {

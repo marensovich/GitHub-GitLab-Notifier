@@ -329,7 +329,7 @@ func TestStatusShowsChatSettings(t *testing.T) {
 
 func TestStatusShowsRichSwitchedOff(t *testing.T) {
 	b, fake := newConfigureBot(t, nil)
-	b.rich = false
+	b.richAvailable = func() bool { return false }
 	c := chat(false)
 	if err := b.store.SaveChat(ChatConfig{ChatID: c.ID, Language: "en"}); err != nil {
 		t.Fatal(err)

@@ -3,6 +3,7 @@ package server
 import (
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/notify"
 	"GitHub-GitLab-Notifier/storage"
@@ -50,7 +51,7 @@ func (f *fakeSender) SendNotification(chatID int64, topicID int, format string, 
 		err := errors.New("topic not found")
 		return []notify.Attempt{{Format: format, Err: err}}, err
 	}
-	text, _ := notify.Classic(lang, n)
+	text, _ := telegram.RenderClassic(lang, n)
 	f.sent = append(f.sent, sentMessage{chatID, topicID, format, text})
 	if f.reply != nil {
 		return f.reply, f.reply[len(f.reply)-1].Err

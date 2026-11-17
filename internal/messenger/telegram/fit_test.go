@@ -1,34 +1,35 @@
-package notify
+package telegram
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/notify"
 	"strings"
 	"testing"
 )
 
 // huge returns a notification far over every Telegram limit: a field with
 // thousands of parts, a long quote, many notes and a long commit list.
-func huge(text string) Notification {
+func huge(text string) notify.Notification {
 	n := samplePR()
-	var value []Part
+	var value []notify.Part
 	for i := 0; i < 3000; i++ {
-		value = append(value, C(text), T(", "))
+		value = append(value, notify.C(text), notify.T(", "))
 	}
-	n.Fields = append(n.Fields, Field{Label: "Labels", Value: value})
+	n.Fields = append(n.Fields, notify.Field{Label: "Labels", Value: value})
 	n.Quote = strings.Repeat(text, 1000)
 	for i := 0; i < 200; i++ {
 		n.Notes = append(n.Notes, strings.Repeat(text, 20))
 	}
-	items := make([][]Part, 500)
+	items := make([][]notify.Part, 500)
 	for i := range items {
-		items[i] = []Part{T(strings.Repeat(text, 50))}
+		items[i] = []notify.Part{notify.T(strings.Repeat(text, 50))}
 	}
-	n.Sections = []Section{{Summary: "Commits", Items: items, ClassicMax: 100}}
+	n.Sections = []notify.Section{{Summary: "Commits", Items: items, ClassicMax: 100}}
 	return n
 }
 
 func TestClassicFitsTelegramLimit(t *testing.T) {
-	text, _ := Classic(i18n.EN, huge("label-<&>"))
+	text, _ := RenderClassic(i18n.EN, huge("label-<&>"))
 	if err := CheckClassicHTML(text); err != nil {
 		t.Fatalf("invalid classic html: %v", err)
 	}
@@ -41,7 +42,7 @@ func TestClassicFitsTelegramLimit(t *testing.T) {
 }
 
 func TestRichFitsOnEscapedHTML(t *testing.T) {
-	out := Rich(i18n.EN, huge("&<>&<>"))
+	out := RenderRich(i18n.EN, huge("&<>&<>"))
 	if err := CheckRichHTML(out); err != nil {
 		t.Fatalf("invalid rich html: %v", err)
 	}

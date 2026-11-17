@@ -63,6 +63,17 @@ type Handler interface {
 	HandlePress(ctx context.Context, p Press)
 }
 
+// CommandInfo is a command shown in a messenger's command menu.
+type CommandInfo struct {
+	Name, Description string
+}
+
+// CommandLister is implemented by a Handler that has a command menu; an
+// adapter that can show one asks for it in each supported language.
+type CommandLister interface {
+	Commands(lang i18n.Lang) []CommandInfo
+}
+
 // Messenger is one messenger adapter.
 type Messenger interface {
 	Name() string

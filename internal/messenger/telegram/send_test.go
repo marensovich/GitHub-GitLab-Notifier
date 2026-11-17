@@ -1,8 +1,10 @@
-package bot
+package telegram
 
 import (
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/messenger"
 	"GitHub-GitLab-Notifier/internal/notify"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -17,7 +19,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if err := i18n.Load("../../locales"); err != nil {
+	if err := i18n.Load("../../../locales"); err != nil {
 		panic(err)
 	}
 	os.Exit(m.Run())
@@ -59,7 +61,7 @@ func (f *fakeAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, reply)
 }
 
-func newSendBot(t *testing.T, rich bool, replies map[string][]string) (*Bot, *fakeAPI) {
+func newSendBot(t *testing.T, rich bool, replies map[string][]string) (*Telegram, *fakeAPI) {
 	t.Helper()
 	fake := &fakeAPI{replies: replies}
 	srv := httptest.NewServer(fake)
@@ -69,7 +71,7 @@ func newSendBot(t *testing.T, rich bool, replies map[string][]string) (*Bot, *fa
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &Bot{api: api, lang: i18n.EN, rich: rich}, fake
+	return newWithAPI(api, &telego.User{ID: 42, IsBot: true, Username: "notifier_bot"}, i18n.EN, "test", rich), fake
 }
 
 func apiError(code int, description string) string {
@@ -108,7 +110,7 @@ func methods(f *fakeAPI) []string {
 
 func TestSendRichOK(t *testing.T) {
 	b, fake := newSendBot(t, true, nil)
-	attempts, err := b.SendNotification(-100, 9, notify.FormatRich, i18n.EN, sample())
+	attempts, err := b.Send(context.Background(), messenger.Target{ChatID: "-100", ThreadID: "9"}, notify.FormatRich, i18n.EN, sample())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +134,7 @@ func TestSendRichRejectedFallsBack(t *testing.T) {
 	b, fake := newSendBot(t, true, map[string][]string{
 		"sendRichMessage": {apiError(400, "Bad Request: can't parse rich message")},
 	})
-	attempts, err := b.SendNotification(-100, 9, notify.FormatRich, i18n.EN, sample())
+	attempts, err := b.Send(context.Background(), messenger.Target{ChatID: "-100", ThreadID: "9"}, notify.FormatRich, i18n.EN, sample())
 	if err != nil {
 		t.Fatalf("fallback should succeed, got %v", err)
 	}
@@ -161,7 +163,7 @@ func TestSendTopicErrorNoFallback(t *testing.T) {
 	b, fake := newSendBot(t, true, map[string][]string{
 		"sendRichMessage": {apiError(400, "Bad Request: message thread not found")},
 	})
-	attempts, err := b.SendNotification(-100, 9, notify.FormatRich, i18n.EN, sample())
+	attempts, err := b.Send(context.Background(), messenger.Target{ChatID: "-100", ThreadID: "9"}, notify.FormatRich, i18n.EN, sample())
 	if err == nil {
 		t.Fatal("want the topic error returned")
 	}
@@ -177,7 +179,7 @@ func TestSend429NoFallback(t *testing.T) {
 	b, fake := newSendBot(t, true, map[string][]string{
 		"sendRichMessage": {apiError(429, "Too Many Requests: retry after 31")},
 	})
-	if _, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample()); err == nil {
+	if _, err := b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatRich, i18n.EN, sample()); err == nil {
 		t.Fatal("want the rate limit error returned")
 	}
 	if got := methods(fake); len(got) != 1 {
@@ -187,7 +189,7 @@ func TestSend429NoFallback(t *testing.T) {
 
 func TestSendClassicFormat(t *testing.T) {
 	b, fake := newSendBot(t, true, nil)
-	attempts, err := b.SendNotification(-100, 0, notify.FormatClassic, i18n.EN, sample())
+	attempts, err := b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatClassic, i18n.EN, sample())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +206,7 @@ func TestSendClassicFormat(t *testing.T) {
 
 func TestSendRichDisabled(t *testing.T) {
 	b, fake := newSendBot(t, false, nil)
-	if _, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample()); err != nil {
+	if _, err := b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatRich, i18n.EN, sample()); err != nil {
 		t.Fatal(err)
 	}
 	if got := methods(fake); len(got) != 1 || got[0] != "sendMessage" {
@@ -232,14 +234,14 @@ func TestSendRichMethodMissingFallsBackAndStops(t *testing.T) {
 	b, fake := newSendBot(t, true, map[string][]string{
 		"sendRichMessage": {apiError(404, "Not Found: method not found")},
 	})
-	attempts, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample())
+	attempts, err := b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatRich, i18n.EN, sample())
 	if err != nil {
 		t.Fatalf("want the classic fallback, got %v", err)
 	}
 	if got := formats(attempts); len(got) != 2 || got[0] != "rich:err" || got[1] != "classic" {
 		t.Errorf("attempts = %v", got)
 	}
-	if _, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample()); err != nil {
+	if _, err := b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatRich, i18n.EN, sample()); err != nil {
 		t.Fatal(err)
 	}
 	if got := methods(fake); len(got) != 3 || got[2] != "sendMessage" {
@@ -253,7 +255,7 @@ func TestSendButtonURLRefusedResendsAsLinks(t *testing.T) {
 		"sendRichMessage": {refused},
 		"sendMessage":     {refused, okMessage},
 	})
-	attempts, err := b.SendNotification(-100, 0, notify.FormatRich, i18n.EN, sample())
+	attempts, err := b.Send(context.Background(), messenger.Target{ChatID: "-100"}, notify.FormatRich, i18n.EN, sample())
 	if err != nil {
 		t.Fatalf("want delivery without buttons, got %v", err)
 	}
