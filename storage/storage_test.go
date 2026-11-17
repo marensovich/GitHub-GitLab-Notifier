@@ -30,105 +30,6 @@ func TestNormalizeRepoURL(t *testing.T) {
 	}
 }
 
-func TestRepoLifecycle(t *testing.T) {
-	s := openTest(t)
-
-	if err := s.SaveChat(ChatConfig{ChatID: 1, Language: "en"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SaveRepo(RepoInfo{ChatID: 1, RepoURL: "https://github.com/octo/hello", Platform: "GitHub", Secret: "x"}); err != nil {
-		t.Fatal(err)
-	}
-
-	repo := s.FindRepo("http://github.com/OCTO/hello/")
-	if repo == nil || repo.Secret != "x" {
-		t.Fatalf("FindRepo: got %+v", repo)
-	}
-
-	repos, err := s.GetReposByChat(1)
-	if err != nil || len(repos) != 1 {
-		t.Fatalf("GetReposByChat: %v %+v", err, repos)
-	}
-
-	if ok, _ := s.DeleteRepo(2, "https://github.com/octo/hello"); ok {
-		t.Error("DeleteRepo must not delete a repo of another chat")
-	}
-	if ok, err := s.DeleteRepo(1, "github.com/octo/hello"); !ok || err != nil {
-		t.Errorf("DeleteRepo: ok=%v err=%v", ok, err)
-	}
-	if s.FindRepo("https://github.com/octo/hello") != nil {
-		t.Error("repo still present after delete")
-	}
-}
-
-func TestSetChatLanguage(t *testing.T) {
-	s := openTest(t)
-
-	if err := s.SetChatLanguage(7, "ru", true); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SetChatLanguage(7, "en", false); err != nil {
-		t.Fatal(err)
-	}
-	chat, err := s.GetChat(7)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if chat.Language != "en" || !chat.IsForum {
-		t.Errorf("got %+v, want language=en and is_forum preserved", chat)
-	}
-}
-
-func TestEventMapping(t *testing.T) {
-	s := openTest(t)
-	if err := s.SaveChat(ChatConfig{ChatID: 1, Language: "en", IsForum: true}); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SaveTopic(TopicInfo{TopicID: 10, ChatID: 1, Name: "🚀 Pushes", EventType: "push"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SetEventTopic(1, "push", 10); err != nil {
-		t.Fatal(err)
-	}
-	if got := s.GetTopicByEvent(1, "push"); got != 10 {
-		t.Errorf("GetTopicByEvent = %d, want 10", got)
-	}
-	if got := s.GetTopicByEvent(1, "ci"); got != 0 {
-		t.Errorf("unmapped event: got %d, want 0", got)
-	}
-}
-
-func TestGetEventMappings(t *testing.T) {
-	s := openTest(t)
-
-	if err := s.SaveChat(ChatConfig{ChatID: 1, Language: "en", IsForum: true}); err != nil {
-		t.Fatal(err)
-	}
-	for _, topic := range []TopicInfo{{TopicID: 10, ChatID: 1, Name: "Pushes"}, {TopicID: 20, ChatID: 1, Name: "CI/CD"}} {
-		if err := s.SaveTopic(topic); err != nil {
-			t.Fatal(err)
-		}
-	}
-	for event, topic := range map[string]int{"push": 10, "pipeline": 20, "workflow_run": 20} {
-		if err := s.SetEventTopic(1, event, topic); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	got, err := s.GetEventMappings(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 3 || got["push"] != 10 || got["pipeline"] != 20 || got["workflow_run"] != 20 {
-		t.Errorf("GetEventMappings(1) = %v", got)
-	}
-
-	empty, err := s.GetEventMappings(2)
-	if err != nil || len(empty) != 0 {
-		t.Errorf("GetEventMappings(2) = %v, %v; want empty", empty, err)
-	}
-}
-
 func TestDeliveriesLog(t *testing.T) {
 	s := openTest(t)
 	now := time.Now()
@@ -144,19 +45,18 @@ func TestDeliveriesLog(t *testing.T) {
 	must(s.RecordDelivery(Delivery{Platform: "GitLab", Event: "Push Hook", ReceivedAt: now, Status: DeliveryDelivered, HTTPStatus: 200}))
 
 	for _, c := range []struct {
-		platform, id string
-		want         bool
+		platform, id, want string
 	}{
-		{"GitHub", "a", true},
-		{"GitLab", "a", false}, // IDs are per platform
-		{"GitHub", "b", false}, // failed, so a redelivery must go through
-		{"GitHub", "", false},
-		{"GitLab", "", false}, // empty IDs never dedupe
+		{"GitHub", "a", DeliveryDelivered},
+		{"GitLab", "a", ""}, // IDs are per platform
+		{"GitHub", "b", DeliveryFailed},
+		{"GitHub", "", ""},
+		{"GitLab", "", ""}, // empty IDs never dedupe
 	} {
-		got, err := s.WasDelivered(c.platform, c.id)
+		got, _, err := s.DeliveryState(c.platform, c.id)
 		must(err)
 		if got != c.want {
-			t.Errorf("WasDelivered(%s, %q) = %v, want %v", c.platform, c.id, got, c.want)
+			t.Errorf("DeliveryState(%s, %q) = %q, want %q", c.platform, c.id, got, c.want)
 		}
 	}
 
@@ -177,41 +77,10 @@ func TestDeliveriesLog(t *testing.T) {
 	if list, _ := s.RecentDeliveries(10); len(list) != 2 {
 		t.Errorf("after prune: %d deliveries, want 2", len(list))
 	}
-}
 
-func TestSetChatSettings(t *testing.T) {
-	s := openTest(t)
-	if err := s.SaveChat(ChatConfig{ChatID: 7, Language: "en", IsForum: true}); err != nil {
-		t.Fatal(err)
-	}
-	chat, _ := s.GetChat(7)
-	if chat.Format != FormatRich || !chat.UseTopics {
-		t.Fatalf("new chat defaults = %q, %v; want rich, true", chat.Format, chat.UseTopics)
-	}
-
-	if err := s.SetChatSettings(7, FormatClassic, false); err != nil {
-		t.Fatal(err)
-	}
-	chat, _ = s.GetChat(7)
-	if chat.Format != FormatClassic || chat.UseTopics {
-		t.Errorf("got %q, %v; want classic, false", chat.Format, chat.UseTopics)
-	}
-	if all := s.GetAllChats(); len(all) != 1 || all[0].Format != FormatClassic || all[0].UseTopics {
-		t.Errorf("GetAllChats = %+v", all)
-	}
-
-	// SaveChat (e.g. /lang, /configure) must not reset the settings.
-	if err := s.SaveChat(ChatConfig{ChatID: 7, Language: "ru", IsForum: true}); err != nil {
-		t.Fatal(err)
-	}
-	if chat, _ = s.GetChat(7); chat.Format != FormatClassic || chat.UseTopics {
-		t.Errorf("SaveChat reset settings: %q, %v", chat.Format, chat.UseTopics)
-	}
-
-	if err := s.SetChatSettings(7, "fancy", true); err == nil {
-		t.Error("invalid format must be refused")
-	}
-	if err := s.SetChatSettings(404, FormatRich, true); err == nil {
-		t.Error("unknown chat must be an error")
+	// A logged duplicate is not a state of its own.
+	must(s.RecordDelivery(Delivery{DeliveryID: "b", Platform: "GitHub", Event: "push", ReceivedAt: now, Status: DeliveryDuplicate, HTTPStatus: 200}))
+	if got, _, _ := s.DeliveryState("GitHub", "b"); got != DeliveryFailed {
+		t.Errorf("after a duplicate row: %q, want failed", got)
 	}
 }

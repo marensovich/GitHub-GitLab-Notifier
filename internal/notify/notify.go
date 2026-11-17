@@ -1,16 +1,10 @@
-// Package notify describes a notification independently of the messenger and
-// renders it for Telegram, either as a rich message (Bot API 10.x) or as a
-// classic HTML message with an inline keyboard.
+// Package notify describes a notification independently of the messenger.
 //
-// Handlers fill a Notification with plain text; every piece of HTML, and so
-// every bit of escaping, is produced here.
+// Handlers fill a Notification with plain text; each messenger adapter
+// renders it, and so does all the escaping.
 package notify
 
-import (
-	"html"
-	"strings"
-	"time"
-)
+import "time"
 
 // Style is the colour of a button.
 type Style string
@@ -101,86 +95,3 @@ const (
 	FormatRich    = "rich"
 	FormatClassic = "classic"
 )
-
-const (
-	maxButtons     = 3
-	maxTitle       = 200
-	maxQuote       = 500
-	maxRichItems   = 20
-	timeFallbackFm = "2006-01-02 15:04 UTC"
-)
-
-// safeURL returns u if it is an http(s) URL, otherwise "".
-func safeURL(u string) string {
-	l := strings.ToLower(strings.TrimSpace(u))
-	if strings.HasPrefix(l, "https://") || strings.HasPrefix(l, "http://") {
-		return strings.TrimSpace(u)
-	}
-	return ""
-}
-
-func esc(s string) string { return html.EscapeString(s) }
-
-// truncate shortens s to at most max runes, appending "…" when cut.
-func truncate(s string, max int) string {
-	r := []rune(s)
-	if len(r) <= max {
-		return s
-	}
-	return string(r[:max-1]) + "…"
-}
-
-func link(l Link, max int) string {
-	text := esc(truncate(l.Text, max))
-	if u := safeURL(l.URL); u != "" {
-		return `<a href="` + esc(u) + `">` + text + `</a>`
-	}
-	return text
-}
-
-func parts(ps []Part) string {
-	var sb strings.Builder
-	for _, p := range ps {
-		switch p.Kind {
-		case KindCode:
-			sb.WriteString("<code>" + esc(truncate(p.Text, maxTitle)) + "</code>")
-		case KindBold:
-			sb.WriteString("<b>" + esc(truncate(p.Text, maxTitle)) + "</b>")
-		case KindLink:
-			sb.WriteString(link(Link{Text: p.Text, URL: p.URL}, maxTitle))
-		default:
-			sb.WriteString(esc(truncate(p.Text, maxTitle)))
-		}
-	}
-	return sb.String()
-}
-
-func quote(s string) string {
-	s = strings.TrimSpace(strings.ReplaceAll(s, "\r\n", "\n"))
-	return esc(truncate(s, maxQuote))
-}
-
-// buttons returns at most maxButtons buttons with safe URLs.
-func buttons(bs []Button) []Button {
-	var out []Button
-	for _, b := range bs {
-		if u := safeURL(b.URL); u != "" && b.Label != "" {
-			b.URL = u
-			out = append(out, b)
-		}
-		if len(out) == maxButtons {
-			break
-		}
-	}
-	return out
-}
-
-func nonEmpty(fs []Field) []Field {
-	var out []Field
-	for _, f := range fs {
-		if len(f.Value) > 0 {
-			out = append(out, f)
-		}
-	}
-	return out
-}

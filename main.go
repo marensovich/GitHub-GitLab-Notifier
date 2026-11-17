@@ -1,29 +1,28 @@
 package main
 
 import (
-	"GitHub-GitLab-Notifier/internal/bot"
+	"GitHub-GitLab-Notifier/internal/commands"
+	"GitHub-GitLab-Notifier/internal/config"
 	"GitHub-GitLab-Notifier/internal/dispatcher"
 	"GitHub-GitLab-Notifier/internal/i18n"
+	"GitHub-GitLab-Notifier/internal/messenger"
+	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
+	"GitHub-GitLab-Notifier/internal/outbox"
 	"GitHub-GitLab-Notifier/internal/server"
 	"GitHub-GitLab-Notifier/internal/web"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
 	"embed"
 	"errors"
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 //go:embed locales/*.json
@@ -35,81 +34,81 @@ var (
 )
 
 func main() {
-	showVersion := flag.Bool("version", false, "Show version and exit")
-	langFlag := flag.String("lang", "", "Default language (ru, en). Overrides BOT_LANG")
-	envFile := flag.String("config", ".env", "Path to the .env configuration file")
-	dbPath := flag.String("db", "", "Path to the SQLite database. Overrides DB_PATH (default data/notifier.db)")
-	flag.Parse()
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
 
-	if *showVersion {
-		fmt.Printf("GitHub-GitLab-Notifier %s (built %s)\n", Version, BuildTime)
-		os.Exit(0)
-	}
-
+// serve runs the bot until SIGINT or SIGTERM.
+func serve(cfg *config.Config) error {
 	locales, _ := fs.Sub(embeddedLocales, "locales")
 	if err := i18n.LoadFS(locales); err != nil {
-		log.Fatalf("❌ %v", err)
+		return err
 	}
+	lang := i18n.Lang(cfg.Defaults.Language)
 
-	envErr := godotenv.Load(*envFile)
-
-	lang := i18n.Lang(firstNonEmpty(*langFlag, os.Getenv("BOT_LANG"), string(i18n.EN)))
-	if !i18n.Valid(lang) {
-		fmt.Printf("Invalid language: %s. Supported: %v\n", lang, i18n.Supported)
-		os.Exit(1)
-	}
-	if envErr != nil {
-		log.Println(i18n.T(lang, i18n.MsgEnvFileNotFound))
-	}
-
-	var chatID int64
-	if chatIDStr := os.Getenv("CHAT_ID"); chatIDStr != "" {
-		var err error
-		chatID, err = strconv.ParseInt(chatIDStr, 10, 64)
-		if err != nil {
-			log.Fatalf(i18n.T(lang, i18n.MsgInvalidBotChatId), err)
-		}
-	}
-
-	store, err := storage.Open(firstNonEmpty(*dbPath, os.Getenv("DB_PATH"), "data/notifier.db"))
+	store, err := storage.Open(cfg.Storage.Path)
 	if err != nil {
-		log.Fatalf("❌ %v", err)
+		return err
 	}
 	defer store.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	b, err := bot.NewBot(lang, store, Version, richMessages())
-	if err != nil {
-		log.Fatal(err)
+	// Adapters of the enabled messengers.
+	ms := map[string]messenger.Messenger{}
+	var tg *telegram.Telegram
+	if t := cfg.Messengers.Telegram; t != nil && t.Enabled {
+		if tg, err = telegram.New(*t, lang, Version); err != nil {
+			return err
+		}
+		ms[telegram.Name] = tg
 	}
-	b.Start(ctx)
+	for _, name := range cfg.Enabled() {
+		if ms[name] == nil {
+			log.Printf("⚠️ %s is enabled in the configuration but not available in this build yet", name)
+		}
+	}
+	if len(ms) == 0 {
+		return errors.New("no messenger to run: enable telegram in config.yaml")
+	}
 
-	notifyUnknown, _ := strconv.ParseBool(os.Getenv("NOTIFY_UNKNOWN_EVENTS"))
-	d := dispatcher.NewDispatcher(lang, notifyUnknown)
+	core := commands.New(store, cfg, Version, ms)
+	if tg != nil {
+		go func() {
+			if err := tg.Run(ctx, core); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
 
+	d := dispatcher.NewDispatcher(lang, cfg.Defaults.NotifyUnknownEvents)
 	m := metrics.New(Version)
-	metricsEnabled, metricsAddr := metricsConfig()
+
+	// The webhook server stores messages; the outbox sends and retries them.
+	o := outbox.New(store, ms, m, time.Now)
+	go o.Run(ctx)
 
 	srv := server.New(server.Config{
-		Addr:                net.JoinHostPort(os.Getenv("SERVER_ADDRESS"), firstNonEmpty(os.Getenv("SERVER_PORT"), "8080")),
-		DefaultChatID:       chatID,
+		Addr:                cfg.Server.Listen,
 		DefaultLang:         lang,
-		WebhookSecret:       os.Getenv("WEBHOOK_SECRET"),
+		WebhookSecret:       cfg.Security.WebhookSecret,
 		Version:             Version,
-		DeliveriesRetention: deliveriesRetention(lang),
+		DeliveriesRetention: time.Duration(cfg.RetentionDays()) * 24 * time.Hour,
 		Metrics:             m,
-		ServeMetrics:        metricsEnabled && metricsAddr == "",
-		Checks: map[string]server.Check{
-			"db":       store.Ping,
-			"telegram": b.CheckTelegram,
-		},
-	}, d, store, b)
-	metricsSrv := startMetrics(lang, m, metricsEnabled, metricsAddr)
+		ServeMetrics:        cfg.MetricsEnabled() && cfg.Metrics.Listen == "",
+		Checks:              server.Checks(store.Ping, ms),
+	}, d, store, o)
+	metricsSrv := startMetrics(lang, m, cfg.MetricsEnabled(), cfg.Metrics.Listen)
 	go srv.PruneDeliveries(ctx)
 
-	panel := startPanel(lang, store, b.RichAvailable)
+	richAvailable := func() bool { return true }
+	if tg != nil {
+		richAvailable = tg.RichAvailable
+	}
+	panel, err := startPanel(lang, cfg, store, richAvailable)
+	if err != nil {
+		return err
+	}
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
@@ -117,7 +116,7 @@ func main() {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			log.Fatalf(i18n.T(lang, i18n.MsgServerFailed), err)
+			return fmt.Errorf(i18n.T(lang, i18n.MsgServerFailed), err)
 		}
 	case <-ctx.Done():
 		log.Println(i18n.T(lang, i18n.MsgShuttingDown))
@@ -135,28 +134,28 @@ func main() {
 			}
 		}
 	}
+	return nil
 }
 
-// startPanel starts the local web panel when PANEL_ADDRESS is set.
-// A misconfigured address stops the bot; a panel that fails later only
-// logs the error, so notifications keep flowing.
-func startPanel(lang i18n.Lang, store *storage.Store, richAvailable func() bool) *web.Server {
-	addr := os.Getenv("PANEL_ADDRESS")
+// startPanel starts the local web panel when panel.listen is set. A
+// misconfigured address stops the bot; a panel that fails later only logs
+// the error, so notifications keep flowing.
+func startPanel(lang i18n.Lang, cfg *config.Config, store *storage.Store, richAvailable func() bool) (*web.Server, error) {
+	addr := cfg.Panel.Listen
 	if addr == "" {
-		return nil
+		return nil, nil
 	}
-	allowRemote, _ := strconv.ParseBool(os.Getenv("PANEL_ALLOW_REMOTE"))
-
 	panel, err := web.New(web.Config{
 		Addr:            addr,
-		AllowRemote:     allowRemote,
-		GlobalSecretSet: os.Getenv("WEBHOOK_SECRET") != "",
+		AllowRemote:     cfg.Panel.AllowRemote,
+		GlobalSecretSet: cfg.Security.WebhookSecret != "",
 		Version:         Version,
 		StartedAt:       time.Now(),
 		RichAvailable:   richAvailable,
+		Secrets:         panelSecrets(cfg),
 	}, store)
 	if err != nil {
-		log.Fatalf(i18n.T(lang, i18n.MsgPanelFailed), err)
+		return nil, fmt.Errorf(i18n.T(lang, i18n.MsgPanelFailed), err)
 	}
 
 	go func() {
@@ -165,16 +164,7 @@ func startPanel(lang i18n.Lang, store *storage.Store, richAvailable func() bool)
 			log.Printf(i18n.T(lang, i18n.MsgPanelFailed), err)
 		}
 	}()
-	return panel
-}
-
-// metricsConfig reads METRICS_ENABLED (default true) and METRICS_ADDR.
-func metricsConfig() (enabled bool, addr string) {
-	enabled = true
-	if v := os.Getenv("METRICS_ENABLED"); v != "" {
-		enabled, _ = strconv.ParseBool(v)
-	}
-	return enabled, os.Getenv("METRICS_ADDR")
+	return panel, nil
 }
 
 // startMetrics serves /metrics on its own address when METRICS_ADDR is set,
@@ -195,40 +185,18 @@ func startMetrics(lang i18n.Lang, m *metrics.Metrics, enabled bool, addr string)
 	return srv
 }
 
-// deliveriesRetention reads DELIVERIES_RETENTION_DAYS (default 14, 0 = keep forever).
-func deliveriesRetention(lang i18n.Lang) time.Duration {
-	raw := os.Getenv("DELIVERIES_RETENTION_DAYS")
-	if raw == "" {
-		return 14 * 24 * time.Hour
+// panelSecrets are the values the panel masks in error texts it shows.
+func panelSecrets(cfg *config.Config) []string {
+	secrets := []string{cfg.Security.WebhookSecret}
+	m := cfg.Messengers
+	if m.Telegram != nil {
+		secrets = append(secrets, m.Telegram.Token)
 	}
-	days, err := strconv.Atoi(raw)
-	if err != nil || days < 0 {
-		log.Fatal(i18n.Tf(lang, i18n.MsgInvalidRetention, raw))
+	if m.Discord != nil {
+		secrets = append(secrets, m.Discord.Token, m.Discord.PublicKey)
 	}
-	return time.Duration(days) * 24 * time.Hour
-}
-
-// richMessages reports whether notifications may be sent as Telegram rich
-// messages (RICH_MESSAGES, on by default). Off sends every chat the classic
-// format, whatever it chose.
-func richMessages() bool {
-	v := os.Getenv("RICH_MESSAGES")
-	if v == "" {
-		return true
+	if m.Max != nil {
+		secrets = append(secrets, m.Max.Token)
 	}
-	on, err := strconv.ParseBool(v)
-	if err != nil {
-		log.Printf("⚠️ RICH_MESSAGES=%q is not a boolean, keeping rich messages on", v)
-		return true
-	}
-	return on
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
+	return secrets
 }

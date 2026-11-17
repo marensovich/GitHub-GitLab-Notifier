@@ -1,6 +1,8 @@
 package server
 
 import (
+	"GitHub-GitLab-Notifier/internal/messenger"
+	"GitHub-GitLab-Notifier/internal/messenger/fake"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"context"
 	"encoding/json"
@@ -63,10 +65,9 @@ func TestHealthz(t *testing.T) {
 
 func TestMetricsEndpoint(t *testing.T) {
 	m := metrics.New("v9")
-	e := newEnv(t, Config{DefaultChatID: 100, Metrics: m, ServeMetrics: true})
-	e.sender.failTopicIDs[0] = true
+	e := newEnv(t, Config{Metrics: m, ServeMetrics: true})
+	e.hello(t)
 	e.post(t, ghHeaders("star"), starPayload)
-	e.sender.failTopicIDs[0] = false
 	e.post(t, ghHeaders("star"), starPayload)
 	e.post(t, ghHeaders("check_suite"), starPayload)
 
@@ -76,11 +77,8 @@ func TestMetricsEndpoint(t *testing.T) {
 	}
 	out := rec.Body.String()
 	for _, want := range []string{
-		`notifier_webhooks_total{platform="GITHUB",event="star",status="delivered"} 1`,
-		`notifier_webhooks_total{platform="GITHUB",event="star",status="failed"} 1`,
+		`notifier_webhooks_total{platform="GITHUB",event="star",status="queued"} 2`,
 		`notifier_webhooks_total{platform="GITHUB",event="check_suite",status="ignored"} 1`,
-		`notifier_messages_sent_total{messenger="telegram",format="rich",result="ok"} 1`,
-		`notifier_messages_sent_total{messenger="telegram",format="rich",result="error"} 1`,
 		`notifier_webhook_duration_seconds_count 3`,
 		`notifier_build_info{version="v9"} 1`,
 	} {
@@ -95,5 +93,28 @@ func TestMetricsEndpoint(t *testing.T) {
 	off := newEnv(t, Config{})
 	if rec := getPath(off, http.MethodGet, "/metrics"); rec.Code != http.StatusNotFound {
 		t.Errorf("/metrics without ServeMetrics: %d, want 404", rec.Code)
+	}
+}
+
+func TestHealthPerMessenger(t *testing.T) {
+	tg := fake.New("telegram", messenger.Caps{})
+	dc := fake.New("discord", messenger.Caps{})
+	dc.HealthErr = errors.New("gateway closed")
+	checks := Checks(func(context.Context) error { return nil }, map[string]messenger.Messenger{"telegram": tg, "discord": dc})
+
+	e := newEnv(t, Config{Checks: checks})
+	rec := getPath(e, http.MethodGet, "/healthz")
+	var body struct {
+		Checks map[string]struct {
+			OK    bool
+			Error string
+		}
+	}
+	must(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	if rec.Code != http.StatusServiceUnavailable || len(body.Checks) != 3 {
+		t.Fatalf("got %d %+v", rec.Code, body.Checks)
+	}
+	if !body.Checks["db"].OK || !body.Checks["telegram"].OK || body.Checks["discord"].Error != "gateway closed" {
+		t.Errorf("checks = %+v", body.Checks)
 	}
 }

@@ -7,17 +7,35 @@
   <div class="tile"><div class="tile-label">Repositories</div><div class="tile-value">{{.Repos}}</div>
     <div class="tile-sub">{{range $i, $p := .ByPlatform}}{{if $i}} · {{end}}{{$p.Name}} {{$p.Count}}{{else}}none connected{{end}}</div></div>
   <div class="tile"><div class="tile-label">Chats</div><div class="tile-value">{{.Chats}}</div><div class="tile-sub">{{.IdleChats}} without repositories</div></div>
+  <div class="tile"><div class="tile-label">Send queue</div><div class="tile-value">{{.Pending}}</div><div class="tile-sub">waiting · {{.Dead}} given up</div></div>
 </section>
 
 <h2>Attention</h2>
-{{if or .Unprotected .Orphans}}
+{{if .Err}}<p class="alerts warn">Could not read everything: {{.Err}}</p>{{end}}
+{{if .Attention}}
 <ul class="alerts">
   {{if .Unprotected}}<li class="warn"><strong>{{.Unprotected}}</strong> repositor{{if eq .Unprotected 1}}y has{{else}}ies have{{end}} no webhook secret and no global WEBHOOK_SECRET is set — anyone who knows the URL can send events. <a href="/repos">Review</a></li>{{end}}
-  {{if .Orphans}}<li class="warn"><strong>{{.Orphans}}</strong> repositor{{if eq .Orphans 1}}y points{{else}}ies point{{end}} to a chat the bot has no record of. <a href="/repos">Review</a></li>{{end}}
+  {{range .Unconnected}}<li class="warn"><span class="mono">{{.URL}}</span> sent <strong>{{.Count}} webhooks</strong> in the last 7 days, but no chat is subscribed — they are dropped. Run <code>/connect</code> in a chat or remove the webhook.</li>{{end}}
+  {{if .Dead}}<li class="warn"><strong>{{.Dead}}</strong> message{{if ne .Dead 1}}s were{{else}} was{{end}} given up on. Redeliver the webhook from GitHub/GitLab to try again.</li>{{end}}
+  {{if .Orphans}}<li class="warn"><strong>{{.Orphans}}</strong> repositor{{if eq .Orphans 1}}y is{{else}}ies are{{end}} not connected to any chat — their events are dropped. Connect them with <code>/connect</code> or ignore this. <a href="/repos">Review</a></li>{{end}}
 </ul>
 {{else}}
 <p class="ok">Nothing needs attention.</p>
 {{end}}
 
-<p class="muted">Started {{.StartedAt.Format "2006-01-02 15:04:05 MST"}}. Delivery history, the send queue and management actions come in later releases.</p>
+{{if .DeadItems}}
+<h2>Messages given up on</h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Chat</th><th>Event</th><th>Attempts</th><th>Last error</th></tr></thead>
+  <tbody>
+  {{range .DeadItems}}
+    <tr><td class="mono">{{.Chat}}</td><td>{{.Event}}</td><td>{{.Attempts}}</td><td class="mono">{{.Error}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}
+
+<p class="muted">Started {{.StartedAt.Format "2006-01-02 15:04:05 MST"}}. Delivery history and management actions come in later releases.</p>
 {{end}}

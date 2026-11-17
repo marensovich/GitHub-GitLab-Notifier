@@ -7,43 +7,70 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type fakeSource struct {
-	chats    []storage.ChatConfig
-	repos    []storage.RepoInfo
-	topics   map[int64][]storage.TopicInfo
-	mappings map[int64]map[string]int
+	dests    []storage.Destination
+	repos    []storage.Repo
+	subs     map[int64][]int64 // destination -> repo IDs
+	threads  map[int64][]storage.Thread
+	routes   map[int64]map[string]string
 	topicErr error
+
+	pending, deadCount int
+	dead               []storage.OutboxItem
+	unconnected        []storage.RepoCount
 }
 
-func (f *fakeSource) GetAllChats() []storage.ChatConfig { return f.chats }
-func (f *fakeSource) GetAllRepos() []storage.RepoInfo   { return f.repos }
-func (f *fakeSource) GetTopicsByChat(id int64) ([]storage.TopicInfo, error) {
-	return f.topics[id], f.topicErr
+func (f *fakeSource) OutboxCounts() (int, int, error) { return f.pending, f.deadCount, nil }
+func (f *fakeSource) DeadItems(limit int) ([]storage.OutboxItem, error) {
+	if len(f.dead) > limit {
+		return f.dead[:limit], nil
+	}
+	return f.dead, nil
 }
-func (f *fakeSource) GetEventMappings(id int64) (map[string]int, error) {
-	return f.mappings[id], nil
+func (f *fakeSource) UnconnectedRepos(time.Time) ([]storage.RepoCount, error) {
+	return f.unconnected, nil
+}
+
+func (f *fakeSource) Destinations() ([]storage.Destination, error) { return f.dests, nil }
+func (f *fakeSource) Repos() ([]storage.Repo, error)               { return f.repos, nil }
+func (f *fakeSource) Threads(id int64) ([]storage.Thread, error) {
+	return f.threads[id], f.topicErr
+}
+func (f *fakeSource) Routes(id int64) (map[string]string, error) { return f.routes[id], nil }
+func (f *fakeSource) SubscriptionsOf(id int64) ([]storage.Repo, error) {
+	var list []storage.Repo
+	for _, rid := range f.subs[id] {
+		for _, r := range f.repos {
+			if r.ID == rid {
+				list = append(list, r)
+			}
+		}
+	}
+	return list, nil
 }
 
 const secret = "s3cr3t-value-that-must-not-leak"
 
 func newSource() *fakeSource {
 	return &fakeSource{
-		chats: []storage.ChatConfig{
-			{ChatID: -1001, Language: "ru", IsForum: true},
-			{ChatID: 42, Language: "en"},
+		dests: []storage.Destination{
+			{ID: 1, Messenger: "telegram", ChatID: "-1001", Language: "ru", Format: storage.FormatRich, UseThreads: true},
+			{ID: 2, Messenger: "telegram", ChatID: "42", Language: "en", Format: storage.FormatRich, UseThreads: true},
 		},
-		repos: []storage.RepoInfo{
-			{ChatID: -1001, RepoURL: "https://github.com/acme/api", Platform: "GitHub", Secret: secret},
-			{ChatID: -1001, RepoURL: "https://gitlab.com/acme/web", Platform: "GitLab"},
-			{ChatID: 7, RepoURL: "javascript:alert(1)", Platform: "GitHub"},
+		repos: []storage.Repo{
+			{ID: 10, URL: "https://github.com/acme/api", Platform: "GitHub", Secret: secret},
+			{ID: 11, URL: "https://gitlab.com/acme/web", Platform: "GitLab"},
+			{ID: 12, URL: "javascript:alert(1)", Platform: "GitHub"},
 		},
-		topics: map[int64][]storage.TopicInfo{
-			-1001: {{TopicID: 5, ChatID: -1001, Name: "CI/CD"}, {TopicID: 3, ChatID: -1001, Name: "Pushes"}},
+		subs: map[int64][]int64{1: {10, 11}},
+		threads: map[int64][]storage.Thread{
+			1: {{DestinationID: 1, ThreadID: "5", Name: "CI/CD"}, {DestinationID: 1, ThreadID: "3", Name: "Pushes"}},
 		},
-		mappings: map[int64]map[string]int{
-			-1001: {"push": 3, "pipeline": 5, "workflow_run": 5},
+		routes: map[int64]map[string]string{
+			1: {"push": "3", "pipeline": "5", "workflow_run": "5"},
 		},
 	}
 }
@@ -140,14 +167,14 @@ func TestPagesRender(t *testing.T) {
 	h := newServer(t, Config{Version: "v9.9.9"}, newSource()).Handler()
 
 	overview := get(t, h, http.MethodGet, "/", "localhost").Body.String()
-	for _, want := range []string{"v9.9.9", "GitHub 2", "GitLab 1", "without repositories", "no webhook secret", "chat the bot has no record of"} {
+	for _, want := range []string{"v9.9.9", "GitHub 2", "GitLab 1", "without repositories", "no webhook secret", "not connected to any chat"} {
 		if !strings.Contains(overview, want) {
 			t.Errorf("overview: missing %q", want)
 		}
 	}
 
 	repos := get(t, h, http.MethodGet, "/repos", "localhost").Body.String()
-	for _, want := range []string{`href="https://github.com/acme/api"`, "https://gitlab.com/acme/web", "-1001", "own", "none"} {
+	for _, want := range []string{`href="https://github.com/acme/api"`, "https://gitlab.com/acme/web", "telegram -1001", "own", "none", "not connected"} {
 		if !strings.Contains(repos, want) {
 			t.Errorf("repos: missing %q", want)
 		}
@@ -157,7 +184,7 @@ func TestPagesRender(t *testing.T) {
 	}
 
 	chats := get(t, h, http.MethodGet, "/chats", "localhost").Body.String()
-	for _, want := range []string{"CI/CD", "Pushes", "workflow_run", "forum", "notifications go to the main chat"} {
+	for _, want := range []string{"CI/CD", "Pushes", "workflow_run", "telegram", "notifications go to the main chat"} {
 		if !strings.Contains(chats, want) {
 			t.Errorf("chats: missing %q", want)
 		}
@@ -168,7 +195,12 @@ func TestPagesRender(t *testing.T) {
 }
 
 func TestSecretsNeverRendered(t *testing.T) {
-	h := newServer(t, Config{}, newSource()).Handler()
+	src := newSource()
+	// A secret in an error text of a dead message must not show either.
+	src.deadCount = 1
+	src.dead = []storage.OutboxItem{{ID: 1, DestinationID: 1, LastError: "401 for https://api.telegram.org/bot" + secret + "/send", State: storage.OutboxDead}}
+	src.unconnected = []storage.RepoCount{{URL: "https://github.com/acme/x", Count: 1}}
+	h := newServer(t, Config{Secrets: []string{secret}}, src).Handler()
 	for _, path := range []string{"/", "/repos", "/chats"} {
 		if body := get(t, h, http.MethodGet, path, "localhost").Body.String(); strings.Contains(body, secret) {
 			t.Errorf("%s leaks the webhook secret", path)
@@ -226,9 +258,9 @@ func TestStoreSatisfiesSource(t *testing.T) {
 
 func TestChatsPageShowsSettings(t *testing.T) {
 	src := newSource()
-	src.chats = []storage.ChatConfig{
-		{ChatID: -1001, Language: "ru", IsForum: true, Format: storage.FormatClassic, UseTopics: false},
-		{ChatID: 42, Language: "en", Format: storage.FormatRich, UseTopics: false},
+	src.dests = []storage.Destination{
+		{ID: 1, Messenger: "telegram", ChatID: "-1001", Language: "ru", Format: storage.FormatClassic, UseThreads: false},
+		{ID: 2, Messenger: "telegram", ChatID: "42", Language: "en", Format: storage.FormatRich, UseThreads: false},
 	}
 	h := newServer(t, Config{}, src).Handler()
 	body := get(t, h, http.MethodGet, "/chats", "localhost").Body.String()
@@ -252,8 +284,8 @@ func TestChatsPageShowsSettings(t *testing.T) {
 
 func TestChatsPageShowsRichOff(t *testing.T) {
 	src := newSource()
-	src.chats = []storage.ChatConfig{
-		{ChatID: 42, Language: "en", Format: storage.FormatRich, UseTopics: true},
+	src.dests = []storage.Destination{
+		{ID: 2, Messenger: "telegram", ChatID: "42", Language: "en", Format: storage.FormatRich, UseThreads: true},
 	}
 	cfg := Config{RichAvailable: func() bool { return false }}
 	body := get(t, newServer(t, cfg, src).Handler(), http.MethodGet, "/chats", "localhost").Body.String()
@@ -264,5 +296,70 @@ func TestChatsPageShowsRichOff(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("chats: missing %q", want)
 		}
+	}
+}
+
+func TestChatsGroupedByMessenger(t *testing.T) {
+	src := newSource()
+	src.dests = []storage.Destination{
+		{ID: 3, Messenger: "max", ChatID: "777", Title: "Max chat"},
+		{ID: 1, Messenger: "telegram", ChatID: "-1001", Title: "Team <b>", Format: storage.FormatRich},
+		{ID: 2, Messenger: "discord", ChatID: "998877", Title: "#deploys"},
+	}
+	body := get(t, newServer(t, Config{}, src).Handler(), http.MethodGet, "/chats", "localhost").Body.String()
+	order := []string{`<h2 class="group">discord</h2>`, "#deploys", `<h2 class="group">max</h2>`, "Max chat", `<h2 class="group">telegram</h2>`, "Team &lt;b&gt;", "-1001"}
+	last := -1
+	for _, want := range order {
+		i := strings.Index(body, want)
+		if i < 0 {
+			t.Fatalf("chats: missing %q", want)
+		}
+		if i < last {
+			t.Errorf("chats: %q is out of order", want)
+		}
+		last = i
+	}
+	if strings.Contains(body, "Team <b>") {
+		t.Error("chat title not escaped")
+	}
+}
+
+func TestInactiveDestinationMarked(t *testing.T) {
+	src := newSource()
+	src.dests[1].Inactive = true
+	body := get(t, newServer(t, Config{}, src).Handler(), http.MethodGet, "/chats", "localhost").Body.String()
+	if n := strings.Count(body, `<span class="badge warn">inactive</span>`); n != 1 {
+		t.Errorf("want 1 inactive badge, got %d", n)
+	}
+}
+
+func TestOverviewShowsOutbox(t *testing.T) {
+	src := newSource()
+	src.pending, src.deadCount = 3, 1
+	src.dead = []storage.OutboxItem{{ID: 7, DestinationID: 1, EventType: "push", Attempts: 10, LastError: "chat not found", State: storage.OutboxDead}}
+	body := get(t, newServer(t, Config{}, src).Handler(), http.MethodGet, "/", "localhost").Body.String()
+	for _, want := range []string{"Send queue", ">3<", "waiting", "1 given up", "telegram -1001", "push", "chat not found"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("overview: missing %q", want)
+		}
+	}
+
+	quiet := newSource()
+	body = get(t, newServer(t, Config{}, quiet).Handler(), http.MethodGet, "/", "localhost").Body.String()
+	if strings.Contains(body, "Messages given up on") {
+		t.Error("overview lists dead messages although there are none")
+	}
+}
+
+func TestOverviewWarnsUnconnectedRepo(t *testing.T) {
+	src := &fakeSource{unconnected: []storage.RepoCount{{URL: "https://github.com/acme/forgotten", Count: 12}}}
+	body := get(t, newServer(t, Config{}, src).Handler(), http.MethodGet, "/", "localhost").Body.String()
+	for _, want := range []string{"https://github.com/acme/forgotten", "12 webhooks", "last 7 days"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("overview: missing %q", want)
+		}
+	}
+	if strings.Contains(body, "Nothing needs attention") {
+		t.Error("overview says nothing needs attention")
 	}
 }

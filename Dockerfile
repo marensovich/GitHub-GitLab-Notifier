@@ -31,13 +31,17 @@ LABEL org.opencontainers.image.title="GitHub-GitLab-Notifier" \
 COPY --from=build /out/notifier /usr/local/bin/notifier
 COPY --from=build --chown=nonroot:nonroot /out/data /data
 
+# Used only when no config.yaml is mounted (1.x settings in the environment).
 ENV DB_PATH=/data/notifier.db \
     SERVER_ADDRESS=0.0.0.0 \
     SERVER_PORT=8080
 
-WORKDIR /data
+# From /, the default storage.path data/notifier.db is on the volume.
+# Mount the configuration at /etc/notifier/config.yaml.
+WORKDIR /
 VOLUME ["/data"]
 EXPOSE 8080
 USER nonroot:nonroot
 
 ENTRYPOINT ["/usr/local/bin/notifier"]
+CMD ["serve"]

@@ -1,0 +1,30 @@
+# Migrated from a 1.x .env by notifier migrate-config.
+server:
+  listen: "0.0.0.0:8443"
+  public_url: "https://notify.example.com"
+panel:
+  listen: "127.0.0.1:8081"
+  allow_remote: false
+metrics:
+  enabled: true
+  listen: "127.0.0.1:9090"
+storage:
+  path: "/var/lib/notifier/notifier.db"
+  deliveries_retention_days: 30
+defaults:
+  language: "ru"
+  notify_unknown_events: true
+# Bot administrators as messenger:user_id, e.g. telegram:123456789. An
+# administrator may connect a repository that another chat already connected.
+admins: []
+security:
+  webhook_secret: "pa$$$$word"
+messengers:
+  telegram:
+    enabled: true
+    token: "123456:ABCdefGHIjklMNOpqrsTUVwxyz"
+    api_url: ""
+    proxy: "socks5://127.0.0.1:1080"
+    rich_messages: false
+
+# CHAT_ID=-1001234567890 from 1.x is no longer used: events of unconnected repositories are dropped.

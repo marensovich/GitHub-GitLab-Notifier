@@ -1,8 +1,17 @@
 # Run with: docker compose up -d
-# Configuration is read from .env (copy .env.example and fill it in).
+# Configuration is read from config.yaml (copy config.example.yaml and fill it in).
+# Secrets such as ${TELEGRAM_TOKEN} come from the environment or the optional .env.
+#
+# Upgrading from 1.x with only a .env: the container still starts from the 1.x
+# variables and logs a warning. To convert them once, run in this directory
+#   rmdir config.yaml 2>/dev/null   # Docker leaves an empty directory for the missing file
+#   docker run --rm -u 0 -v "$PWD:/conf" ghcr.io/marensovich/github-gitlab-notifier:latest \
+#     migrate-config --from /conf/.env --to /conf/config.yaml
+#   sudo chown 65532:65532 config.yaml   # the image runs as nonroot (uid 65532); the file stays 0600
+#   docker compose up -d
 #
 # The image comes from GitHub Container Registry (amd64, arm64, arm/v7).
-# Pin a version instead of "latest" if you prefer updating by hand, e.g. :1.1.
+# Pin a version instead of "latest" if you prefer updating by hand, e.g. :2.0.
 # To build it from this checkout instead: docker compose up -d --build
 services:
   notifier:
@@ -11,15 +20,19 @@ services:
       context: .
     container_name: github-gitlab-notifier
     restart: unless-stopped
-    env_file: .env
+    # Optional: variables referenced from config.yaml, or the 1.x settings.
+    env_file:
+      - path: .env
+        required: false
     environment:
-      # Inside the container the database lives on the "data" volume.
+      # Used only without config.yaml (1.x settings).
       DB_PATH: /data/notifier.db
       SERVER_ADDRESS: 0.0.0.0
     ports:
       - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
     volumes:
       - data:/data
+      - ./config.yaml:/etc/notifier/config.yaml:ro
 
 volumes:
   data:

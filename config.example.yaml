@@ -1,0 +1,67 @@
+# GitHub-GitLab-Notifier configuration.
+#
+# ${VAR} is replaced with the environment variable VAR (an error when it is not set);
+# ${VAR:-default} uses the default when VAR is unset or empty; $$ is a literal $.
+# Keep secrets in the environment or make this file readable only by the service (chmod 600).
+
+server:
+  # Address the webhook server listens on.
+  listen: ":8080"
+  # Public address GitHub/GitLab send webhooks to; /connect prints <public_url>/webhook.
+  public_url: "https://notify.example.com"
+
+panel:
+  # Local read-only web panel; empty disables it. Open it through an SSH tunnel.
+  listen: "127.0.0.1:8081"
+  # Allow a non-loopback address. Only behind your own authentication.
+  allow_remote: false
+
+metrics:
+  # Prometheus metrics at /metrics.
+  enabled: true
+  # Separate address for /metrics, e.g. 127.0.0.1:9090; empty serves it on the webhook server.
+  listen: ""
+
+storage:
+  # SQLite database file.
+  path: "data/notifier.db"
+  # Days the webhook delivery log is kept; 0 keeps it forever.
+  deliveries_retention_days: 14
+
+defaults:
+  # Language of logs and of chats that have not chosen one: en or ru.
+  language: en
+  # Post "New event …" for events the notifier does not know.
+  notify_unknown_events: false
+
+# Bot administrators as messenger:user_id. They can connect an already connected
+# repository to another chat without its secret.
+admins: []
+#  - "telegram:123456789"
+#  - "discord:112233445566778899"
+
+security:
+  # Optional secret accepted for every webhook in addition to per-repository secrets.
+  webhook_secret: "${WEBHOOK_SECRET:-}"
+
+messengers:
+  telegram:
+    enabled: true
+    # Token from @BotFather.
+    token: "${TELEGRAM_TOKEN}"
+    # Self-hosted Bot API server, e.g. http://127.0.0.1:8081; empty uses api.telegram.org.
+    api_url: ""
+    # Proxy for Telegram, e.g. socks5://127.0.0.1:1080 or http://user:pass@host:3128.
+    proxy: ""
+    # Rich messages (the new look); false sends classic messages everywhere.
+    rich_messages: true
+  discord:
+    enabled: false
+    # Bot token, application ID and public key from the Discord developer portal.
+    token: "${DISCORD_TOKEN:-}"
+    application_id: ""
+    public_key: ""
+  max:
+    enabled: false
+    # Bot token from MAX for partners (available to verified organisations).
+    token: "${MAX_TOKEN:-}"

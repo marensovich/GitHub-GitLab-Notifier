@@ -82,3 +82,23 @@ func TestHandler(t *testing.T) {
 		t.Errorf("POST: %d", rec.Code)
 	}
 }
+
+func TestOutboxMetrics(t *testing.T) {
+	m := New("v1")
+	m.SendRetried("telegram")
+	m.SendRetried("telegram")
+	m.SetOutboxCounts(func() (int, int, error) { return 4, 2, nil })
+	out := render(m)
+	for _, want := range []string{
+		`notifier_send_retries_total{messenger="telegram"} 2`,
+		"# TYPE notifier_outbox_pending gauge\nnotifier_outbox_pending 4\n",
+		"# TYPE notifier_outbox_dead gauge\nnotifier_outbox_dead 2\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(render(New("v1")), "notifier_outbox_pending") {
+		t.Error("without an outbox there are no outbox gauges")
+	}
+}

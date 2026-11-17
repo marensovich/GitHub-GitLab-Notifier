@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -8,10 +10,11 @@ import (
 //
 // Статусы доставок вебхуков.
 const (
-	DeliveryDelivered = "delivered" // at least one message was sent
+	DeliveryQueued    = "queued"    // its messages wait in the outbox
+	DeliveryDelivered = "delivered" // every message was sent
 	DeliveryIgnored   = "ignored"   // nothing to send: unsupported/filtered event or no chat
 	DeliveryRejected  = "rejected"  // signature or token did not match
-	DeliveryFailed    = "failed"    // there was something to send, but every send failed
+	DeliveryFailed    = "failed"    // some message could not be sent and none waits
 	DeliveryDuplicate = "duplicate" // the same delivery ID was already delivered
 )
 
@@ -42,20 +45,24 @@ func (s *Store) RecordDelivery(d Delivery) error {
 	return err
 }
 
-// WasDelivered reports whether a delivery with this ID was already delivered.
-// An empty ID is never a duplicate.
+// DeliveryState returns the status and row ID of the latest queued,
+// delivered or failed delivery with this ID ("" when there is none).
+// An empty ID never matches.
 //
-// Проверяет, была ли доставка с этим ID уже отправлена.
-func (s *Store) WasDelivered(platform, deliveryID string) (bool, error) {
+// Состояние последней доставки с этим ID.
+func (s *Store) DeliveryState(platform, deliveryID string) (status string, rowID int64, err error) {
 	if deliveryID == "" {
-		return false, nil
+		return "", 0, nil
 	}
-	var n int
-	err := s.db.QueryRow(`
-		SELECT COUNT(*) FROM deliveries
-		WHERE platform = ? AND delivery_id = ? AND delivery_id != '' AND status = ?
-	`, platform, deliveryID, DeliveryDelivered).Scan(&n)
-	return n > 0, err
+	err = s.db.QueryRow(`
+		SELECT status, id FROM deliveries
+		WHERE platform = ? AND delivery_id = ? AND status IN (?, ?, ?)
+		ORDER BY id DESC LIMIT 1
+	`, platform, deliveryID, DeliveryQueued, DeliveryDelivered, DeliveryFailed).Scan(&status, &rowID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", 0, nil
+	}
+	return status, rowID, err
 }
 
 // RecentDeliveries returns the newest deliveries first.
@@ -96,4 +103,35 @@ func (s *Store) PruneDeliveries(before time.Time) (int64, error) {
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// RepoCount is a repository URL with a number of deliveries.
+type RepoCount struct {
+	URL   string
+	Count int
+}
+
+// UnconnectedRepos counts, per repository, the webhooks received since a
+// time that nobody was subscribed to, the most frequent first.
+//
+// Репозитории, чьи вебхуки приходят, но никуда не отправляются.
+func (s *Store) UnconnectedRepos(since time.Time) ([]RepoCount, error) {
+	rows, err := s.db.Query(`
+		SELECT repo_url, COUNT(*) AS n FROM deliveries
+		WHERE status = ? AND error = 'not connected' AND received_at >= ? AND repo_url != ''
+		GROUP BY repo_url ORDER BY n DESC, repo_url
+	`, DeliveryIgnored, since.UnixMilli())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []RepoCount
+	for rows.Next() {
+		var rc RepoCount
+		if err := rows.Scan(&rc.URL, &rc.Count); err != nil {
+			return nil, err
+		}
+		list = append(list, rc)
+	}
+	return list, rows.Err()
 }

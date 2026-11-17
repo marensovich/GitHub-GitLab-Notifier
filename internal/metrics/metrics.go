@@ -33,7 +33,9 @@ type Metrics struct {
 	webhooks  map[[3]string]uint64 // platform, event, status
 	messages  map[[3]string]uint64 // messenger, format, result
 	fallbacks uint64               // rich messages replaced by classic ones
-	durCounts []uint64             // per bucket, not cumulative; last = above all buckets
+	retries   map[string]uint64    // sends scheduled again, by messenger
+	outbox    func() (pending, dead int, err error)
+	durCounts []uint64 // per bucket, not cumulative; last = above all buckets
 	durSum    float64
 	durCount  uint64
 }
@@ -45,6 +47,7 @@ func New(version string) *Metrics {
 		started:   time.Now(),
 		webhooks:  map[[3]string]uint64{},
 		messages:  map[[3]string]uint64{},
+		retries:   map[string]uint64{},
 		durCounts: make([]uint64, len(durationBuckets)+1),
 	}
 }
@@ -92,6 +95,20 @@ func (m *Metrics) MessageRetried(messenger, format string) {
 func (m *Metrics) RichFallback() {
 	m.mu.Lock()
 	m.fallbacks++
+	m.mu.Unlock()
+}
+
+// SendRetried counts one message the outbox will try to send again.
+func (m *Metrics) SendRetried(messenger string) {
+	m.mu.Lock()
+	m.retries[messenger]++
+	m.mu.Unlock()
+}
+
+// SetOutboxCounts sets where the outbox gauges are read from at scrape time.
+func (m *Metrics) SetOutboxCounts(f func() (pending, dead int, err error)) {
+	m.mu.Lock()
+	m.outbox = f
 	m.mu.Unlock()
 }
 
@@ -158,6 +175,25 @@ func (m *Metrics) WriteTo(w io.Writer) (int64, error) {
 
 	b.WriteString("# HELP notifier_rich_fallbacks_total Rich messages rejected by Telegram and sent as classic ones.\n# TYPE notifier_rich_fallbacks_total counter\n")
 	fmt.Fprintf(&b, "notifier_rich_fallbacks_total %d\n", m.fallbacks)
+
+	b.WriteString("# HELP notifier_send_retries_total Messages scheduled to be sent again, by messenger.\n# TYPE notifier_send_retries_total counter\n")
+	retryKeys := make([]string, 0, len(m.retries))
+	for k := range m.retries {
+		retryKeys = append(retryKeys, k)
+	}
+	sort.Strings(retryKeys)
+	for _, k := range retryKeys {
+		fmt.Fprintf(&b, "notifier_send_retries_total{messenger=%s} %d\n", quote(k), m.retries[k])
+	}
+
+	if m.outbox != nil {
+		if pending, dead, err := m.outbox(); err == nil {
+			b.WriteString("# HELP notifier_outbox_pending Messages waiting to be sent.\n# TYPE notifier_outbox_pending gauge\n")
+			fmt.Fprintf(&b, "notifier_outbox_pending %d\n", pending)
+			b.WriteString("# HELP notifier_outbox_dead Messages given up on.\n# TYPE notifier_outbox_dead gauge\n")
+			fmt.Fprintf(&b, "notifier_outbox_dead %d\n", dead)
+		}
+	}
 
 	n, err := io.WriteString(w, b.String())
 	return int64(n), err
