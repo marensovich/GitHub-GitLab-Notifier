@@ -86,6 +86,7 @@ func serve(cfg *config.Config) error {
 
 	// The webhook server stores messages; the outbox sends and retries them.
 	o := outbox.New(store, ms, m, time.Now)
+	o.SetThreadMaker(core.MakeThread)
 	go o.Run(ctx)
 
 	srv := server.New(server.Config{

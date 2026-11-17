@@ -473,7 +473,7 @@ func (s *Server) items(p platform.Platform, eventName string, body []byte, repo 
 		if look == "" && d.Messenger == "telegram" {
 			look = storage.FormatRich
 		}
-		payload, err := json.Marshal(outbox.Payload{Lang: lang, Look: look, N: res.Notification})
+		payload, err := json.Marshal(outbox.Payload{Lang: lang, Look: look, N: res.Notification, Topic: string(res.Topic)})
 		if err != nil {
 			log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
 			continue

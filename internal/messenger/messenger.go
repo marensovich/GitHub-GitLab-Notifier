@@ -21,6 +21,9 @@ type Caps struct {
 	// PerChatRate and GlobalRate are messages per second.
 	PerChatRate, GlobalRate float64
 	PerChatBurst            int
+	// ForumOnlyThreads is true when a forum has no main chat: every
+	// message there goes to a thread (Discord forum channels).
+	ForumOnlyThreads bool
 }
 
 // Target is where a notification goes.
