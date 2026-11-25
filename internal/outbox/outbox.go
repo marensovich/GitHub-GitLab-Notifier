@@ -45,6 +45,15 @@ type Payload struct {
 	N    notify.Notification
 	// Topic is the event category (platform.Topic); "" is general.
 	Topic string
+	// Member is set on a DM about a private repository: it is sent only
+	// while the person is in a chat subscribed to the repository.
+	Member *MemberCheck `json:",omitempty"`
+}
+
+// MemberCheck names the repository and the messenger user of a DM.
+type MemberCheck struct {
+	RepoID int64
+	UserID string
 }
 
 // Outbox sends the queued rows.

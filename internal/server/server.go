@@ -8,6 +8,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/messenger"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/outbox"
+	"GitHub-GitLab-Notifier/internal/personal"
 	"GitHub-GitLab-Notifier/internal/platform"
 	"GitHub-GitLab-Notifier/storage"
 	"context"
@@ -20,6 +21,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -494,7 +496,119 @@ func (s *Server) items(p platform.Platform, eventName string, body []byte, repo 
 			Payload: payload, NextAttemptAt: time.Now(),
 		})
 	}
+	return append(items, s.personalItems(p, eventName, body, repo, subs, results)...)
+}
+
+// reasonNotes is the note that tells a person why they got a DM.
+var reasonNotes = map[personal.Reason]string{
+	personal.Review:   i18n.MsgPersonalReview,
+	personal.Assigned: i18n.MsgPersonalAssigned,
+	personal.Mention:  i18n.MsgPersonalMention,
+	personal.Pipeline: i18n.MsgPersonalPipeline,
+}
+
+// personalItems queues a DM for each linked person the event concerns: at
+// most one per person, none for their own action (except their failed
+// pipeline), none for a muted reason, and none to a DM that already gets
+// the chat message because it is subscribed itself.
+func (s *Server) personalItems(p platform.Platform, eventName string, body []byte, repo *storage.Repo,
+	subs []storage.Destination, results map[i18n.Lang]dispatcher.Result) []storage.OutboxItem {
+	ev := personal.Extract(p, eventName, body)
+	if len(ev.Hits) == 0 {
+		return nil
+	}
+	var ids, logins []string
+	for _, h := range ev.Hits {
+		if h.AccountID != "" {
+			ids = append(ids, h.AccountID)
+		} else {
+			logins = append(logins, h.Login)
+		}
+	}
+	recipients, err := s.store.Recipients(ev.Platform, ev.Host, ids, logins)
+	if err != nil {
+		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+		return nil
+	}
+	subscribed := map[int64]bool{}
+	for _, d := range subs {
+		subscribed[d.ID] = true
+	}
+
+	best := map[int64]int{} // person -> index in personal.Order
+	people := map[int64]storage.Recipient{}
+	var order []int64
+	for _, r := range recipients {
+		for _, h := range ev.Hits {
+			if !hitMatches(h, r.Account) || isActor(ev, r.Account) && h.Reason != personal.Pipeline ||
+				slices.Contains(r.Muted, string(h.Reason)) {
+				continue
+			}
+			rank := slices.Index(personal.Order, h.Reason)
+			if cur, seen := best[r.Person.ID]; !seen {
+				order = append(order, r.Person.ID)
+				best[r.Person.ID], people[r.Person.ID] = rank, r
+			} else if rank < cur {
+				best[r.Person.ID] = rank
+			}
+		}
+	}
+
+	var items []storage.OutboxItem
+	for _, id := range order {
+		r := people[id]
+		if subscribed[r.DestinationID] {
+			continue
+		}
+		d, err := s.store.DestinationByID(r.DestinationID)
+		if err != nil || d == nil {
+			continue
+		}
+		lang := s.langOrDefault(d.Language)
+		res, ok := results[lang]
+		if !ok {
+			res = s.dispatcher.Dispatch(lang, p, eventName, body)
+			results[lang] = res
+		}
+		if res.Skip && !res.PersonalOnly {
+			continue
+		}
+		n := res.Notification
+		n.Notes = append([]string{i18n.T(lang, reasonNotes[personal.Order[best[id]]])}, n.Notes...)
+		look := d.Format
+		if look == "" && d.Messenger == "telegram" {
+			look = storage.FormatRich
+		}
+		pl := outbox.Payload{Lang: lang, Look: look, N: n, Topic: string(res.Topic)}
+		if ev.Private {
+			pl.Member = &outbox.MemberCheck{RepoID: repo.ID, UserID: r.UserID}
+		}
+		payload, err := json.Marshal(pl)
+		if err != nil {
+			log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+			continue
+		}
+		items = append(items, storage.OutboxItem{
+			DestinationID: d.ID, EventType: eventName, Payload: payload, NextAttemptAt: time.Now(),
+		})
+	}
 	return items
+}
+
+// hitMatches tells whether a hit names the account: by ID when it has one,
+// else by login in any case.
+func hitMatches(h personal.Hit, a storage.Account) bool {
+	if h.AccountID != "" {
+		return h.AccountID == a.AccountID
+	}
+	return strings.EqualFold(h.Login, a.Login)
+}
+
+func isActor(ev personal.Event, a storage.Account) bool {
+	if ev.ActorID != "" {
+		return ev.ActorID == a.AccountID
+	}
+	return ev.ActorLogin != "" && strings.EqualFold(ev.ActorLogin, a.Login)
 }
 
 func (s *Server) langOrDefault(language string) i18n.Lang {
