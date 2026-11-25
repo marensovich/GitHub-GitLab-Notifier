@@ -320,6 +320,15 @@ func (s *Store) Subscribers(repoID int64) ([]Destination, error) {
 		WHERE s.repo_id = ? AND d.inactive = 0 ORDER BY d.id`, repoID)
 }
 
+// SubscribersIn returns the active chats of one messenger subscribed to a
+// repository, leaving out the DMs of people.
+func (s *Store) SubscribersIn(repoID int64, messenger string) ([]Destination, error) {
+	return queryDests(s.db, `SELECT d.id, d.messenger, d.chat_id, d.title, d.language, d.format, d.use_threads, d.inactive
+		FROM destinations d JOIN subscriptions s ON s.destination_id = d.id
+		WHERE s.repo_id = ? AND d.messenger = ? AND d.inactive = 0
+		AND d.id NOT IN (SELECT destination_id FROM people) ORDER BY d.id`, repoID, messenger)
+}
+
 // SubscriptionsOf returns the repositories a destination is subscribed to.
 func (s *Store) SubscriptionsOf(destID int64) ([]Repo, error) {
 	return queryRepos(s.db, `SELECT r.id, r.url, r.platform, r.secret

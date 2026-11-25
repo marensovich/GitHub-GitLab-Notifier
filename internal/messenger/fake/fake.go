@@ -77,6 +77,11 @@ type Messenger struct {
 	Attempts []notify.Attempt
 	// Hang makes Send block until its context is done.
 	Hang bool
+	// Members holds chatID+"/"+userID of chat members; MemberErr fails
+	// IsMember; MemberCalls counts its calls.
+	Members     map[string]bool
+	MemberErr   error
+	MemberCalls int
 }
 
 // SentList returns a copy of the sent notifications; safe while the
@@ -172,6 +177,17 @@ func (m *Messenger) IsChatAdmin(_ context.Context, chatID, userID string) (bool,
 		return false, m.AdminErr
 	}
 	return m.Admins[chatID+"/"+userID], nil
+}
+
+// IsMember reports whether the user is in Members.
+func (m *Messenger) IsMember(_ context.Context, chatID, userID string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.MemberCalls++
+	if m.MemberErr != nil {
+		return false, m.MemberErr
+	}
+	return m.Members[chatID+"/"+userID], nil
 }
 
 func (m *Messenger) CanManageThreads(_ context.Context, chatID string) (bool, error) {

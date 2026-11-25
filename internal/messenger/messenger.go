@@ -83,6 +83,12 @@ type CommandLister interface {
 	Commands(lang i18n.Lang) []CommandInfo
 }
 
+// MemberChecker is implemented by an adapter that can tell whether a user
+// is a member of a chat.
+type MemberChecker interface {
+	IsMember(ctx context.Context, chatID, userID string) (bool, error)
+}
+
 // Messenger is one messenger adapter.
 type Messenger interface {
 	Name() string
