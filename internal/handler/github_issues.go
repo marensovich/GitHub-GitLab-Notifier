@@ -46,10 +46,12 @@ func (h *GitHubIssuesHandler) Handle(lang i18n.Lang, payload []byte) (notify.Not
 	}
 
 	var headingKey string
-	withBody := false
+	withBody, personalOnly := false, false
 	switch dto.Action {
 	case "opened":
 		headingKey, withBody = i18n.MsgIssueOpened, true
+	case "assigned":
+		headingKey, personalOnly = i18n.MsgIssueAssigned, true
 	case "closed":
 		headingKey = i18n.MsgIssueClosed
 		if dto.Issue.StateReason == "not_planned" {
@@ -81,6 +83,9 @@ func (h *GitHubIssuesHandler) Handle(lang i18n.Lang, payload []byte) (notify.Not
 	}
 	if withBody {
 		v.Body = dto.Issue.Body
+	}
+	if personalOnly {
+		return v.notification(), ErrPersonalOnly
 	}
 	return v.notification(), nil
 }

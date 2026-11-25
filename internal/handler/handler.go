@@ -11,6 +11,10 @@ import (
 // produce a notification (e.g. noisy PR actions or in-progress pipelines).
 var ErrSkip = errors.New("event skipped")
 
+// ErrPersonalOnly is returned with a notification that goes only to the
+// people the event concerns (an assignment, a review request), not to chats.
+var ErrPersonalOnly = errors.New("personal only")
+
 // EventHandler processes a specific webhook event.
 type EventHandler interface {
 	// GetEventType returns the event type this handler processes.
