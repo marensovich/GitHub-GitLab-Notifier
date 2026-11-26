@@ -1,0 +1,19 @@
+--- en ---
+💬 New comment on merge request
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1 Tempora et eos debitis quae laborum et.</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>This MR needs work.</blockquote>
+[Open comment](https://gitlab.example.com/group/app/-/merge_requests/1#note_1244)
+
+--- ru ---
+💬 Новый комментарий к merge request
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/1#note_1244">!1 Tempora et eos debitis quae laborum et.</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>This MR needs work.</blockquote>
+[Открыть комментарий](https://gitlab.example.com/group/app/-/merge_requests/1#note_1244)

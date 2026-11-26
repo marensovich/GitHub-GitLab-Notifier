@@ -1,0 +1,23 @@
+--- en ---
+🔀 New merge request
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a></b>
+Branches: <code>ms-viewer</code> → <code>master</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+[Open MR](https://gitlab.example.com/group/app/-/merge_requests/3)
+[Files changed](https://gitlab.example.com/group/app/-/merge_requests/3/diffs)
+
+--- ru ---
+🔀 Новый merge request
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/merge_requests/3">!3 MS-Viewer update</a></b>
+Ветки: <code>ms-viewer</code> → <code>master</code>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Adds a &lt;viewer&gt; &amp; fixes bugs</blockquote>
+[Открыть MR](https://gitlab.example.com/group/app/-/merge_requests/3)
+[Файлы](https://gitlab.example.com/group/app/-/merge_requests/3/diffs)

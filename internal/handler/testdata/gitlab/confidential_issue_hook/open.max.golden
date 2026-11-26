@@ -1,0 +1,21 @@
+--- en ---
+🐛 New issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23">#23 New API: create/update/delete file</a></b>
+🔒 Confidential — visible only to project members in GitLab
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Create new API for manipulations with repository</blockquote>
+[Open issue](https://gitlab.example.com/group/app/-/issues/23)
+
+--- ru ---
+🐛 Новый issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23">#23 New API: create/update/delete file</a></b>
+🔒 Конфиденциально — в GitLab видно только участникам проекта
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Create new API for manipulations with repository</blockquote>
+[Открыть issue](https://gitlab.example.com/group/app/-/issues/23)

@@ -1,0 +1,33 @@
+--- en ---
+🚀 New push
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/tree/main">main</a></b>
+Commits: <b>1</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
+
+<b>Commits:</b>
+  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <a href="https://github.com/octocat">Octo Cat</a>
+
+<b>Changed files:</b>
+  ➕ <code>new.go</code>
+  ✏️ <code>main.go</code>
+[Compare](https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f)
+
+--- ru ---
+🚀 Новый пуш
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/tree/main">main</a></b>
+Коммиты: <b>1</b>
+E-mail: <code>octo@example.com</code>
+👤 <a href="https://github.com/octocat">@octocat</a>
+
+<b>Коммиты:</b>
+  <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a> fix: handle &lt;nil&gt; &amp; empty values — <a href="https://github.com/octocat">Octo Cat</a>
+
+<b>Изменённые файлы:</b>
+  ➕ <code>new.go</code>
+  ✏️ <code>main.go</code>
+[Сравнить](https://github.com/octo/hello/compare/6113728f27ae...59b20b8d5c6f)

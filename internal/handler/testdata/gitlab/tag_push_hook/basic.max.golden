@@ -1,0 +1,15 @@
+--- en ---
+🏷 New tag
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+[Open tag](https://gitlab.example.com/group/app/-/tags/v1.0.0)
+
+--- ru ---
+🏷 Новый тег
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/tags/v1.0.0">v1.0.0</a></b>
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+[Открыть тег](https://gitlab.example.com/group/app/-/tags/v1.0.0)

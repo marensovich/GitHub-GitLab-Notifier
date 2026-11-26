@@ -1,0 +1,29 @@
+--- en ---
+🔀 New pull request
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/pull/12">#12 Add &lt;dark&gt; mode</a></b>
+Branches: <code>contributor:main</code> → <code>main</code>
+Changes: <b>+120</b> / <b>−8</b> · files: 5 · commits: 3
+👤 <a href="https://github.com/contributor">@contributor</a>
+
+<blockquote>This PR adds dark mode.
+
+Closes #10</blockquote>
+[Open PR](https://github.com/octo/hello/pull/12)
+[Files changed](https://github.com/octo/hello/pull/12/files)
+
+--- ru ---
+🔀 Новый pull request
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/pull/12">#12 Add &lt;dark&gt; mode</a></b>
+Ветки: <code>contributor:main</code> → <code>main</code>
+Изменения: <b>+120</b> / <b>−8</b> · файлов: 5 · коммитов: 3
+👤 <a href="https://github.com/contributor">@contributor</a>
+
+<blockquote>This PR adds dark mode.
+
+Closes #10</blockquote>
+[Открыть PR](https://github.com/octo/hello/pull/12)
+[Файлы](https://github.com/octo/hello/pull/12/files)
