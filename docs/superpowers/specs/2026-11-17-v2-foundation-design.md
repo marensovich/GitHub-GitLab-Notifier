@@ -41,7 +41,8 @@ are listed in `config.yaml`; a chat is managed by its own administrators, as `/c
 ## Non-goals (later 2.x)
 
 - Editing earlier messages, live CI and PR cards (NTF-20…24).
-- People, personal DMs, mentions, subscription filters, fine-grained permissions (NTF-30…34).
+- People, personal DMs, mentions, subscription filters, fine-grained permissions (NTF-30…34). Personal DMs
+  (NTF-30) were added later in 2.0: see `2026-11-26-personal-dms-design.md`.
 - Per-destination quiet hours, digests, string overrides (NTF-41, NTF-42).
 - `notifier update/rollback`, release signing, update checks (NTF-60…63); webhook auto-registration (NTF-70/71);
   panel management and login (NTF-73/74); GitHub App, GitLab group hooks, Gitea (NTF-80…82).
