@@ -104,3 +104,13 @@ type Messenger interface {
 	CreateThread(ctx context.Context, chatID, name string) (threadID string, err error)
 	Health(ctx context.Context) error
 }
+
+// DirectMessenger is implemented by an adapter that can write to a user
+// privately.
+type DirectMessenger interface {
+	// DirectChat returns the chat ID of the private chat with a user.
+	DirectChat(ctx context.Context, userID string) (chatID string, err error)
+	// DeleteCommand removes the message a command came in, where the
+	// messenger keeps one (a token must not stay in the chat).
+	DeleteCommand(ctx context.Context, c Command) error
+}

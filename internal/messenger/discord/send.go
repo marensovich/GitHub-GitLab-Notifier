@@ -20,6 +20,7 @@ const FormatEmbed = "embed"
 const (
 	codeUnknownChannel   = 10003
 	codeMissingAccess    = 50001
+	codeCannotDM         = 50007
 	codeCannotSendInText = 50008
 	codeMissingPerms     = 50013
 	codeInvalidForm      = 50035
@@ -59,7 +60,7 @@ func sendError(err error, inThread bool) error {
 	switch {
 	case ae.Status == http.StatusTooManyRequests:
 		return &messenger.RateLimited{RetryAfter: ae.RetryAfter, Err: err}
-	case ae.Code == codeUnknownChannel, ae.Code == codeMissingAccess, ae.Code == codeMissingPerms:
+	case ae.Code == codeUnknownChannel, ae.Code == codeMissingAccess, ae.Code == codeMissingPerms, ae.Code == codeCannotDM:
 		return fmt.Errorf("%w: %v", gone, err)
 	case ae.Code == codeThreadArchived:
 		return fmt.Errorf("%w: %v", messenger.ErrThreadNotFound, err)

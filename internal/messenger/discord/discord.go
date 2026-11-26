@@ -45,8 +45,9 @@ type Discord struct {
 
 // channelInfo is what is kept of a channel.
 type channelInfo struct {
-	Type int    `json:"type"`
-	Name string `json:"name"`
+	Type    int    `json:"type"`
+	Name    string `json:"name"`
+	GuildID string `json:"guild_id"`
 }
 
 var (
