@@ -27,7 +27,12 @@ var updateTypes = []string{"message_created", "message_callback", "bot_started"}
 const (
 	pollTimeout = 30 // seconds MAX holds a long poll
 	retryPause  = 5 * time.Second
-	maxCommands = 32
+	// handleTimeout bounds the work on one update: a MAX call that never
+	// answers must not stop the polling loop or pile up goroutines.
+	handleTimeout = 2 * time.Minute
+	// setupTimeout bounds the calls made once on start.
+	setupTimeout = 30 * time.Second
+	maxCommands  = 32
 )
 
 // update is a MAX update; only the fields the adapter reads.
@@ -97,12 +102,16 @@ func (m *Max) UsesWebhook() bool {
 // subscribe asks MAX to post updates to hook with the secret.
 func (m *Max) subscribe(ctx context.Context, hook string) error {
 	body := map[string]any{"url": hook, "update_types": updateTypes, "secret": m.secret}
+	ctx, cancel := context.WithTimeout(ctx, setupTimeout)
+	defer cancel()
 	return m.c.do(ctx, http.MethodPost, "/subscriptions", nil, body, nil)
 }
 
 // unsubscribe removes every webhook of the bot: MAX does not serve long
 // polling while one is set.
 func (m *Max) unsubscribe(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, setupTimeout)
+	defer cancel()
 	var out struct {
 		Subscriptions []struct {
 			URL string `json:"url"`
@@ -187,6 +196,8 @@ func (m *Max) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // consume passes a command or a button press to the core.
 func (m *Max) consume(ctx context.Context, h messenger.Handler, u update) {
+	ctx, cancel := context.WithTimeout(ctx, handleTimeout)
+	defer cancel()
 	switch u.UpdateType {
 	case "bot_started":
 		chat := strconv.FormatInt(u.ChatID, 10)
@@ -228,7 +239,7 @@ func (m *Max) consume(ctx context.Context, h messenger.Handler, u update) {
 // command turns a message into a command, or reports false when it is not
 // a command for this bot. Channel posts are not commands.
 func (m *Max) command(ctx context.Context, msg *message) (messenger.Command, bool) {
-	if msg == nil || msg.Sender.id() == "" || msg.Recipient.ChatType == chatChannel {
+	if msg == nil || msg.Sender.id() == "" || msg.Sender.IsBot || msg.Recipient.ChatType == chatChannel {
 		return messenger.Command{}, false
 	}
 	name, args, ok := parseCommand(msg.Body.Text, m.self)
@@ -296,6 +307,8 @@ func (m *Max) registerCommands(ctx context.Context, l messenger.CommandLister) {
 		}
 		cmds = append(cmds, command{Name: c.Name, Description: truncate(c.Description, 128)})
 	}
+	ctx, cancel := context.WithTimeout(ctx, setupTimeout)
+	defer cancel()
 	if err := m.c.do(ctx, http.MethodPatch, "/me/commands", nil, map[string]any{"commands": cmds}, nil); err != nil {
 		log.Printf(i18n.T(m.lang, i18n.MsgSetCommandsFailed), err)
 	}

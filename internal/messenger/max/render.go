@@ -16,8 +16,13 @@ const (
 	maxText    = 4000
 	maxButtons = 3 // a row with a link button holds at most 3
 	maxTitle   = 200
-	maxQuote   = 500
-	fitParts   = 20
+	// compactTitle is the length of the fixed parts when nothing else
+	// is left to drop: even escaped 5 times, four of them fit.
+	compactTitle = 150
+	// maxURL is the longest link kept; a longer one leaves its text only.
+	maxURL   = 1000
+	maxQuote = 500
+	fitParts = 20
 )
 
 // Message is a notification as MAX gets it: HTML text and link buttons in
@@ -39,8 +44,13 @@ func Render(lang i18n.Lang, n notify.Notification) Message {
 		text = render(lang, n)
 	}
 	if runes(text) > maxText {
-		// Only the fixed parts are left; cut the text, not the markup.
+		// Only the fixed parts are left, as short text without links:
+		// cut the text, never the markup.
 		n.Fields, n.Sections, n.Notes, n.Quote = nil, nil, nil, ""
+		for _, l := range []*notify.Link{&n.Repo, &n.Item, &n.Actor} {
+			*l = notify.Link{Text: truncate(l.Text, compactTitle)}
+		}
+		n.Heading = truncate(n.Heading, compactTitle)
 		text = render(lang, n)
 	}
 	return Message{Text: text, Buttons: buttons(n.Buttons)}
@@ -48,7 +58,7 @@ func Render(lang i18n.Lang, n notify.Notification) Message {
 
 func render(lang i18n.Lang, n notify.Notification) string {
 	var sb strings.Builder
-	sb.WriteString(esc(strings.TrimSpace(n.Emoji+" "+n.Heading)) + "\n")
+	sb.WriteString(esc(strings.TrimSpace(n.Emoji+" "+truncate(n.Heading, maxTitle))) + "\n")
 	if n.Repo.Text != "" {
 		sb.WriteString("<b>" + link(n.Repo) + "</b>\n")
 	}
@@ -132,7 +142,7 @@ func truncate(s string, max int) string {
 func safeURL(u string) string {
 	u = strings.TrimSpace(u)
 	l := strings.ToLower(u)
-	if strings.HasPrefix(l, "https://") || strings.HasPrefix(l, "http://") {
+	if len(u) <= maxURL && (strings.HasPrefix(l, "https://") || strings.HasPrefix(l, "http://")) {
 		return u
 	}
 	return ""

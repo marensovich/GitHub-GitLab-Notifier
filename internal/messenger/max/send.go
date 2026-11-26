@@ -153,7 +153,15 @@ func (m *Max) Answer(ctx context.Context, p messenger.Press, text string, _ bool
 		return err
 	}
 	if text == "" {
-		return nil
+		s.mu.Lock()
+		done := s.answered
+		s.mu.Unlock()
+		if done {
+			return nil
+		}
+		// MAX takes an answer with something in it; a press nothing came
+		// of still gets one, so the button stops waiting.
+		text = "✓"
 	}
 	return m.answer(ctx, s, map[string]any{"notification": text})
 }
