@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -105,6 +106,10 @@ func New(cfg config.Max, lang i18n.Lang, publicURL string) (*Max, error) {
 	base := cfg.APIURL
 	if base == "" {
 		base = APIBase
+	}
+	// The token goes in a header, so it is never sent in the clear.
+	if u, err := url.Parse(base); err != nil || u.Scheme != "https" || u.Host == "" {
+		return nil, fmt.Errorf("max: api_url %q must be an https:// URL", base)
 	}
 	m := newWithClient(newClient(base, cfg.Token), lang)
 	m.secret, m.publicURL = secretFor(cfg.Token), publicURL

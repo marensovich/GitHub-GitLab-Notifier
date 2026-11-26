@@ -26,7 +26,6 @@ var updateTypes = []string{"message_created", "message_callback", "bot_started"}
 
 const (
 	pollTimeout = 30 // seconds MAX holds a long poll
-	retryPause  = 5 * time.Second
 	// handleTimeout bounds the work on one update: a MAX call that never
 	// answers must not stop the polling loop or pile up goroutines.
 	handleTimeout = 2 * time.Minute
@@ -34,6 +33,9 @@ const (
 	setupTimeout = 30 * time.Second
 	maxCommands  = 32
 )
+
+// retryPause is the wait after a failed poll; a variable for tests.
+var retryPause = 5 * time.Second
 
 // update is a MAX update; only the fields the adapter reads.
 type update struct {
@@ -44,8 +46,52 @@ type update struct {
 		Payload    string `json:"payload"`
 		User       *user  `json:"user"`
 	} `json:"callback"`
-	ChatID int64 `json:"chat_id"`
-	User   *user `json:"user"`
+	ChatID    int64 `json:"chat_id"`
+	User      *user `json:"user"`
+	Timestamp int64 `json:"timestamp"`
+}
+
+// key tells updates apart, so one MAX sends again is not handled twice;
+// "" when nothing does.
+func (u update) key() string {
+	switch {
+	case u.UpdateType == "message_created" && u.Message != nil && u.Message.Body.Mid != "":
+		return "m:" + u.Message.Body.Mid
+	case u.UpdateType == "message_callback" && u.Callback != nil && u.Callback.CallbackID != "":
+		return "c:" + u.Callback.CallbackID
+	case u.UpdateType == "bot_started" && u.Timestamp != 0:
+		return "s:" + strconv.FormatInt(u.ChatID, 10) + ":" + strconv.FormatInt(u.Timestamp, 10)
+	}
+	return ""
+}
+
+// seenMax is how many update keys polling remembers.
+const seenMax = 1000
+
+// seen remembers the last seenMax update keys.
+type seen struct {
+	keys  map[string]bool
+	order []string
+}
+
+// add reports whether k is new, and remembers it.
+func (s *seen) add(k string) bool {
+	if k == "" {
+		return true
+	}
+	if s.keys[k] {
+		return false
+	}
+	if s.keys == nil {
+		s.keys = map[string]bool{}
+	}
+	s.keys[k] = true
+	s.order = append(s.order, k)
+	if len(s.order) > seenMax {
+		delete(s.keys, s.order[0])
+		s.order = s.order[1:]
+	}
+	return true
 }
 
 // webhookURL is where MAX should post updates, when public_url allows a
@@ -55,7 +101,14 @@ func webhookURL(publicURL string) (string, bool) {
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || (u.Port() != "" && u.Port() != "443") {
 		return "", false
 	}
-	u.Host = u.Hostname()
+	// Only the scheme, host and path are kept: MAX takes no port but 443,
+	// and a query or fragment would end up before the path.
+	u.RawQuery, u.ForceQuery, u.Fragment, u.RawFragment = "", false, "", ""
+	host := u.Hostname()
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	u.Host = host
 	return strings.TrimRight(u.String(), "/") + UpdatesPath, true
 }
 
@@ -108,8 +161,8 @@ func (m *Max) subscribe(ctx context.Context, hook string) error {
 }
 
 // unsubscribe removes every webhook of the bot: MAX does not serve long
-// polling while one is set.
-func (m *Max) unsubscribe(ctx context.Context) {
+// polling while one is set. It reports whether all of them are gone.
+func (m *Max) unsubscribe(ctx context.Context) bool {
 	ctx, cancel := context.WithTimeout(ctx, setupTimeout)
 	defer cancel()
 	var out struct {
@@ -119,20 +172,28 @@ func (m *Max) unsubscribe(ctx context.Context) {
 	}
 	if err := m.c.do(ctx, http.MethodGet, "/subscriptions", nil, nil, &out); err != nil {
 		log.Printf("⚠️ MAX: listing webhooks: %v", err)
-		return
+		return false
 	}
+	ok := true
 	for _, s := range out.Subscriptions {
 		if err := m.c.do(ctx, http.MethodDelete, "/subscriptions", url.Values{"url": {s.URL}}, nil, nil); err != nil {
 			log.Printf("⚠️ MAX: removing the webhook %s: %v", s.URL, err)
+			ok = false
 		}
 	}
+	return ok
 }
 
-// poll takes updates by long polling until ctx is done.
+// poll takes updates by long polling until ctx is done. Webhooks are
+// removed first, and again after a failed poll until that works.
 func (m *Max) poll(ctx context.Context, h messenger.Handler) {
-	m.unsubscribe(ctx)
 	var marker *int64
+	var done seen
+	cleared := false
 	for ctx.Err() == nil {
+		if !cleared {
+			cleared = m.unsubscribe(ctx)
+		}
 		q := url.Values{"timeout": {strconv.Itoa(pollTimeout)}, "types": {strings.Join(updateTypes, ",")}}
 		if marker != nil {
 			q.Set("marker", strconv.FormatInt(*marker, 10))
@@ -156,11 +217,14 @@ func (m *Max) poll(ctx context.Context, h messenger.Handler) {
 			}
 			continue
 		}
+		cleared = true
 		if out.Marker != nil {
 			marker = out.Marker
 		}
 		for _, u := range out.Updates {
-			m.consume(ctx, h, u)
+			if done.add(u.key()) {
+				m.consume(ctx, h, u)
+			}
 		}
 	}
 }
@@ -200,11 +264,11 @@ func (m *Max) consume(ctx context.Context, h messenger.Handler, u update) {
 	defer cancel()
 	switch u.UpdateType {
 	case "bot_started":
-		chat := strconv.FormatInt(u.ChatID, 10)
-		m.sawDialog(u.User.id(), chat)
-		if u.User.id() == "" {
+		if u.ChatID == 0 || u.User.id() == "" {
 			return
 		}
+		chat := strconv.FormatInt(u.ChatID, 10)
+		m.sawDialog(u.User.id(), chat)
 		h.HandleCommand(ctx, messenger.Command{Messenger: Name, ChatID: chat, UserID: u.User.id(), IsPrivate: true, Name: "start"})
 	case "message_created":
 		if c, ok := m.command(ctx, u.Message); ok {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"GitHub-GitLab-Notifier/internal/messenger"
 )
@@ -22,19 +23,26 @@ type chatInfo struct {
 	Type           string `json:"type"`
 	Title          string `json:"title"`
 	DialogWithUser *user  `json:"dialog_with_user"`
+
+	at time.Time // when it was fetched
 }
 
-// chat returns a chat's type and title, fetched once.
+// chatTTL is how long a chat's title is kept before it is fetched again.
+const chatTTL = 10 * time.Minute
+
+// chat returns a chat's type and title, fetched again after chatTTL.
 func (m *Max) chat(ctx context.Context, id string) (chatInfo, error) {
 	m.mu.Lock()
 	ch, ok := m.chats[id]
 	m.mu.Unlock()
-	if ok {
+	if ok && time.Since(ch.at) < chatTTL {
 		return ch, nil
 	}
+	ch = chatInfo{}
 	if err := m.c.do(ctx, http.MethodGet, "/chats/"+url.PathEscape(id), nil, nil, &ch); err != nil {
 		return ch, classify(err)
 	}
+	ch.at = time.Now()
 	m.mu.Lock()
 	m.chats[id] = ch
 	m.mu.Unlock()

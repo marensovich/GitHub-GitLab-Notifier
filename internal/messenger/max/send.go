@@ -101,7 +101,7 @@ func (m *Max) Send(ctx context.Context, t messenger.Target, _ string, lang i18n.
 // user only; a reply with buttons quotes the command, so a press can be
 // matched to whoever sent it.
 func (m *Max) Reply(ctx context.Context, c messenger.Command, r messenger.Reply) (any, error) {
-	msg := newMessage{Text: r.Text, Format: FormatHTML}
+	msg := newMessage{Text: fitHTML(r.Text), Format: FormatHTML}
 	if rows := choiceRows(r.Choices); rows != nil {
 		msg.Attachments = withKeyboard(rows)
 		if cmd, ok := c.Ref.(*message); ok && cmd.Body.Mid != "" {
@@ -131,17 +131,31 @@ func (m *Max) answer(ctx context.Context, s *pressState, body any) error {
 }
 
 // Edit implements messenger.Messenger: the answer to the callback replaces
-// the message, keeping the command it quotes.
+// the message, keeping the command it quotes. When MAX refuses the answer,
+// the message is edited directly.
 func (m *Max) Edit(ctx context.Context, p messenger.Press, r messenger.Reply) error {
 	s, err := stateOf(p)
 	if err != nil {
 		return err
 	}
-	msg := newMessage{Text: r.Text, Format: FormatHTML, Attachments: withKeyboard(choiceRows(r.Choices))}
+	msg := newMessage{Text: fitHTML(r.Text), Format: FormatHTML, Attachments: withKeyboard(choiceRows(r.Choices))}
 	if s.msg != nil && s.msg.Link != nil && s.msg.Link.Type == "reply" && s.msg.Link.Message != nil {
 		msg.Link = &replyLink{Type: "reply", Mid: s.msg.Link.Message.Mid}
 	}
-	return m.answer(ctx, s, map[string]any{"message": msg})
+	err = m.answer(ctx, s, map[string]any{"message": msg})
+	if err == nil || !errors.Is(err, messenger.ErrRejected) || s.msg == nil || s.msg.Body.Mid == "" {
+		return err
+	}
+	// MAX refuses the answer to an old callback; the message itself can
+	// still be edited.
+	msg.Link = nil
+	if err := m.c.do(ctx, http.MethodPut, "/messages", url.Values{"message_id": {s.msg.Body.Mid}}, msg, nil); err != nil {
+		return classify(err)
+	}
+	s.mu.Lock()
+	s.answered = true
+	s.mu.Unlock()
+	return nil
 }
 
 // Answer implements messenger.Messenger: text goes to the presser as a

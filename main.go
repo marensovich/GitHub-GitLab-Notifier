@@ -7,7 +7,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/messenger"
 	"GitHub-GitLab-Notifier/internal/messenger/discord"
-	"GitHub-GitLab-Notifier/internal/messenger/max"
+	maxbot "GitHub-GitLab-Notifier/internal/messenger/max"
 	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/outbox"
@@ -77,14 +77,14 @@ func serve(cfg *config.Config) error {
 		log.Printf("🔗 Discord: set the Interactions Endpoint URL to %s", strings.TrimRight(cfg.Server.PublicURL, "/")+discord.InteractionsPath)
 		log.Printf("🔗 Discord: invite the bot with %s", dc.InviteURL())
 	}
-	var mx *max.Max
+	var mx *maxbot.Max
 	if c := cfg.Messengers.Max; c != nil && c.Enabled {
-		if mx, err = max.New(*c, lang, cfg.Server.PublicURL); err != nil {
+		if mx, err = maxbot.New(*c, lang, cfg.Server.PublicURL); err != nil {
 			return err
 		}
-		ms[max.Name] = mx
+		ms[maxbot.Name] = mx
 		if mx.UsesWebhook() {
-			routes[max.UpdatesPath] = mx
+			routes[maxbot.UpdatesPath] = mx
 		} else {
 			log.Print("🔗 MAX: server.public_url is not HTTPS on port 443, so updates come by long polling")
 		}

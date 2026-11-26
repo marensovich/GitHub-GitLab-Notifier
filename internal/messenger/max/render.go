@@ -221,3 +221,32 @@ func CheckHTML(s string) error {
 	}
 	return nil
 }
+
+// fitRoom is what fitHTML leaves for the closing tags.
+const fitRoom = 100
+
+var partialRe = regexp.MustCompile(`(<[^<>]*|&[#a-zA-Z0-9]*)$`)
+
+// fitHTML cuts HTML text to the text limit, never inside a tag or an
+// entity, and closes the tags left open.
+func fitHTML(s string) string {
+	if runes(s) <= maxText {
+		return s
+	}
+	cut := partialRe.ReplaceAllString(string([]rune(s)[:maxText-fitRoom]), "")
+	var open []string
+	for _, m := range tagRe.FindAllStringSubmatch(cut, -1) {
+		switch {
+		case m[1] != "/":
+			open = append(open, m[2])
+		case len(open) > 0 && open[len(open)-1] == m[2]:
+			open = open[:len(open)-1]
+		}
+	}
+	var sb strings.Builder
+	sb.WriteString(cut + "…")
+	for i := len(open) - 1; i >= 0; i-- {
+		sb.WriteString("</" + open[i] + ">")
+	}
+	return sb.String()
+}
