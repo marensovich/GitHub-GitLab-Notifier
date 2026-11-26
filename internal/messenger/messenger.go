@@ -24,6 +24,9 @@ type Caps struct {
 	// ForumOnlyThreads is true when a forum has no main chat: every
 	// message there goes to a thread (Discord forum channels).
 	ForumOnlyThreads bool
+	// HiddenCommands is true when a command typed in a group is seen by
+	// nobody but the bot (Discord slash commands), so it may carry a token.
+	HiddenCommands bool
 }
 
 // Target is where a notification goes.

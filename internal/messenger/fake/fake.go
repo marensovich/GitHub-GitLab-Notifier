@@ -82,6 +82,10 @@ type Messenger struct {
 	Members     map[string]bool
 	MemberErr   error
 	MemberCalls int
+	// Deleted lists the commands DeleteCommand removed.
+	Deleted []messenger.Command
+	// DirectErr fails DirectChat.
+	DirectErr error
 }
 
 // SentList returns a copy of the sent notifications; safe while the
@@ -188,6 +192,30 @@ func (m *Messenger) IsMember(_ context.Context, chatID, userID string) (bool, er
 		return false, m.MemberErr
 	}
 	return m.Members[chatID+"/"+userID], nil
+}
+
+// DirectChat returns the user ID for "telegram" (as Telegram does) and
+// "dm-<user>" for other names.
+func (m *Messenger) DirectChat(_ context.Context, userID string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Log = append(m.Log, "DirectChat")
+	if m.DirectErr != nil {
+		return "", m.DirectErr
+	}
+	if m.name == "telegram" {
+		return userID, nil
+	}
+	return "dm-" + userID, nil
+}
+
+// DeleteCommand records the command in Deleted.
+func (m *Messenger) DeleteCommand(_ context.Context, c messenger.Command) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Log = append(m.Log, "DeleteCommand")
+	m.Deleted = append(m.Deleted, c)
+	return nil
 }
 
 func (m *Messenger) CanManageThreads(_ context.Context, chatID string) (bool, error) {

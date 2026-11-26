@@ -94,6 +94,7 @@ func (d *Discord) Caps() messenger.Caps {
 	return messenger.Caps{
 		Threads:          true,
 		ForumOnlyThreads: true,
+		HiddenCommands:   true,
 		ButtonsPerRow:    maxRowButtons,
 		PerChatRate:      1,
 		PerChatBurst:     5,

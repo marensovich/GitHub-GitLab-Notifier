@@ -1,7 +1,11 @@
 package telegram
 
 import (
+	"bytes"
 	"context"
+	"log"
+	"os"
+	"strings"
 	"testing"
 
 	"GitHub-GitLab-Notifier/internal/messenger"
@@ -48,5 +52,27 @@ func TestDeleteCommand(t *testing.T) {
 	}
 	if call := lastCall(fake); call.method != "deleteMessage" || call.body["chat_id"] != float64(5) || call.body["message_id"] != float64(7) {
 		t.Errorf("call %s %v", call.method, call.body)
+	}
+}
+
+type nopHandler struct{ got []messenger.Command }
+
+func (h *nopHandler) HandleCommand(_ context.Context, c messenger.Command) { h.got = append(h.got, c) }
+func (h *nopHandler) HandlePress(context.Context, messenger.Press)         {}
+
+func TestLinkTokenNotLogged(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+	b, _ := newSendBot(t, false, nil)
+	h := &nopHandler{}
+	b.consume(context.Background(), h, telego.Update{Message: &telego.Message{MessageID: 7,
+		Chat: telego.Chat{ID: 5, Type: telego.ChatTypePrivate}, From: &telego.User{ID: 5, Username: "al"},
+		Text: "/link github ghp_SECRET"}})
+	if len(h.got) != 1 || h.got[0].Args[1] != "ghp_SECRET" {
+		t.Fatalf("command %+v", h.got)
+	}
+	if strings.Contains(buf.String(), "ghp_SECRET") || !strings.Contains(buf.String(), "/link github") {
+		t.Errorf("log %q", buf.String())
 	}
 }

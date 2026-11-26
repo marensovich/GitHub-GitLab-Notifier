@@ -195,9 +195,18 @@ func (t *Telegram) consume(ctx context.Context, h messenger.Handler, u telego.Up
 			// From is nil for channel posts.
 			userName = u.Message.From.Username
 		}
-		log.Printf(i18n.T(t.lang, i18n.MsgNewMessage), userName, u.Message.Chat.ID, u.Message.Text)
+		log.Printf(i18n.T(t.lang, i18n.MsgNewMessage), userName, u.Message.Chat.ID, logged(c, u.Message.Text))
 		h.HandleCommand(ctx, c)
 	}
+}
+
+// logged is the text of a command as the log shows it: the token of /link
+// never reaches the log.
+func logged(c messenger.Command, text string) string {
+	if c.Name != "link" || len(c.Args) < 2 {
+		return text
+	}
+	return "/link " + c.Args[0] + " [token hidden]"
 }
 
 // press turns a button press into a Press, with the sender of the command
