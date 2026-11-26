@@ -43,6 +43,7 @@ type Telegram struct {
 	healthMu    sync.Mutex
 	lastContact time.Time
 	lastErr     error
+	probe       messenger.Probe
 }
 
 var _ messenger.Messenger = (*Telegram)(nil)
@@ -325,8 +326,8 @@ func (t *Telegram) Health(ctx context.Context) error {
 	t.healthMu.Lock()
 	err := telegramHealth(t.lastContact, t.lastErr, time.Now())
 	t.healthMu.Unlock()
-	if err == nil {
-		return nil
+	if err == nil || !t.probe.Due() {
+		return err
 	}
 	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

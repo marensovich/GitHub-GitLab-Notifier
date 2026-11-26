@@ -39,8 +39,9 @@ var (
 
 // New returns the core for the given adapters, keyed by messenger name.
 func New(store *storage.Store, cfg *config.Config, version string, ms map[string]messenger.Messenger) *Core {
-	return &Core{store: store, cfg: cfg, version: version, ms: ms,
-		Verifier: personal.Verifier{HTTP: &http.Client{Timeout: verifyTimeout}}}
+	c := &Core{store: store, cfg: cfg, version: version, ms: ms}
+	c.Verifier = personal.Verifier{HTTP: &http.Client{Timeout: verifyTimeout}, BaseURL: c.apiBase}
+	return c
 }
 
 // Commands returns the command menu in lang.
@@ -78,6 +79,13 @@ func (c *Core) HandleCommand(ctx context.Context, cmd messenger.Command) {
 			log.Print(i18n.Tf(c.defaultLang(), i18n.MsgFailedToSaveChatConfig, err))
 		}
 		d.Inactive = false
+	}
+	if !cmd.IsPrivate && cmd.UserID != "" {
+		// A user seen anywhere may get private messages again (Discord
+		// refuses them to someone who shares no server with the bot).
+		if err := c.store.ReactivateDM(cmd.Messenger, cmd.UserID); err != nil {
+			log.Print(i18n.Tf(c.defaultLang(), i18n.MsgFailedToSaveChatConfig, err))
+		}
 	}
 	r := &request{ctx: ctx, m: m, cmd: cmd, dest: d, lang: c.langOf(d)}
 

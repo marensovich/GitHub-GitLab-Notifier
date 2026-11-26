@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -99,26 +100,26 @@ func serve(cfg *config.Config) error {
 	}
 
 	core := commands.New(store, cfg, Version, ms)
-	if tg != nil {
+	// running counts what must finish before the store closes: the
+	// adapters (Discord lets its interactions end) and the outbox.
+	var running sync.WaitGroup
+	start := func(run func(context.Context, messenger.Handler) error) {
+		running.Add(1)
 		go func() {
-			if err := tg.Run(ctx, core); err != nil {
+			defer running.Done()
+			if err := run(ctx, core); err != nil {
 				log.Fatal(err)
 			}
 		}()
+	}
+	if tg != nil {
+		start(tg.Run)
 	}
 	if dc != nil {
-		go func() {
-			if err := dc.Run(ctx, core); err != nil {
-				log.Fatal(err)
-			}
-		}()
+		start(dc.Run)
 	}
 	if mx != nil {
-		go func() {
-			if err := mx.Run(ctx, core); err != nil {
-				log.Fatal(err)
-			}
-		}()
+		start(mx.Run)
 	}
 
 	d := dispatcher.NewDispatcher(lang, cfg.Defaults.NotifyUnknownEvents)
@@ -127,7 +128,11 @@ func serve(cfg *config.Config) error {
 	// The webhook server stores messages; the outbox sends and retries them.
 	o := outbox.New(store, ms, m, time.Now)
 	o.SetThreadMaker(core.MakeThread)
-	go o.Run(ctx)
+	running.Add(1)
+	go func() {
+		defer running.Done()
+		o.Run(ctx)
+	}()
 
 	srv := server.New(server.Config{
 		Addr:                cfg.Server.Listen,
@@ -174,6 +179,16 @@ func serve(cfg *config.Config) error {
 			if err := panel.Shutdown(shutdownCtx); err != nil {
 				log.Printf(i18n.T(lang, i18n.MsgPanelFailed), err)
 			}
+		}
+		done := make(chan struct{})
+		go func() {
+			running.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-shutdownCtx.Done():
+			log.Print("⚠️ stopping before every message in progress was sent")
 		}
 	}
 	return nil

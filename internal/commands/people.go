@@ -245,6 +245,21 @@ func (c *Core) gitlabHosts() []string {
 	return hosts
 }
 
+// apiBase is the API root a /link token is checked at. A self-hosted
+// GitLab whose connected repositories use plain http:// is asked over http.
+func (c *Core) apiBase(platform, host string) string {
+	if platform == "gitlab" {
+		if repos, err := c.store.Repos(); err == nil {
+			for _, repo := range repos {
+				if repo.Platform == "GitLab" && strings.HasPrefix(strings.ToLower(repo.URL), "http://") && hostOf(repo.URL) == host {
+					return "http://" + host + "/api/v4"
+				}
+			}
+		}
+	}
+	return personal.DefaultBaseURL(platform, host)
+}
+
 // hostOf returns the lower-case host of "git.example.com",
 // "https://git.example.com/" or a repository URL.
 func hostOf(s string) string {

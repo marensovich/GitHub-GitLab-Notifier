@@ -273,9 +273,16 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 
 	if messenger.Classify(err) == messenger.ClassNeedsThread && o.makeThread != nil {
 		id, makeErr := o.makeThread(ctx, d.ID, p.Topic, it.ThreadID)
-		if makeErr != nil {
+		switch c := messenger.Classify(makeErr); {
+		case makeErr == nil:
+		case c == messenger.ClassRejected || c == messenger.ClassChatGone:
+			// The chat refuses new threads for good (e.g. its forum
+			// requires tags): retrying would fail the same way.
+			err = fmt.Errorf("creating a thread: %w", makeErr)
+		default:
 			err = fmt.Errorf("%w (creating a thread: %v)", err, makeErr)
-		} else {
+		}
+		if makeErr == nil {
 			if err := o.store.SetOutboxThread(it.ID, id); err != nil {
 				log.Printf("❌ outbox: %v", err)
 			}
@@ -302,6 +309,20 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 		}
 		o.metrics.SendRetried(name)
 		if err := o.store.MarkRetry(it.ID, it.Attempts, o.clock().Add(wait), err.Error()); err != nil {
+			log.Printf("❌ outbox: %v", err)
+		}
+	case messenger.ClassChatMoved:
+		to := messenger.MovedTo(err)
+		if moveErr := o.store.MoveDestination(d.ID, to); moveErr != nil {
+			log.Printf("⚠️ %s: chat %s moved to %s, which cannot take its place, no more messages go there: %v", name, d.ChatID, to, moveErr)
+			o.dead(it, err.Error())
+			if err := o.store.SetDestinationInactive(d.ID, true); err != nil {
+				log.Printf("❌ outbox: %v", err)
+			}
+			break
+		}
+		log.Printf("🔁 %s: chat %s is now %s", name, d.ChatID, to)
+		if err := o.store.MarkRetry(it.ID, it.Attempts, o.clock(), err.Error()); err != nil {
 			log.Printf("❌ outbox: %v", err)
 		}
 	case messenger.ClassChatGone:

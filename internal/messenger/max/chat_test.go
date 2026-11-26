@@ -115,6 +115,7 @@ func TestHealthAsksMe(t *testing.T) {
 		t.Errorf("health %v", err)
 	}
 	f.answer("GET /me", `{"user_id":1,"username":"notifier_bot"}`)
+	m.probe = messenger.Probe{} // the next check is due
 	if err := m.Health(context.Background()); err != nil {
 		t.Errorf("health %v", err)
 	}

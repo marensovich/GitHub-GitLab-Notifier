@@ -221,9 +221,9 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Print(i18n.Tf(lang, i18n.MsgWebhookReceived, p, eventName))
 
 	repoURL := platform.RepositoryURL(p, body)
-	repo, err := s.store.FindRepo(repoURL)
-	if err != nil {
-		log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), err)
+	repo, findErr := s.store.FindRepo(repoURL)
+	if findErr != nil {
+		log.Printf(i18n.T(lang, i18n.MsgDeliveryLogFailed), findErr)
 	}
 	if repo != nil {
 		repoURL = repo.URL
@@ -249,6 +249,12 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(status)
 		w.Write([]byte(text))
+	}
+
+	if findErr != nil {
+		// Unknown is not "not connected": the platform should try again.
+		reply(http.StatusInternalServerError, "Internal Server Error", storage.DeliveryFailed, findErr.Error())
+		return
 	}
 
 	if !s.verify(r, p, body, repo) {
@@ -286,7 +292,11 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	var items []storage.OutboxItem
 	if repo != nil {
-		items = s.items(p, eventName, body, repo)
+		var err error
+		if items, err = s.items(p, eventName, body, repo); err != nil {
+			reply(http.StatusInternalServerError, "Internal Server Error", storage.DeliveryFailed, err.Error())
+			return
+		}
 	}
 	switch {
 	case items == nil && !s.dispatcher.Dispatch(lang, p, eventName, body).Skip:
@@ -451,14 +461,22 @@ func validGitHubSignature(secret string, body []byte, header string) bool {
 
 // items formats the event for every destination subscribed to the
 // repository: one outbox row each. It returns nil when nobody is
-// subscribed and an empty list when the event is not sent to anyone.
-func (s *Server) items(p platform.Platform, eventName string, body []byte, repo *storage.Repo) []storage.OutboxItem {
+// subscribed and an empty list when the event is not sent to anyone (the
+// only chats subscribed are inactive, say).
+func (s *Server) items(p platform.Platform, eventName string, body []byte, repo *storage.Repo) ([]storage.OutboxItem, error) {
 	subs, err := s.store.Subscribers(repo.ID)
 	if err != nil {
-		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+		return nil, err
 	}
 	if len(subs) == 0 {
-		return nil
+		n, err := s.store.SubscriberCount(repo.ID)
+		if err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			return []storage.OutboxItem{}, nil
+		}
+		return nil, nil
 	}
 	results := make(map[i18n.Lang]dispatcher.Result)
 	items := []storage.OutboxItem{}
@@ -496,7 +514,7 @@ func (s *Server) items(p platform.Platform, eventName string, body []byte, repo 
 			Payload: payload, NextAttemptAt: time.Now(),
 		})
 	}
-	return append(items, s.personalItems(p, eventName, body, repo, subs, results)...)
+	return append(items, s.personalItems(p, eventName, body, repo, subs, results)...), nil
 }
 
 // reasonNotes is the note that tells a person why they got a DM.

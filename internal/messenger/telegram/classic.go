@@ -17,6 +17,12 @@ func RenderClassic(lang i18n.Lang, n notify.Notification) (string, [][]notify.Bu
 		t, kb = classic(lang, n)
 		return t
 	}, VisibleLen, classicMaxText)
+	if VisibleLen(text) > classicMaxText {
+		// Only the fixed parts are left, each cut short.
+		n.Fields, n.Sections, n.Notes, n.Quote = nil, nil, nil, ""
+		n.Heading = truncate(n.Heading, maxTitle)
+		text, kb = classic(lang, n)
+	}
 	return text, kb
 }
 
@@ -33,7 +39,7 @@ func classic(lang i18n.Lang, n notify.Notification) (string, [][]notify.Button) 
 		sb.WriteString("<b>" + link(n.Item, maxTitle) + "</b>\n")
 	}
 	for _, f := range nonEmpty(n.Fields) {
-		sb.WriteString(esc(f.Label) + ": " + parts(f.Value) + "\n")
+		sb.WriteString(esc(truncate(f.Label, maxTitle)) + ": " + parts(f.Value) + "\n")
 	}
 	for _, note := range n.Notes {
 		sb.WriteString(esc(note) + "\n")

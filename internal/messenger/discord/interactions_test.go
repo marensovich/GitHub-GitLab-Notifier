@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -51,6 +52,8 @@ func newFakeAPI(t *testing.T) *fakeAPI {
 		switch r.URL.Path {
 		case "/channels/20":
 			_, _ = io.WriteString(w, `{"id":"20","type":15,"name":"forum"}`)
+		case "/channels/49":
+			w.WriteHeader(http.StatusInternalServerError)
 		case "/channels/30":
 			_, _ = io.WriteString(w, `{"id":"30","type":0,"name":"text"}`)
 		default:
@@ -137,7 +140,7 @@ func (e *env) post(t *testing.T, body string, signed bool) *httptest.ResponseRec
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/discord/interactions", strings.NewReader(body))
 	if signed {
-		ts := "1700000000"
+		ts := strconv.FormatInt(time.Now().Unix(), 10)
 		req.Header.Set("X-Signature-Timestamp", ts)
 		req.Header.Set("X-Signature-Ed25519", hex.EncodeToString(ed25519.Sign(e.priv, []byte(ts+body))))
 	}

@@ -4,7 +4,7 @@
     {
       "title": "🐛 New issue · #10 App crashes on start",
       "url": "https://github.com/octo/hello/issues/10",
-      "description": "> Steps:\n> 1. Open the app\n> 2. <crash\\>",
+      "description": "> Steps:\n> 1\\. Open the app\n> 2\\. <crash\\>",
       "color": 5793266,
       "author": {
         "name": "octo/hello",
@@ -39,7 +39,7 @@
     {
       "title": "🐛 Новый issue · #10 App crashes on start",
       "url": "https://github.com/octo/hello/issues/10",
-      "description": "> Steps:\n> 1. Open the app\n> 2. <crash\\>",
+      "description": "> Steps:\n> 1\\. Open the app\n> 2\\. <crash\\>",
       "color": 5793266,
       "author": {
         "name": "octo/hello",

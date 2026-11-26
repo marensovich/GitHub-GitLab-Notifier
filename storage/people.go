@@ -132,6 +132,13 @@ func (s *Store) RenameAccount(platform, host, accountID, login string) (int, err
 		WHERE platform = ? AND host = ? AND account_id = ? AND login != ?`, login, platform, host, accountID, login)
 }
 
+// ReactivateDM makes the private chat of a linked user active again.
+func (s *Store) ReactivateDM(messenger, userID string) error {
+	_, err := s.db.Exec(`UPDATE destinations SET inactive = 0 WHERE inactive = 1
+		AND id = (SELECT destination_id FROM people WHERE messenger = ? AND user_id = ?)`, messenger, userID)
+	return err
+}
+
 // SetMuted sets the reasons a person gets no DM for.
 func (s *Store) SetMuted(personID int64, muted []string) error {
 	_, err := s.db.Exec("UPDATE people SET muted = ? WHERE id = ?", strings.Join(muted, ","), personID)

@@ -3,6 +3,7 @@ package messenger
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -46,7 +47,47 @@ const (
 	ClassRejected
 	ClassNeedsThread
 	ClassTemporary
+	ClassChatMoved
 )
+
+// ChatMoved: the chat has a new ID (a Telegram group that became a
+// supergroup); its messages go to To from now on.
+type ChatMoved struct {
+	To  string
+	Err error
+}
+
+func (e *ChatMoved) Error() string { return fmt.Sprintf("chat moved to %s: %v", e.To, e.Err) }
+func (e *ChatMoved) Unwrap() error { return e.Err }
+
+// MovedTo returns the new chat ID of a ChatMoved error, or "".
+func MovedTo(err error) string {
+	var cm *ChatMoved
+	if errors.As(err, &cm) {
+		return cm.To
+	}
+	return ""
+}
+
+// ProbeEvery is how often Health may ask a messenger's API at most.
+const ProbeEvery = 30 * time.Second
+
+// Probe limits how often Health asks a messenger's API.
+type Probe struct {
+	mu   sync.Mutex
+	last time.Time
+}
+
+// Due reports whether a check may run now, and if so counts it as run.
+func (p *Probe) Due() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.last.IsZero() && time.Since(p.last) < ProbeEvery {
+		return false
+	}
+	p.last = time.Now()
+	return true
+}
 
 func (c Class) String() string {
 	switch c {
@@ -62,6 +103,8 @@ func (c Class) String() string {
 		return "rejected"
 	case ClassNeedsThread:
 		return "needs thread"
+	case ClassChatMoved:
+		return "chat moved"
 	}
 	return "temporary"
 }
@@ -74,6 +117,8 @@ func Classify(err error) Class {
 		return ClassOK
 	case errors.As(err, &rl):
 		return ClassRateLimited
+	case MovedTo(err) != "":
+		return ClassChatMoved
 	case errors.Is(err, ErrThreadNotFound):
 		return ClassThreadNotFound
 	case errors.Is(err, ErrChatGone):
