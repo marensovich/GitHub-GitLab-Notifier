@@ -42,10 +42,13 @@ func (v Verifier) WhoAmI(ctx context.Context, platform, host, token string) (sto
 	if base == nil {
 		base = DefaultBaseURL
 	}
-	client := v.HTTP
-	if client == nil {
-		client = http.DefaultClient
+	client := http.Client{}
+	if v.HTTP != nil {
+		client = *v.HTTP
 	}
+	// A redirect would carry PRIVATE-TOKEN to another host, and that
+	// host's answer would decide whose account it is.
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base(platform, host)+"/user", nil)
 	if err != nil {
 		return storage.Account{}, fmt.Errorf("%s: bad host", host)

@@ -218,3 +218,26 @@ func TestLinkInServerWhereCommandsAreHidden(t *testing.T) {
 		t.Errorf("DM destination %+v", d)
 	}
 }
+
+func TestLinkTokenWithoutPlatformDeleted(t *testing.T) {
+	e := newEnv(t, telegramCaps)
+	a := e.accounts(t)
+	got := e.run(dm("5", "/link ghp_ABC"))
+	if len(e.m.Deleted) != 1 || strings.Contains(got, "ghp_ABC") || len(a.calls()) != 0 {
+		t.Errorf("deleted %d, reply %q", len(e.m.Deleted), got)
+	}
+}
+
+func TestLinkSwappedHostAndToken(t *testing.T) {
+	e := newEnv(t, telegramCaps)
+	a := e.accounts(t)
+	got := e.run(dm("5", "/link gitlab git.corp glpat-XYZ"))
+	if got != i18n.T(i18n.EN, i18n.MsgLinkBadHost) || strings.Contains(strings.ToLower(got), "glpat") || len(a.calls()) != 0 {
+		t.Errorf("reply %q, calls %v", got, a.calls())
+	}
+	// A host with a port is kept whole.
+	e.run(dm("5", "/link gitlab tok-bob git.corp:8443"))
+	if c := a.calls(); len(c) != 1 || c[0] != "/gitlab/git.corp:8443/user" {
+		t.Errorf("port: calls %v", c)
+	}
+}

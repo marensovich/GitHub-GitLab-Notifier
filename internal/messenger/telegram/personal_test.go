@@ -76,3 +76,12 @@ func TestLinkTokenNotLogged(t *testing.T) {
 		t.Errorf("log %q", buf.String())
 	}
 }
+
+func TestLinkArgsNeverLogged(t *testing.T) {
+	for _, text := range []string{"/link ghp_SECRET", "/link gitlab x.y ghp_SECRET", "/link ghp_SECRET a b"} {
+		c := messenger.Command{Name: "link", Args: strings.Fields(text)[1:]}
+		if got := logged(c, text); strings.Contains(got, "ghp_SECRET") {
+			t.Errorf("%q logged as %q", text, got)
+		}
+	}
+}

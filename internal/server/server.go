@@ -525,6 +525,11 @@ func (s *Server) personalItems(p platform.Platform, eventName string, body []byt
 			logins = append(logins, h.Login)
 		}
 	}
+	if ev.ActorID != "" {
+		// The actor is never a recipient here, but their login is kept
+		// current like any account seen with its ID.
+		ids = append(ids, ev.ActorID)
+	}
 	recipients, err := s.store.Recipients(ev.Platform, ev.Host, ids, logins)
 	if err != nil {
 		log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
@@ -534,6 +539,8 @@ func (s *Server) personalItems(p platform.Platform, eventName string, body []byt
 	for _, d := range subs {
 		subscribed[d.ID] = true
 	}
+
+	recipients = s.followRenames(ev, recipients)
 
 	best := map[int64]int{} // person -> index in personal.Order
 	people := map[int64]storage.Recipient{}
@@ -593,6 +600,37 @@ func (s *Server) personalItems(p platform.Platform, eventName string, body []byt
 		})
 	}
 	return items
+}
+
+// followRenames stores the login an event gives for an account it names by
+// ID, so a mention of the old login (maybe someone else's now) stops
+// matching. The returned recipients carry the new logins.
+func (s *Server) followRenames(ev personal.Event, recipients []storage.Recipient) []storage.Recipient {
+	seen := map[string]string{} // account ID -> login in the event
+	if ev.ActorID != "" && ev.ActorLogin != "" {
+		seen[ev.ActorID] = ev.ActorLogin
+	}
+	for _, h := range ev.Hits {
+		if h.AccountID != "" && h.Login != "" {
+			seen[h.AccountID] = h.Login
+		}
+	}
+	renamed := map[string]bool{}
+	for i, r := range recipients {
+		login, ok := seen[r.AccountID]
+		if !ok || login == r.Login {
+			continue
+		}
+		if !renamed[r.AccountID] {
+			if _, err := s.store.RenameAccount(ev.Platform, ev.Host, r.AccountID, login); err != nil {
+				log.Printf(i18n.T(s.cfg.DefaultLang, i18n.MsgDeliveryLogFailed), err)
+				continue
+			}
+			renamed[r.AccountID] = true
+		}
+		recipients[i].Login = login
+	}
+	return recipients
 }
 
 // hitMatches tells whether a hit names the account: by ID when it has one,

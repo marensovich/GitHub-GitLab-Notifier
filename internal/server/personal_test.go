@@ -179,3 +179,21 @@ func TestDMInBothMessengersAndNotTwiceInOneChat(t *testing.T) {
 		t.Errorf("sent to %v", to)
 	}
 }
+
+func TestRenamedLoginFollowsAccountID(t *testing.T) {
+	e := newEnv(t, Config{})
+	e.hello(t)
+	e.dm(t, "5", "en", "10", "alice")
+	assigned := `{"action":"assigned","assignee":{"login":"alice2","id":10},"pull_request":{"number":3,"title":"Dark"},` + repoJSON(false) + `}`
+	e.post(t, ghHeaders("pull_request"), assigned)
+	_, accs, err := e.store.PersonOf("telegram", "5")
+	must(t, err)
+	if len(accs) != 1 || accs[0].Login != "alice2" {
+		t.Fatalf("accounts %+v", accs)
+	}
+	before := len(e.m.SentList())
+	e.post(t, ghHeaders("issue_comment"), commentPayload("@alice is someone else now"))
+	if n := len(e.m.SentList()) - before; n != 1 {
+		t.Errorf("sent %d after old-login mention, want the chat only", n)
+	}
+}

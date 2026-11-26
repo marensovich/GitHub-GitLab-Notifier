@@ -3,6 +3,7 @@ package outbox
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -123,5 +124,50 @@ func TestAdapterWithoutMemberCheckSends(t *testing.T) {
 	e.drain()
 	if len(e.m.SentList()) != 1 || e.m.MemberCalls != 0 {
 		t.Errorf("sent %d, checks %d", len(e.m.SentList()), e.m.MemberCalls)
+	}
+}
+
+// twoChats subscribes a second team chat -2 to the repository.
+func (e *memberEnv) twoChats(t *testing.T) {
+	t.Helper()
+	b, _ := e.store.EnsureDestination("telegram", "-2", storage.Destination{Language: "en"})
+	if err := e.store.Subscribe(e.repo.ID, b.ID); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBrokenChatDoesNotBlockMemberCheck(t *testing.T) {
+	e := newMemberEnv(t)
+	e.twoChats(t)
+	e.m.MemberErrs = map[string]error{"-1": fmt.Errorf("%w: no such chat", messenger.ErrRejected)}
+	e.m.Members = map[string]bool{"-2/5": true}
+	id := e.enqueueDM(t, "hi")
+	e.drain()
+	if len(e.m.SentList()) != 1 || e.status(t, id) != storage.DeliveryDelivered {
+		t.Errorf("sent %d, status %s", len(e.m.SentList()), e.status(t, id))
+	}
+}
+
+func TestTemporaryCheckErrorRetriesWhenNoChatSaysYes(t *testing.T) {
+	e := newMemberEnv(t)
+	e.twoChats(t)
+	e.m.MemberErrs = map[string]error{"-2": errors.New("timeout")}
+	id := e.enqueueDM(t, "hi")
+	e.drain()
+	if len(e.m.SentList()) != 0 || e.status(t, id) != storage.DeliveryQueued {
+		t.Errorf("sent %d, status %s", len(e.m.SentList()), e.status(t, id))
+	}
+}
+
+func TestRateLimitedCheckSpendsNoAttempt(t *testing.T) {
+	e := newMemberEnv(t)
+	e.m.MemberErr = &messenger.RateLimited{RetryAfter: time.Second, Err: errors.New("429")}
+	id := e.enqueueDM(t, "hi")
+	for range 15 {
+		e.drain()
+		e.now = e.now.Add(time.Hour)
+	}
+	if s := e.status(t, id); s != storage.DeliveryQueued {
+		t.Errorf("status %s after 15 rate-limited checks", s)
 	}
 }

@@ -94,7 +94,7 @@ type payload struct {
 	RequestedReviewer *ghUser `json:"requested_reviewer"`
 	Repository        struct {
 		HTMLURL string `json:"html_url"`
-		Private bool   `json:"private"`
+		Private *bool  `json:"private"`
 	} `json:"repository"`
 	PullRequest struct{ Body string } `json:"pull_request"`
 	Issue       struct{ Body string } `json:"issue"`
@@ -109,10 +109,11 @@ type payload struct {
 	// GitLab
 	User             glUser `json:"user"`
 	ObjectAttributes struct {
-		Action      string `json:"action"`
-		Description string `json:"description"`
-		Note        string `json:"note"`
-		Status      string `json:"status"`
+		Action       string `json:"action"`
+		Description  string `json:"description"`
+		Note         string `json:"note"`
+		Status       string `json:"status"`
+		Confidential bool   `json:"confidential"`
 	} `json:"object_attributes"`
 	Assignees []glUser `json:"assignees"`
 	Reviewers []glUser `json:"reviewers"`
@@ -129,6 +130,13 @@ type payload struct {
 // glPublic is GitLab's visibility level of a public project.
 const glPublic = 20
 
+// glPrivate: a project that is not public, one whose visibility is not
+// given, or a confidential issue or note in any project.
+func glPrivate(event string, d *payload) bool {
+	return d.Project.VisibilityLevel == nil || *d.Project.VisibilityLevel < glPublic ||
+		event == "Confidential Issue Hook" || event == "Confidential Note Hook" || d.ObjectAttributes.Confidential
+}
+
 // Extract reads an event's payload. An event about nobody has no hits.
 func Extract(p platform.Platform, eventName string, body []byte) Event {
 	var d payload
@@ -138,18 +146,20 @@ func Extract(p platform.Platform, eventName string, body []byte) Event {
 	var e Event
 	switch p {
 	case platform.GitHub:
-		e = Event{Platform: "github", Private: d.Repository.Private,
+		// No "private" field: assume the worst.
+		e = Event{Platform: "github", Private: d.Repository.Private == nil || *d.Repository.Private,
 			ActorID: string(d.Sender.ID), ActorLogin: d.Sender.Login}
 		e.Hits = githubHits(eventName, &d)
 	case platform.GitLab:
 		e = Event{Platform: "gitlab", ActorID: string(d.User.ID), ActorLogin: d.User.Username,
-			Private: d.Project.VisibilityLevel != nil && *d.Project.VisibilityLevel < glPublic}
+			Private: glPrivate(eventName, &d)}
 		e.Hits = gitlabHits(eventName, &d)
 	default:
 		return Event{}
 	}
 	if u, err := url.Parse(platform.RepositoryURL(p, body)); err == nil {
-		e.Host = strings.ToLower(u.Hostname())
+		// With the port: the API of a server on another port is there too.
+		e.Host = strings.ToLower(u.Host)
 	}
 	return e
 }

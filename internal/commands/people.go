@@ -6,6 +6,7 @@ import (
 	"html"
 	"log"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -15,6 +16,9 @@ import (
 	"GitHub-GitLab-Notifier/internal/personal"
 	"GitHub-GitLab-Notifier/storage"
 )
+
+// hostPattern is a host name with at least one dot and an optional port.
+var hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:[0-9]{1,5})?$`)
 
 // pressMe is the press data prefix of the /me toggles: "me:<reason>".
 const pressMe = "me:"
@@ -35,7 +39,7 @@ var reasonButtons = map[personal.Reason]string{
 // is deleted where the messenger keeps one.
 func (c *Core) link(r *request) {
 	dm, _ := r.m.(messenger.DirectMessenger)
-	if len(r.cmd.Args) >= 2 && dm != nil {
+	if len(r.cmd.Args) > 0 && dm != nil {
 		if err := dm.DeleteCommand(r.ctx, r.cmd); err != nil {
 			log.Printf("❌ %s: delete the /link message in chat %s: %v", r.cmd.Messenger, r.cmd.ChatID, err)
 		}
@@ -56,7 +60,12 @@ func (c *Core) link(r *request) {
 	token := r.cmd.Args[1]
 	host := ""
 	if len(r.cmd.Args) > 2 {
-		host = hostOf(r.cmd.Args[2])
+		// A token typed in the host's place must not be looked up or
+		// echoed back: only a host name with a dot is tried.
+		if host = hostOf(r.cmd.Args[2]); !hostPattern.MatchString(host) {
+			c.reply(r, i18n.T(r.lang, i18n.MsgLinkBadHost), nil)
+			return
+		}
 	}
 	if host == "" {
 		if platform == "github" {

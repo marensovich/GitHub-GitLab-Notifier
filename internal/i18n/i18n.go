@@ -146,6 +146,7 @@ const (
 	MsgLinkFailed             = "link_failed"
 	MsgLinkNeedHost           = "link_need_host"
 	MsgLinkPickHost           = "link_pick_host"
+	MsgLinkBadHost            = "link_bad_host"
 	MsgLinkNoDM               = "link_no_dm"
 	MsgLinkDone               = "link_done"
 	MsgUnlinkUsage            = "unlink_usage"

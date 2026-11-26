@@ -82,6 +82,8 @@ type Messenger struct {
 	Members     map[string]bool
 	MemberErr   error
 	MemberCalls int
+	// MemberErrs fails IsMember for one chat ID.
+	MemberErrs map[string]error
 	// Deleted lists the commands DeleteCommand removed.
 	Deleted []messenger.Command
 	// DirectErr fails DirectChat.
@@ -190,6 +192,9 @@ func (m *Messenger) IsMember(_ context.Context, chatID, userID string) (bool, er
 	m.MemberCalls++
 	if m.MemberErr != nil {
 		return false, m.MemberErr
+	}
+	if err := m.MemberErrs[chatID]; err != nil {
+		return false, err
 	}
 	return m.Members[chatID+"/"+userID], nil
 }

@@ -125,6 +125,13 @@ func (s *Store) affected(q string, args ...any) (int, error) {
 	return int(n), err
 }
 
+// RenameAccount stores a new login of an account, known by its ID, in
+// every messenger. It reports how many links changed.
+func (s *Store) RenameAccount(platform, host, accountID, login string) (int, error) {
+	return s.affected(`UPDATE accounts SET login = ?
+		WHERE platform = ? AND host = ? AND account_id = ? AND login != ?`, login, platform, host, accountID, login)
+}
+
 // SetMuted sets the reasons a person gets no DM for.
 func (s *Store) SetMuted(personID int64, muted []string) error {
 	_, err := s.db.Exec("UPDATE people SET muted = ? WHERE id = ?", strings.Join(muted, ","), personID)
