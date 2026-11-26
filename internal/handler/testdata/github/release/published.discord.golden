@@ -4,7 +4,7 @@
     {
       "title": "📦 New release · v1.2.0 — Dark mode",
       "url": "https://github.com/octo/hello/releases/tag/v1.2.0",
-      "description": "> ## Changes\n> - Dark mode",
+      "description": "> \\## Changes\n> \\- Dark mode",
       "color": 5793266,
       "author": {
         "name": "octo/hello",
@@ -46,7 +46,7 @@
     {
       "title": "📦 Новый релиз · v1.2.0 — Dark mode",
       "url": "https://github.com/octo/hello/releases/tag/v1.2.0",
-      "description": "> ## Changes\n> - Dark mode",
+      "description": "> \\## Changes\n> \\- Dark mode",
       "color": 5793266,
       "author": {
         "name": "octo/hello",

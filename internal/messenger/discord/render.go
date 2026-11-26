@@ -2,6 +2,7 @@ package discord
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -118,6 +119,25 @@ var escaper = strings.NewReplacer(
 
 // esc makes text show as typed in Discord markdown.
 func esc(s string) string { return escaper.Replace(s) }
+
+// lineStartRe finds markdown that only means something at the start of a
+// line: headings, subtext and lists.
+var lineStartRe = regexp.MustCompile(`^(\s*)(#{1,3}|-#|[-+]|[0-9]+\.)(\s)`)
+
+// escLineStart escapes the markdown a line starts with, if any.
+func escLineStart(l string) string {
+	m := lineStartRe.FindStringSubmatchIndex(l)
+	if m == nil {
+		return l
+	}
+	marker := l[m[4]:m[5]]
+	if strings.HasSuffix(marker, ".") {
+		marker = strings.TrimSuffix(marker, ".") + `\.`
+	} else {
+		marker = `\` + marker
+	}
+	return l[:m[4]] + marker + l[m[5]:]
+}
 
 // safeURL returns u if it is an http(s) URL, otherwise "". Characters that
 // would end a markdown link are percent-encoded.
@@ -285,7 +305,7 @@ func build(lang i18n.Lang, n notify.Notification, b budget) Message {
 		}
 		lines := strings.Split(esc(q), "\n")
 		for i, l := range lines {
-			lines[i] = "> " + l
+			lines[i] = "> " + escLineStart(l)
 		}
 		blocks = append(blocks, strings.Join(lines, "\n"))
 	}

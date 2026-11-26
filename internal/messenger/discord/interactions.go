@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime/debug"
+	"strconv"
 	"sync"
 	"time"
 
@@ -41,6 +43,21 @@ const (
 // minutes.
 const handleTimeout = 14 * time.Minute
 
+// maxSkew is how far the signature timestamp may be from now: an older
+// signed request is a replay.
+const maxSkew = 5 * time.Minute
+
+// fresh reports whether a signature timestamp (Unix seconds) is within
+// maxSkew of now.
+func fresh(ts string, now time.Time) bool {
+	sec, err := strconv.ParseInt(ts, 10, 64)
+	if err != nil {
+		return false
+	}
+	d := now.Sub(time.Unix(sec, 0))
+	return d < maxSkew && d > -maxSkew
+}
+
 type user struct {
 	ID string `json:"id"`
 }
@@ -56,6 +73,8 @@ type interaction struct {
 		Type     int    `json:"type"`
 		Name     string `json:"name"`
 		ParentID string `json:"parent_id"`
+		// AppliedTags is set only on forum posts.
+		AppliedTags *[]string `json:"applied_tags"`
 	} `json:"channel"`
 	Member *struct {
 		User        user   `json:"user"`
@@ -107,7 +126,8 @@ func (d *Discord) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if !verify(d.key, r.Header.Get("X-Signature-Ed25519"), r.Header.Get("X-Signature-Timestamp"), body) {
+	ts := r.Header.Get("X-Signature-Timestamp")
+	if !verify(d.key, r.Header.Get("X-Signature-Ed25519"), ts, body) || !fresh(ts, time.Now()) {
 		http.Error(w, "invalid request signature", http.StatusUnauthorized)
 		return
 	}
@@ -136,7 +156,11 @@ func (d *Discord) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unsupported interaction", http.StatusBadRequest)
 		return
 	}
-	go d.handle(base, h, &in)
+	d.work.Add(1)
+	go func() {
+		defer d.work.Done()
+		d.handle(base, h, &in)
+	}()
 }
 
 // response is an interaction response.
@@ -159,6 +183,11 @@ func respond(w http.ResponseWriter, v response) {
 
 // handle passes an answered interaction to the core.
 func (d *Discord) handle(base context.Context, h messenger.Handler, in *interaction) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("❌ discord: an interaction failed: %v\n%s", r, debug.Stack())
+		}
+	}()
 	ctx, cancel := context.WithTimeout(base, handleTimeout)
 	defer cancel()
 	chatID, threadID, title, isForum := d.where(ctx, in)
@@ -198,7 +227,9 @@ func (d *Discord) where(ctx context.Context, in *interaction) (chatID, threadID,
 		}
 		parent, err := d.channel(ctx, ch.ParentID)
 		if err != nil {
+			// Only posts in a forum carry tags, so they still tell.
 			log.Printf("❌ discord: channel %s: %v", ch.ParentID, err)
+			return ch.ParentID, ch.ID, "", ch.AppliedTags != nil
 		}
 		if parent.Name != "" {
 			title = "#" + parent.Name

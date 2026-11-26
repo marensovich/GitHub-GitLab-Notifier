@@ -104,8 +104,8 @@ func (d *Discord) CanManageThreads(ctx context.Context, chatID string) (bool, er
 // Health reports whether Discord answers. After staleAfter without an
 // answer it asks once (GET /users/@me).
 func (d *Discord) Health(ctx context.Context) error {
-	if err := health(d.c.contact()); err == nil {
-		return nil
+	if err := health(d.c.contact()); err == nil || !d.probe.Due() {
+		return err
 	}
 	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

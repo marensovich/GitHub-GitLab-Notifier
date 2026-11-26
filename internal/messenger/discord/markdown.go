@@ -80,7 +80,78 @@ func toMarkdown(htmlText string) string {
 			}
 		}
 	}
-	return cut(sb.String(), maxContent)
+	return cutMarkdown(sb.String(), maxContent)
+}
+
+// cutMarkdown cuts markdown to max runes like cut, but never leaves a link
+// half done or a style open.
+func cutMarkdown(s string, max int) string {
+	if runes(s) <= max {
+		return s
+	}
+	r := []rune(s)
+	for n := max - 1; n > 0; n-- {
+		out := string(r[:n])
+		// An unfinished link would show its markup: drop it.
+		if i := strings.LastIndex(out, "["); i >= 0 && (i == 0 || out[i-1] != '\\') && !strings.Contains(out[i:], ")") {
+			out = out[:i]
+			n = runes(out)
+		}
+		out += "…" + closers(out)
+		if runes(out) <= max {
+			return out
+		}
+	}
+	return "…"
+}
+
+// mdMarkers are the markdown markers that come in pairs, longest first.
+var mdMarkers = []string{"```", "**", "__", "~~", "`", "*"}
+
+// closers returns what closes the markers left open in s, inner first.
+func closers(s string) string {
+	var open []string
+	code := ""
+	for i := 0; i < len(s); {
+		if s[i] == '\\' && code == "" {
+			i += 2
+			continue
+		}
+		matched := ""
+		for _, m := range mdMarkers {
+			if strings.HasPrefix(s[i:], m) {
+				matched = m
+				break
+			}
+		}
+		switch {
+		case matched == "":
+			i++
+			continue
+		case code != "":
+			// Inside code only its own marker counts.
+			if matched == code {
+				code = ""
+				open = open[:len(open)-1]
+			}
+		case matched == "`" || matched == "```":
+			code = matched
+			open = append(open, matched)
+		case len(open) > 0 && open[len(open)-1] == matched:
+			open = open[:len(open)-1]
+		default:
+			open = append(open, matched)
+		}
+		i += len(matched)
+	}
+	var sb strings.Builder
+	for i := len(open) - 1; i >= 0; i-- {
+		if open[i] == "```" {
+			sb.WriteString("\n")
+		}
+		sb.WriteString(open[i])
+	}
+	return sb.String()
 }
 
 func adjust(depth int, closing bool) int {

@@ -125,6 +125,12 @@ func (s *Store) SetDestinationLanguage(id int64, lang string) error {
 	return s.updateDest(id, "UPDATE destinations SET language = ? WHERE id = ?", lang, id)
 }
 
+// MoveDestination gives a destination the new ID of its chat. It fails
+// when another destination has that chat already.
+func (s *Store) MoveDestination(id int64, chatID string) error {
+	return s.updateDest(id, "UPDATE destinations SET chat_id = ? WHERE id = ?", chatID, id)
+}
+
 // SetDestinationInactive marks a destination the bot can no longer post to,
 // or active again.
 func (s *Store) SetDestinationInactive(id int64, inactive bool) error {

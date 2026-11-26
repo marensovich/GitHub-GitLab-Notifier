@@ -7,6 +7,7 @@ import (
 	"html"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -144,6 +145,9 @@ func classify(err error) error {
 		}
 		return &messenger.RateLimited{RetryAfter: time.Duration(retry) * time.Second, Err: err}
 	}
+	if apiErr.Parameters != nil && apiErr.Parameters.MigrateToChatID != 0 {
+		return &messenger.ChatMoved{To: strconv.FormatInt(apiErr.Parameters.MigrateToChatID, 10), Err: err}
+	}
 	d := strings.ToLower(apiErr.Description)
 	for _, s := range threadErrors {
 		if strings.Contains(d, s) {
@@ -155,12 +159,10 @@ func classify(err error) error {
 			return fmt.Errorf("%w: %w", messenger.ErrChatGone, err)
 		}
 	}
-	if apiErr.ErrorCode == 403 {
-		return fmt.Errorf("%w: %w", messenger.ErrChatGone, err)
-	}
-	if apiErr.ErrorCode == 400 {
+	if apiErr.ErrorCode == 403 || apiErr.ErrorCode == 400 {
 		// The classic rendering was refused too; the same bytes would be
-		// refused again.
+		// refused again. A 403 not known to mean the chat is gone may be
+		// about this message only, so the chat stays active.
 		return fmt.Errorf("%w: %w", messenger.ErrRejected, err)
 	}
 	return err

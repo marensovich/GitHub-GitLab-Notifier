@@ -39,6 +39,7 @@ type Max struct {
 	ctx     context.Context
 	chats   map[string]chatInfo
 	dialogs map[string]string // user ID -> chat ID of the dialog with the bot
+	probe   messenger.Probe
 }
 
 var (
@@ -151,8 +152,8 @@ func (m *Max) CreateThread(context.Context, string, string) (string, error) {
 // Health reports whether MAX answers. After staleAfter without an answer
 // it asks once (GET /me).
 func (m *Max) Health(ctx context.Context) error {
-	if err := health(m.c.contact()); err == nil {
-		return nil
+	if err := health(m.c.contact()); err == nil || !m.probe.Due() {
+		return err
 	}
 	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

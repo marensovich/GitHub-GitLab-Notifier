@@ -41,6 +41,21 @@ type Discord struct {
 	perms    map[string]uint64      // "<chat>/<user>": a member's permissions
 	appPerms map[string]uint64      // chat: the bot's permissions
 	channels map[string]channelInfo // parents of threads
+
+	work  sync.WaitGroup // interactions being handled
+	probe messenger.Probe
+}
+
+// cacheMax bounds each cache; a full one starts over.
+const cacheMax = 10000
+
+// drainTimeout is how long Run waits for interactions after ctx is done.
+const drainTimeout = 10 * time.Second
+
+func bound[K comparable, V any](m map[K]V) {
+	if len(m) >= cacheMax {
+		clear(m)
+	}
 }
 
 // channelInfo is what is kept of a channel.
@@ -105,14 +120,27 @@ func (d *Discord) Caps() messenger.Caps {
 // Run registers the slash commands and passes interactions to h until ctx
 // is done. Interactions arrive on ServeHTTP.
 func (d *Discord) Run(ctx context.Context, h messenger.Handler) error {
+	// Interactions keep their context through shutdown, for drainTimeout.
+	work, stop := context.WithCancel(context.WithoutCancel(ctx))
+	defer stop()
 	d.mu.Lock()
-	d.h, d.ctx = h, ctx
+	d.h, d.ctx = h, work
 	d.mu.Unlock()
 	log.Printf(i18n.T(d.lang, i18n.MsgBotStarted), d.self)
 	if l, ok := h.(messenger.CommandLister); ok {
 		go d.registerCommands(ctx, l)
 	}
 	<-ctx.Done()
+	done := make(chan struct{})
+	go func() {
+		d.work.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(drainTimeout):
+		log.Print("⚠️ discord: stopping with interactions still running")
+	}
 	return nil
 }
 
@@ -139,6 +167,8 @@ func (d *Discord) IsChatAdmin(ctx context.Context, chatID, userID string) (bool,
 func (d *Discord) remember(chatID string, in *interaction) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	bound(d.perms)
+	bound(d.appPerms)
 	if in.Member != nil {
 		if p, err := strconv.ParseUint(in.Member.Permissions, 10, 64); err == nil {
 			d.perms[chatID+"/"+in.Member.User.ID] = p
@@ -161,6 +191,7 @@ func (d *Discord) channel(ctx context.Context, id string) (channelInfo, error) {
 		return ch, err
 	}
 	d.mu.Lock()
+	bound(d.channels)
 	d.channels[id] = ch
 	d.mu.Unlock()
 	return ch, nil
