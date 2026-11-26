@@ -107,6 +107,8 @@ type Discord struct {
 type Max struct {
 	Enabled bool   `yaml:"enabled"`
 	Token   string `yaml:"token"`
+	// APIURL replaces the MAX Bot API base (default platform-api.max.ru).
+	APIURL string `yaml:"api_url"`
 }
 
 // Load reads, expands and validates the configuration file at path.
