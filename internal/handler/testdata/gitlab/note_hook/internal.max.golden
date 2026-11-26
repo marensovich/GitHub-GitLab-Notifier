@@ -1,0 +1,21 @@
+--- en ---
+💬 New comment on issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b>
+🔒 Confidential — visible only to project members in GitLab
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Internal: the customer is on v1.4.</blockquote>
+[Open comment](https://gitlab.example.com/group/app/-/issues/23#note_1301)
+
+--- ru ---
+💬 Новый комментарий к issue
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/issues/23#note_1301">#23 New API: create/update/delete file</a></b>
+🔒 Конфиденциально — в GitLab видно только участникам проекта
+👤 <a href="https://gitlab.example.com/dev1">@dev1</a>
+
+<blockquote>Internal: the customer is on v1.4.</blockquote>
+[Открыть комментарий](https://gitlab.example.com/group/app/-/issues/23#note_1301)

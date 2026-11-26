@@ -7,6 +7,7 @@ import (
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/messenger"
 	"GitHub-GitLab-Notifier/internal/messenger/discord"
+	maxbot "GitHub-GitLab-Notifier/internal/messenger/max"
 	"GitHub-GitLab-Notifier/internal/messenger/telegram"
 	"GitHub-GitLab-Notifier/internal/metrics"
 	"GitHub-GitLab-Notifier/internal/outbox"
@@ -76,13 +77,25 @@ func serve(cfg *config.Config) error {
 		log.Printf("🔗 Discord: set the Interactions Endpoint URL to %s", strings.TrimRight(cfg.Server.PublicURL, "/")+discord.InteractionsPath)
 		log.Printf("🔗 Discord: invite the bot with %s", dc.InviteURL())
 	}
+	var mx *maxbot.Max
+	if c := cfg.Messengers.Max; c != nil && c.Enabled {
+		if mx, err = maxbot.New(*c, lang, cfg.Server.PublicURL); err != nil {
+			return err
+		}
+		ms[maxbot.Name] = mx
+		if mx.UsesWebhook() {
+			routes[maxbot.UpdatesPath] = mx
+		} else {
+			log.Print("🔗 MAX: server.public_url is not HTTPS on port 443, so updates come by long polling")
+		}
+	}
 	for _, name := range cfg.Enabled() {
 		if ms[name] == nil {
 			log.Printf("⚠️ %s is enabled in the configuration but not available in this build yet", name)
 		}
 	}
 	if len(ms) == 0 {
-		return errors.New("no messenger to run: enable telegram or discord in config.yaml")
+		return errors.New("no messenger to run: enable telegram, discord or max in config.yaml")
 	}
 
 	core := commands.New(store, cfg, Version, ms)
@@ -96,6 +109,13 @@ func serve(cfg *config.Config) error {
 	if dc != nil {
 		go func() {
 			if err := dc.Run(ctx, core); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
+	if mx != nil {
+		go func() {
+			if err := mx.Run(ctx, core); err != nil {
 				log.Fatal(err)
 			}
 		}()

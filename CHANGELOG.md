@@ -6,8 +6,7 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-Foundation of 2.0: one core for several messengers, with Telegram and Discord. The MAX adapter comes next on top
-of it.
+Foundation of 2.0: one core for several messengers, with Telegram, Discord and MAX.
 
 ### Breaking changes
 
@@ -25,6 +24,9 @@ of it.
 
 ### Added
 
+- MAX (NTF-50): the bot posts to MAX group chats and runs every command there, personal DMs included. Updates
+  come by webhook (`<public_url>/max/updates`, secret-checked) when `server.public_url` is HTTPS on port 443, and by
+  long polling otherwise. Messages are HTML with link buttons; `messengers.max.api_url` replaces the API base.
 - Personal DMs (NTF-30): `/link github|gitlab <token> [host]` ties a GitHub or GitLab account to a Telegram or
   Discord user, proved by a personal access token that is used for one request and never stored or logged. The bot
   then writes privately about review requests, assignments, mentions and failed own pipelines in connected

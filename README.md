@@ -30,6 +30,7 @@ happens in your repo.
 - [Supported events](#-supported-events)
 - [Quick start](#-quick-start)
 - [Discord](#-discord)
+- [MAX](#-max)
 - [Installation on Linux (systemd)](#-installation-on-linux-systemd)
 - [Running with Docker](#-running-with-docker)
 - [Building from source](#-building-from-source)
@@ -193,6 +194,35 @@ person who typed a command sees the answer. `/configure` needs the **Manage Chan
 In a **forum channel** every category of events gets its own post, created by `/configure` (type it inside any
 post of the forum); a post that is deleted is created again with the next event. In a text channel everything
 goes to the channel.
+
+---
+
+## 🟣 MAX
+
+The bot can post to MAX group chats too. MAX bots are made on [MAX for partners](https://business.max.ru), which is
+open to verified organisations.
+
+1. Create the bot on business.max.ru and copy its token (**Chat bots** → the bot → **Settings**).
+2. Fill in `config.yaml` and restart the bot:
+
+   ```yaml
+   messengers:
+     max:
+       enabled: true
+       token: "${MAX_TOKEN}"
+   ```
+
+3. Add the bot to a group chat and **make it an administrator**: MAX shows the members and their roles only to an
+   administrator, and the bot needs them to check `/configure` and `/connect` and private-repository DMs.
+
+When `server.public_url` is HTTPS on port 443 (no other port; MAX does not accept self-signed certificates), MAX
+posts updates to `<server.public_url>/max/updates`; the bot subscribes on start and checks a secret on every
+request. Otherwise the bot polls MAX for updates — fine for a test, MAX recommends the webhook in production.
+
+Commands are ordinary messages (`/connect …`, `/status`, …) in the group or in the dialog with the bot. MAX has no
+replies seen by one person only and no threads, so answers are visible to the chat and every event goes to the
+chat itself. `api_url` replaces the API base (`https://platform-api.max.ru`); `platform-api2.max.ru` works only on
+a system that trusts the Russian Trusted Root CA.
 
 ---
 
@@ -388,6 +418,8 @@ Where to send `/link`:
 - **Telegram** — only in the private chat with the bot. In a group the bot refuses, deletes the message and asks you
   to revoke the token if others saw it. The bot deletes the message with the token in the private chat too.
 - **Discord** — in a server channel or in the bot's DM; the slash command and its answer are seen only by you.
+- **MAX** — only in the dialog with the bot. MAX does not let a bot delete your message there, so delete the
+  message with the token yourself; the bot reminds you.
 
 The DMs come only for repositories connected to some chat with `/connect`. For a **private** repository the bot
 first checks that you are still a member of a chat it is connected to; someone who left the team gets nothing.

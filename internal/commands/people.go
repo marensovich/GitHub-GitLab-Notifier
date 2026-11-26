@@ -39,22 +39,31 @@ var reasonButtons = map[personal.Reason]string{
 // is deleted where the messenger keeps one.
 func (c *Core) link(r *request) {
 	dm, _ := r.m.(messenger.DirectMessenger)
+	undeleted := false
 	if len(r.cmd.Args) > 0 && dm != nil {
 		if err := dm.DeleteCommand(r.ctx, r.cmd); err != nil {
 			log.Printf("❌ %s: delete the /link message in chat %s: %v", r.cmd.Messenger, r.cmd.ChatID, err)
+			undeleted = true
 		}
 	}
+	// say answers; a token the bot could not delete is pointed out.
+	say := func(text string) {
+		if undeleted {
+			text += "\n\n" + i18n.T(r.lang, i18n.MsgLinkDeleteToken)
+		}
+		c.reply(r, text, nil)
+	}
 	if !r.cmd.IsPrivate && !r.m.Caps().HiddenCommands {
-		c.reply(r, i18n.T(r.lang, i18n.MsgLinkPrivateOnly), nil)
+		say(i18n.T(r.lang, i18n.MsgLinkPrivateOnly))
 		return
 	}
 	if len(r.cmd.Args) < 2 || dm == nil {
-		c.reply(r, i18n.T(r.lang, i18n.MsgLinkUsage), nil)
+		say(i18n.T(r.lang, i18n.MsgLinkUsage))
 		return
 	}
 	platform := strings.ToLower(r.cmd.Args[0])
 	if platform != "github" && platform != "gitlab" {
-		c.reply(r, i18n.T(r.lang, i18n.MsgLinkUsage), nil)
+		say(i18n.T(r.lang, i18n.MsgLinkUsage))
 		return
 	}
 	token := r.cmd.Args[1]
@@ -63,7 +72,7 @@ func (c *Core) link(r *request) {
 		// A token typed in the host's place must not be looked up or
 		// echoed back: only a host name with a dot is tried.
 		if host = hostOf(r.cmd.Args[2]); !hostPattern.MatchString(host) {
-			c.reply(r, i18n.T(r.lang, i18n.MsgLinkBadHost), nil)
+			say(i18n.T(r.lang, i18n.MsgLinkBadHost))
 			return
 		}
 	}
@@ -74,12 +83,12 @@ func (c *Core) link(r *request) {
 			hosts := c.gitlabHosts()
 			switch len(hosts) {
 			case 0:
-				c.reply(r, i18n.T(r.lang, i18n.MsgLinkNeedHost), nil)
+				say(i18n.T(r.lang, i18n.MsgLinkNeedHost))
 				return
 			case 1:
 				host = hosts[0]
 			default:
-				c.reply(r, i18n.Tf(r.lang, i18n.MsgLinkPickHost, html.EscapeString(strings.Join(hosts, ", "))), nil)
+				say(i18n.Tf(r.lang, i18n.MsgLinkPickHost, html.EscapeString(strings.Join(hosts, ", "))))
 				return
 			}
 		}
@@ -90,17 +99,17 @@ func (c *Core) link(r *request) {
 	cancel()
 	switch {
 	case errors.Is(err, personal.ErrBadToken):
-		c.reply(r, i18n.T(r.lang, i18n.MsgLinkBadToken), nil)
+		say(i18n.T(r.lang, i18n.MsgLinkBadToken))
 		return
 	case err != nil:
-		c.reply(r, i18n.Tf(r.lang, i18n.MsgLinkFailed, html.EscapeString(err.Error())), nil)
+		say(i18n.Tf(r.lang, i18n.MsgLinkFailed, html.EscapeString(err.Error())))
 		return
 	}
 
 	chat, err := dm.DirectChat(r.ctx, r.cmd.UserID)
 	if err != nil {
 		log.Printf("❌ %s: open the DM of user %s: %v", r.cmd.Messenger, r.cmd.UserID, err)
-		c.reply(r, i18n.T(r.lang, i18n.MsgLinkNoDM), nil)
+		say(i18n.T(r.lang, i18n.MsgLinkNoDM))
 		return
 	}
 	d, err := c.store.EnsureDestination(r.cmd.Messenger, chat, storage.Destination{Language: string(r.lang), Format: defaultLook(r.m)})
@@ -109,11 +118,11 @@ func (c *Core) link(r *request) {
 	}
 	if err != nil {
 		log.Print(i18n.Tf(c.defaultLang(), i18n.MsgFailedToSaveChatConfig, err))
-		c.reply(r, i18n.T(r.lang, i18n.MsgCfgFailed), nil)
+		say(i18n.T(r.lang, i18n.MsgCfgFailed))
 		return
 	}
 	log.Printf("🔗 %s user %s linked %s account %s on %s", r.cmd.Messenger, r.cmd.UserID, platform, acc.Login, host)
-	c.reply(r, i18n.Tf(r.lang, i18n.MsgLinkDone, platformTitle(platform), html.EscapeString(acc.Login), html.EscapeString(host)), nil)
+	say(i18n.Tf(r.lang, i18n.MsgLinkDone, platformTitle(platform), html.EscapeString(acc.Login), html.EscapeString(host)))
 }
 
 // unlink removes the sender's links on a platform, or one by login; a bot

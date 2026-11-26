@@ -1,0 +1,21 @@
+--- en ---
+⏹️ CI cancelled
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/actions/runs/1">#57 CI</a></b>
+Branch: <code>main</code> · <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a>
+Commit: fix: handle nil values
+Duration: 2m 5s
+👤 <a href="https://github.com/octocat">@octocat</a>
+[Open run](https://github.com/octo/hello/actions/runs/1)
+
+--- ru ---
+⏹️ CI отменён
+<b><a href="https://github.com/octo/hello">octo/hello</a></b>
+
+<b><a href="https://github.com/octo/hello/actions/runs/1">#57 CI</a></b>
+Ветка: <code>main</code> · <a href="https://github.com/octo/hello/commit/59b20b8d5c6ff8d09518454d4dd8b7b30f095ab5">59b20b8</a>
+Коммит: fix: handle nil values
+Длительность: 2m 5s
+👤 <a href="https://github.com/octocat">@octocat</a>
+[Открыть запуск](https://github.com/octo/hello/actions/runs/1)

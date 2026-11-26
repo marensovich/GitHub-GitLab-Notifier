@@ -1,0 +1,19 @@
+--- en ---
+📦 New release
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">Release 1.0</a></b>
+Tag: <code>v1.0.0</code>
+
+<blockquote>First stable release</blockquote>
+[Open release](https://gitlab.example.com/group/app/-/releases/v1.0.0)
+
+--- ru ---
+📦 Новый релиз
+<b><a href="https://gitlab.example.com/group/app">group/app</a></b>
+
+<b><a href="https://gitlab.example.com/group/app/-/releases/v1.0.0">Release 1.0</a></b>
+Тег: <code>v1.0.0</code>
+
+<blockquote>First stable release</blockquote>
+[Открыть релиз](https://gitlab.example.com/group/app/-/releases/v1.0.0)
