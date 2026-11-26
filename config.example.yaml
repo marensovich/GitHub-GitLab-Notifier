@@ -67,5 +67,11 @@ messengers:
     public_key: ""
   max:
     enabled: false
-    # Bot token from MAX for partners (available to verified organisations).
+    # Bot token from MAX for partners (available to verified organisations):
+    # business.max.ru → Chat bots → your bot → Settings.
+    # With server.public_url on HTTPS port 443 MAX posts updates to
+    # <server.public_url>/max/updates; otherwise the bot polls for them.
     token: "${MAX_TOKEN:-}"
+    # API base; empty is https://platform-api.max.ru. platform-api2.max.ru
+    # needs the Russian Trusted Root CA installed on the system.
+    api_url: ""

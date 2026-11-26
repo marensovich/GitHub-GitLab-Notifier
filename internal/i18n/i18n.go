@@ -148,6 +148,7 @@ const (
 	MsgLinkPickHost           = "link_pick_host"
 	MsgLinkBadHost            = "link_bad_host"
 	MsgLinkNoDM               = "link_no_dm"
+	MsgLinkDeleteToken        = "link_delete_token"
 	MsgLinkDone               = "link_done"
 	MsgUnlinkUsage            = "unlink_usage"
 	MsgUnlinkDone             = "unlink_done"

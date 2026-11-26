@@ -88,6 +88,8 @@ type Messenger struct {
 	Deleted []messenger.Command
 	// DirectErr fails DirectChat.
 	DirectErr error
+	// DeleteErr fails DeleteCommand (the command is still recorded).
+	DeleteErr error
 }
 
 // SentList returns a copy of the sent notifications; safe while the
@@ -220,7 +222,7 @@ func (m *Messenger) DeleteCommand(_ context.Context, c messenger.Command) error 
 	defer m.mu.Unlock()
 	m.Log = append(m.Log, "DeleteCommand")
 	m.Deleted = append(m.Deleted, c)
-	return nil
+	return m.DeleteErr
 }
 
 func (m *Messenger) CanManageThreads(_ context.Context, chatID string) (bool, error) {

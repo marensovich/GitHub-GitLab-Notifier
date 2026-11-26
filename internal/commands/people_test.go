@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -239,5 +240,22 @@ func TestLinkSwappedHostAndToken(t *testing.T) {
 	e.run(dm("5", "/link gitlab tok-bob git.corp:8443"))
 	if c := a.calls(); len(c) != 1 || c[0] != "/gitlab/git.corp:8443/user" {
 		t.Errorf("port: calls %v", c)
+	}
+}
+
+func TestLinkTokenNotDeletedHint(t *testing.T) {
+	e := newEnv(t, telegramCaps)
+	e.accounts(t)
+	e.m.DeleteErr = errors.New("cannot delete")
+	hint := i18n.T(i18n.EN, i18n.MsgLinkDeleteToken)
+	if got := e.run(dm("5", "/link github tok-alice")); !strings.Contains(got, "alice") || !strings.Contains(got, hint) {
+		t.Errorf("linked: %q", got)
+	}
+	if got := e.run(dm("5", "/link github tok-nobody")); !strings.Contains(got, hint) {
+		t.Errorf("bad token: %q", got)
+	}
+	e.m.DeleteErr = nil
+	if got := e.run(dm("5", "/link github tok-alice")); strings.Contains(got, hint) {
+		t.Errorf("deleted, still a hint: %q", got)
 	}
 }

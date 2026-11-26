@@ -216,5 +216,6 @@
   "cmd_link": "Link your GitHub/GitLab account for personal DMs",
   "cmd_unlink": "Unlink an account",
   "cmd_me": "Your accounts and personal DMs",
-  "link_bad_host": "❌ That does not look like a server address. Usage: /link gitlab &lt;token&gt; &lt;host&gt;"
+  "link_bad_host": "❌ That does not look like a server address. Usage: /link gitlab &lt;token&gt; &lt;host&gt;",
+  "link_delete_token": "⚠️ I cannot delete your message with the token here: delete it yourself."
 }
