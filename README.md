@@ -34,6 +34,7 @@ happens in your repo.
 - [Running with Docker](#-running-with-docker)
 - [Building from source](#-building-from-source)
 - [Bot commands](#-bot-commands)
+- [Personal DMs](#-personal-dms)
 - [Environment variables](#environment-variables)
 - [Web panel](#-web-panel)
 - [Monitoring](#-monitoring)
@@ -352,9 +353,45 @@ Pre-built binaries for Linux, macOS, Windows and FreeBSD are attached to every
 | `/disconnect <url>`   | Disconnect a repository from this chat                            |
 | `/status`             | Chat settings, topics, connected repositories, version            |
 | `/lang en` / `/lang ru` | Change the language of this chat                                |
+| `/link github <token>` / `/link gitlab <token> [host]` | Link your account for [personal DMs](#-personal-dms) |
+| `/unlink github\|gitlab [login]` | Remove your link (a bot administrator may name anyone's login) |
+| `/me`                 | Your linked accounts, with buttons to turn each kind of DM off or on |
 | `/version`            | Bot version                                                       |
 
 The commands also appear in Telegram's **Menu** button.
+
+---
+
+## 🔔 Personal DMs
+
+Anyone in a chat can link their GitHub or GitLab account, and the bot writes to them privately when:
+
+- 👀 their review is requested;
+- 👤 they are assigned to a pull/merge request or an issue;
+- 🔔 they are mentioned (`@login` in an issue, a pull/merge request, a comment or a review; code blocks are skipped,
+  team mentions like `@org/team` are ignored);
+- ❌ a pipeline they started fails.
+
+Nobody gets a DM about their own action, except their own failed pipeline. Assignments and review requests go only
+to DMs; chats keep getting the same messages as before.
+
+**Linking.** The token proves the account is yours. It is used for one request to learn who you are and is never
+stored or logged:
+
+- GitHub: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with **no permissions**
+  (public repositories only is enough). For GitHub Enterprise add the host: `/link github <token> ghe.example.com`.
+- GitLab: a personal access token with the **`read_user`** scope. The host may be left out when the bot knows one
+  GitLab server; otherwise add it: `/link gitlab <token> gitlab.example.com`.
+
+Where to send `/link`:
+
+- **Telegram** — only in the private chat with the bot. In a group the bot refuses, deletes the message and asks you
+  to revoke the token if others saw it. The bot deletes the message with the token in the private chat too.
+- **Discord** — in a server channel or in the bot's DM; the slash command and its answer are seen only by you.
+
+The DMs come only for repositories connected to some chat with `/connect`. For a **private** repository the bot
+first checks that you are still a member of a chat it is connected to; someone who left the team gets nothing.
+Turn kinds of DMs off and on with `/me`. The web panel lists every link on its **People** page.
 
 ---
 
@@ -392,7 +429,8 @@ The commands also appear in Telegram's **Menu** button.
 ## 🖥 Web panel
 
 A small read-only panel shows what the bot is connected to: repositories and the chat each one posts to,
-whether a webhook secret protects it, and every chat with its topics and which events are routed to them.
+whether a webhook secret protects it, every chat with its topics and which events are routed to them, and the
+accounts linked for personal DMs (no tokens are stored, so none can be shown).
 It is not tied to Telegram and has no login, so it only listens on a loopback address.
 
 Enable it in `.env` and restart the bot:

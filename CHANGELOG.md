@@ -25,6 +25,14 @@ of it.
 
 ### Added
 
+- Personal DMs (NTF-30): `/link github|gitlab <token> [host]` ties a GitHub or GitLab account to a Telegram or
+  Discord user, proved by a personal access token that is used for one request and never stored or logged. The bot
+  then writes privately about review requests, assignments, mentions and failed own pipelines in connected
+  repositories; for a private repository only while the person is still in a chat connected to it. `/me` turns
+  each kind off and on, `/unlink` removes a link (bot administrators may remove anyone's), and the web panel has a
+  People page. In Telegram `/link` works only in the private chat and the message with the token is deleted; in
+  Discord it also works in a server, where nobody else sees it. Assignments and review requests are sent only to
+  DMs, so chat messages stay as they were.
 - Subcommands: `serve` (default), `version`, `config check`, `migrate-config`, `db backup <path>`, `help`.
 - Send queue (outbox): every notification is stored first and sent by one worker per messenger, in order per
   chat, with per-chat and global rate limits. Failures are retried with growing delays for up to 10 attempts; a

@@ -44,6 +44,7 @@ type Source interface {
 	OutboxCounts() (pending, dead int, err error)
 	DeadItems(limit int) ([]storage.OutboxItem, error)
 	UnconnectedRepos(since time.Time) ([]storage.RepoCount, error)
+	Links() ([]storage.Recipient, error)
 }
 
 // unconnectedWindow is how far back the overview looks for webhooks of
@@ -95,7 +96,7 @@ func New(cfg Config, src Source) (*Server, error) {
 	}
 
 	pages := map[string]*template.Template{}
-	for _, name := range []string{"overview", "repos", "chats", "notfound"} {
+	for _, name := range []string{"overview", "repos", "chats", "people", "notfound"} {
 		t, err := template.New(name).Funcs(funcs).ParseFS(templateFS, "templates/layout.html", "templates/"+name+".html")
 		if err != nil {
 			return nil, fmt.Errorf("parse template %s: %w", name, err)
@@ -123,6 +124,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.handleOverview)
 	mux.HandleFunc("GET /repos", s.handleRepos)
 	mux.HandleFunc("GET /chats", s.handleChats)
+	mux.HandleFunc("GET /people", s.handlePeople)
 	mux.HandleFunc("GET /", s.handleNotFound)
 	return s.secure(mux)
 }
@@ -364,6 +366,17 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 		"Groups":  groups,
 		"RichOff": richOff,
 		"Err":     s.maskErr(errors.Join(snap.errors...)),
+	})
+}
+
+// handlePeople lists the linked accounts. A Recipient holds no token: none
+// is ever stored.
+func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
+	links, err := s.src.Links()
+	s.render(w, http.StatusOK, "people", map[string]any{
+		"Nav":   nav{Active: "people", Version: s.cfg.Version},
+		"Links": links,
+		"Err":   s.maskErr(err),
 	})
 }
 

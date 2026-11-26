@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"sync"
 	"time"
 
 	"GitHub-GitLab-Notifier/internal/i18n"
@@ -45,6 +46,15 @@ type Payload struct {
 	N    notify.Notification
 	// Topic is the event category (platform.Topic); "" is general.
 	Topic string
+	// Member is set on a DM about a private repository: it is sent only
+	// while the person is in a chat subscribed to the repository.
+	Member *MemberCheck `json:",omitempty"`
+}
+
+// MemberCheck names the repository and the messenger user of a DM.
+type MemberCheck struct {
+	RepoID int64
+	UserID string
 }
 
 // Outbox sends the queued rows.
@@ -59,6 +69,19 @@ type Outbox struct {
 	// messenger's worker.
 	sendTimeout time.Duration
 	makeThread  ThreadMaker
+
+	mu      sync.Mutex
+	members map[memberKey]memberAnswer
+}
+
+// memberTTL is how long an answer of IsMember is used.
+const memberTTL = 10 * time.Minute
+
+type memberKey struct{ messenger, chatID, userID string }
+
+type memberAnswer struct {
+	ok bool
+	at time.Time
 }
 
 // ThreadMaker returns the thread for an event category (topic) of a
@@ -81,7 +104,8 @@ func New(store *storage.Store, ms map[string]messenger.Messenger, m *metrics.Met
 	}
 	m.SetOutboxCounts(store.OutboxCounts)
 	o := &Outbox{store: store, ms: ms, metrics: m, clock: clock,
-		wake: map[string]chan struct{}{}, limiters: map[string]*limiter{}, sendTimeout: sendTimeout}
+		wake: map[string]chan struct{}{}, limiters: map[string]*limiter{}, sendTimeout: sendTimeout,
+		members: map[memberKey]memberAnswer{}}
 	for name, msg := range ms {
 		o.wake[name] = make(chan struct{}, 1)
 		o.limiters[name] = newLimiter(msg.Caps())
@@ -208,6 +232,31 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 
 	ctx, cancel := context.WithTimeout(ctx, o.sendTimeout)
 	defer cancel()
+	if mc, ok := m.(messenger.MemberChecker); ok && p.Member != nil {
+		member, err := o.isMember(ctx, name, mc, p.Member)
+		if messenger.Classify(err) == messenger.ClassRateLimited {
+			// Not a failed attempt: come back when the messenger says.
+			wait := messenger.RetryAfter(err)
+			if wait <= 0 {
+				wait = Delay(1)
+			}
+			if err := o.store.MarkRetry(it.ID, it.Attempts, o.clock().Add(wait), "checking membership: "+err.Error()); err != nil {
+				log.Printf("❌ outbox: %v", err)
+			}
+			return
+		}
+		if err != nil {
+			o.retry(name, it, fmt.Errorf("checking membership: %w", err))
+			return
+		}
+		if !member {
+			log.Printf("🔒 %s: user %s is in no chat of repository %d, DM not sent", name, p.Member.UserID, p.Member.RepoID)
+			if err := o.store.MarkDone(it.ID); err != nil {
+				log.Printf("❌ outbox: %v", err)
+			}
+			return
+		}
+	}
 	to := messenger.Target{ChatID: d.ChatID, ThreadID: it.ThreadID}
 	attempts, err := m.Send(ctx, to, p.Look, p.Lang, p.N)
 	o.count(name, attempts)
@@ -268,6 +317,47 @@ func (o *Outbox) send(ctx context.Context, name string, m messenger.Messenger, i
 	default:
 		o.retry(name, it, err)
 	}
+}
+
+// isMember reports whether the user is a member of a chat of the
+// messenger subscribed to the repository. Answers are kept for memberTTL.
+// A chat that refuses the check for good (gone, rejected) counts as "not
+// a member there"; a temporary error is returned only when no other chat
+// said yes.
+func (o *Outbox) isMember(ctx context.Context, name string, mc messenger.MemberChecker, c *MemberCheck) (bool, error) {
+	chats, err := o.store.SubscribersIn(c.RepoID, name)
+	if err != nil {
+		return false, err
+	}
+	now := o.clock()
+	var temporary error
+	for _, d := range chats {
+		key := memberKey{name, d.ChatID, c.UserID}
+		o.mu.Lock()
+		a, ok := o.members[key]
+		o.mu.Unlock()
+		if !ok || now.Sub(a.at) >= memberTTL {
+			member, err := mc.IsMember(ctx, d.ChatID, c.UserID)
+			switch messenger.Classify(err) {
+			case messenger.ClassOK:
+			case messenger.ClassChatGone, messenger.ClassRejected, messenger.ClassThreadNotFound:
+				log.Printf("⚠️ %s: cannot check members of chat %s: %v", name, d.ChatID, err)
+			default:
+				if temporary == nil {
+					temporary = err
+				}
+				continue
+			}
+			a = memberAnswer{ok: member, at: now}
+			o.mu.Lock()
+			o.members[key] = a
+			o.mu.Unlock()
+		}
+		if a.ok {
+			return true, nil
+		}
+	}
+	return false, temporary
 }
 
 // retry schedules a failed row again, or gives up after maxAttempts.

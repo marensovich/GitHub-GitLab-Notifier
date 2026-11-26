@@ -26,6 +26,14 @@ type GitLabMergeRequestDto struct {
 		WorkInProgress bool      `json:"work_in_progress"`
 		UpdatedAt      Timestamp `json:"updated_at"`
 	} `json:"object_attributes"`
+	Changes gitlabPeopleChanges `json:"changes"`
+}
+
+// gitlabPeopleChanges tells whether an update changed who works on an
+// item; such an update goes only to the people concerned.
+type gitlabPeopleChanges struct {
+	Assignees *struct{} `json:"assignees"`
+	Reviewers *struct{} `json:"reviewers"`
 }
 
 // GitLabMergeRequestHandler handles merge request lifecycle events.
@@ -58,8 +66,17 @@ func (h *GitLabMergeRequestHandler) Handle(lang i18n.Lang, payload []byte) (noti
 		headingKey = i18n.MsgMRMerged
 	case "approved":
 		headingKey = i18n.MsgMRApproved
+	case "update":
+		switch {
+		case dto.Changes.Reviewers != nil:
+			headingKey = i18n.MsgMRReviewRequested
+		case dto.Changes.Assignees != nil:
+			headingKey = i18n.MsgMRAssigned
+		default:
+			return notify.Notification{}, ErrSkip
+		}
 	default:
-		// update, approval, unapproved, unapproval, ...
+		// approval, unapproved, unapproval, ...
 		return notify.Notification{}, ErrSkip
 	}
 
@@ -81,6 +98,9 @@ func (h *GitLabMergeRequestHandler) Handle(lang i18n.Lang, payload []byte) (noti
 	}
 	if withBody {
 		v.Body = mr.Description
+	}
+	if mr.Action == "update" {
+		return v.notification(), ErrPersonalOnly
 	}
 	return v.notification(), nil
 }
@@ -104,6 +124,7 @@ type GitLabIssueDto struct {
 	Labels []struct {
 		Title string `json:"title"`
 	} `json:"labels"`
+	Changes gitlabPeopleChanges `json:"changes"`
 }
 
 // GitLabIssueHandler handles issue events. Event is either
@@ -132,6 +153,11 @@ func (h *GitLabIssueHandler) Handle(lang i18n.Lang, payload []byte) (notify.Noti
 		headingKey = i18n.MsgIssueClosed
 	case "reopen":
 		headingKey = i18n.MsgIssueReopened
+	case "update":
+		if dto.Changes.Assignees == nil {
+			return notify.Notification{}, ErrSkip
+		}
+		headingKey = i18n.MsgIssueAssigned
 	default:
 		return notify.Notification{}, ErrSkip
 	}
@@ -159,6 +185,9 @@ func (h *GitLabIssueHandler) Handle(lang i18n.Lang, payload []byte) (notify.Noti
 	}
 	if h.Event == platform.GitLabConfidentialIssue || issue.Confidential {
 		v.Notes = append(v.Notes, i18n.T(lang, i18n.MsgItemConfidential))
+	}
+	if issue.Action == "update" {
+		return v.notification(), ErrPersonalOnly
 	}
 	return v.notification(), nil
 }

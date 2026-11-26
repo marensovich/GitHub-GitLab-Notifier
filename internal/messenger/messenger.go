@@ -24,6 +24,9 @@ type Caps struct {
 	// ForumOnlyThreads is true when a forum has no main chat: every
 	// message there goes to a thread (Discord forum channels).
 	ForumOnlyThreads bool
+	// HiddenCommands is true when a command typed in a group is seen by
+	// nobody but the bot (Discord slash commands), so it may carry a token.
+	HiddenCommands bool
 }
 
 // Target is where a notification goes.
@@ -83,6 +86,12 @@ type CommandLister interface {
 	Commands(lang i18n.Lang) []CommandInfo
 }
 
+// MemberChecker is implemented by an adapter that can tell whether a user
+// is a member of a chat.
+type MemberChecker interface {
+	IsMember(ctx context.Context, chatID, userID string) (bool, error)
+}
+
 // Messenger is one messenger adapter.
 type Messenger interface {
 	Name() string
@@ -97,4 +106,14 @@ type Messenger interface {
 	CanManageThreads(ctx context.Context, chatID string) (bool, error)
 	CreateThread(ctx context.Context, chatID, name string) (threadID string, err error)
 	Health(ctx context.Context) error
+}
+
+// DirectMessenger is implemented by an adapter that can write to a user
+// privately.
+type DirectMessenger interface {
+	// DirectChat returns the chat ID of the private chat with a user.
+	DirectChat(ctx context.Context, userID string) (chatID string, err error)
+	// DeleteCommand removes the message a command came in, where the
+	// messenger keeps one (a token must not stay in the chat).
+	DeleteCommand(ctx context.Context, c Command) error
 }

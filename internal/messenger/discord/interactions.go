@@ -336,7 +336,19 @@ var commandOptions = map[string][]optionDef{
 	"lang": {
 		{Name: "code", EN: "Language code: en or ru", RU: "Код языка: en или ru"},
 	},
+	"link": {
+		{Name: "platform", Required: true, EN: "github or gitlab", RU: "github или gitlab"},
+		{Name: "token", Required: true, EN: "Personal access token, used once and not stored", RU: "Личный токен доступа, используется один раз и не хранится"},
+		{Name: "host", EN: "Server for self-hosted GitHub or GitLab", RU: "Сервер для своего GitHub или GitLab"},
+	},
+	"unlink": {
+		{Name: "platform", Required: true, EN: "github or gitlab", RU: "github или gitlab"},
+		{Name: "login", EN: "Account login, when several are linked", RU: "Логин аккаунта, если привязано несколько"},
+	},
 }
+
+// personalCommands work in the bot's DM too.
+var personalCommands = map[string]bool{"link": true, "unlink": true, "me": true}
 
 type appOption struct {
 	Type        int               `json:"type"`
@@ -355,7 +367,8 @@ type appCommand struct {
 	Options     []appOption       `json:"options,omitempty"`
 }
 
-// registerCommands publishes the slash commands, server channels only.
+// registerCommands publishes the slash commands: server channels only,
+// except the personal ones, which work in the bot's DM as well.
 func (d *Discord) registerCommands(ctx context.Context, l messenger.CommandLister) {
 	ru := map[string]string{}
 	for _, c := range l.Commands(i18n.RU) {
@@ -364,6 +377,9 @@ func (d *Discord) registerCommands(ctx context.Context, l messenger.CommandListe
 	var cmds []appCommand
 	for _, c := range l.Commands(i18n.EN) {
 		ac := appCommand{Name: c.Name, Type: 1, Description: cut(c.Description, 100), Contexts: []int{0}}
+		if personalCommands[c.Name] {
+			ac.Contexts = []int{0, 1}
+		}
 		if s := ru[c.Name]; s != "" {
 			ac.Localized = map[string]string{"ru": cut(s, 100)}
 		}

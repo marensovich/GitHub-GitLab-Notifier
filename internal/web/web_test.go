@@ -21,7 +21,10 @@ type fakeSource struct {
 	pending, deadCount int
 	dead               []storage.OutboxItem
 	unconnected        []storage.RepoCount
+	links              []storage.Recipient
 }
+
+func (f *fakeSource) Links() ([]storage.Recipient, error) { return f.links, nil }
 
 func (f *fakeSource) OutboxCounts() (int, int, error) { return f.pending, f.deadCount, nil }
 func (f *fakeSource) DeadItems(limit int) ([]storage.OutboxItem, error) {
@@ -361,5 +364,30 @@ func TestOverviewWarnsUnconnectedRepo(t *testing.T) {
 	}
 	if strings.Contains(body, "Nothing needs attention") {
 		t.Error("overview says nothing needs attention")
+	}
+}
+
+func TestPeopleTable(t *testing.T) {
+	src := newSource()
+	src.links = []storage.Recipient{
+		{Person: storage.Person{Messenger: "discord", UserID: "77", Muted: []string{"mention"}},
+			Account: storage.Account{Platform: "gitlab", Host: "git.example.com", AccountID: "7", Login: "bob"}},
+		{Person: storage.Person{Messenger: "telegram", UserID: "5"},
+			Account: storage.Account{Platform: "github", Host: "github.com", AccountID: "10", Login: "alice"}},
+	}
+	h := newServer(t, Config{}, src).Handler()
+	page := get(t, h, http.MethodGet, "/people", "localhost").Body.String()
+	for _, want := range []string{"<th>Messenger</th><th>User</th><th>Platform</th><th>Host</th><th>Login</th><th>Muted</th></tr>",
+		"discord", "77", "git.example.com", "bob", "mention", "telegram", "alice", `href="/people" aria-current="page"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Index(page, "bob") > strings.Index(page, "alice") {
+		t.Error("rows not in the order of the store")
+	}
+	src.links = nil
+	if page := get(t, h, http.MethodGet, "/people", "localhost").Body.String(); !strings.Contains(page, "/link") {
+		t.Error("empty state does not mention /link")
 	}
 }

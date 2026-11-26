@@ -45,7 +45,8 @@ type GitHubPullRequestDto struct {
 }
 
 // GitHubPullRequestHandler handles GitHub pull_request events.
-// Only lifecycle actions are reported; noisy ones (labeled, assigned,
+// Only lifecycle actions are reported to chats; assigned and
+// review_requested go only to the people concerned; noisy ones (labeled,
 // synchronize, edited, ...) are skipped.
 type GitHubPullRequestHandler struct{}
 
@@ -61,7 +62,7 @@ func (h *GitHubPullRequestHandler) Handle(lang i18n.Lang, payload []byte) (notif
 
 	pr := dto.PullRequest
 	var headingKey string
-	withBody, withStats := false, false
+	withBody, withStats, personalOnly := false, false, false
 
 	switch dto.Action {
 	case "opened":
@@ -78,6 +79,10 @@ func (h *GitHubPullRequestHandler) Handle(lang i18n.Lang, payload []byte) (notif
 		headingKey = i18n.MsgPRReopened
 	case "ready_for_review":
 		headingKey = i18n.MsgPRReady
+	case "assigned":
+		headingKey, personalOnly = i18n.MsgPRAssigned, true
+	case "review_requested":
+		headingKey, personalOnly = i18n.MsgPRReviewRequested, true
 	default:
 		return notify.Notification{}, ErrSkip
 	}
@@ -105,6 +110,9 @@ func (h *GitHubPullRequestHandler) Handle(lang i18n.Lang, payload []byte) (notif
 	v.Buttons = []notify.Button{button(lang, i18n.MsgBtnOpenPR, pr.HTMLURL, notify.StylePrimary)}
 	if pr.HTMLURL != "" {
 		v.Buttons = append(v.Buttons, button(lang, i18n.MsgBtnFiles, pr.HTMLURL+"/files", notify.StyleDefault))
+	}
+	if personalOnly {
+		return v.notification(), ErrPersonalOnly
 	}
 	return v.notification(), nil
 }

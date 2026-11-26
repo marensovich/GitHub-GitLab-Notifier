@@ -1,0 +1,27 @@
+{{define "title"}}People{{end}}
+{{define "content"}}
+<h1>People</h1>
+{{if .Err}}<p class="alerts warn">Could not read everything: {{.Err}}</p>{{end}}
+{{if .Links}}
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Messenger</th><th>User</th><th>Platform</th><th>Host</th><th>Login</th><th>Muted</th></tr></thead>
+  <tbody>
+  {{range .Links}}
+    <tr>
+      <td>{{.Messenger}}</td>
+      <td class="mono">{{.UserID}}</td>
+      <td>{{.Platform}}</td>
+      <td class="mono">{{.Host}}</td>
+      <td class="mono">{{.Login}}</td>
+      <td>{{range .Muted}}<span class="badge">{{.}}</span> {{else}}<span class="muted">—</span>{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+<p class="muted">Accounts linked with <code>/link</code> for personal DMs. Tokens are never stored. A bot administrator removes a link with <code>/unlink &lt;platform&gt; &lt;login&gt;</code>.</p>
+{{else}}
+<p class="empty">Nobody linked an account yet. People do it with <code>/link</code> in a private chat with the bot.</p>
+{{end}}
+{{end}}

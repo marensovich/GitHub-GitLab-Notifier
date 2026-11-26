@@ -77,6 +77,17 @@ type Messenger struct {
 	Attempts []notify.Attempt
 	// Hang makes Send block until its context is done.
 	Hang bool
+	// Members holds chatID+"/"+userID of chat members; MemberErr fails
+	// IsMember; MemberCalls counts its calls.
+	Members     map[string]bool
+	MemberErr   error
+	MemberCalls int
+	// MemberErrs fails IsMember for one chat ID.
+	MemberErrs map[string]error
+	// Deleted lists the commands DeleteCommand removed.
+	Deleted []messenger.Command
+	// DirectErr fails DirectChat.
+	DirectErr error
 }
 
 // SentList returns a copy of the sent notifications; safe while the
@@ -172,6 +183,44 @@ func (m *Messenger) IsChatAdmin(_ context.Context, chatID, userID string) (bool,
 		return false, m.AdminErr
 	}
 	return m.Admins[chatID+"/"+userID], nil
+}
+
+// IsMember reports whether the user is in Members.
+func (m *Messenger) IsMember(_ context.Context, chatID, userID string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.MemberCalls++
+	if m.MemberErr != nil {
+		return false, m.MemberErr
+	}
+	if err := m.MemberErrs[chatID]; err != nil {
+		return false, err
+	}
+	return m.Members[chatID+"/"+userID], nil
+}
+
+// DirectChat returns the user ID for "telegram" (as Telegram does) and
+// "dm-<user>" for other names.
+func (m *Messenger) DirectChat(_ context.Context, userID string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Log = append(m.Log, "DirectChat")
+	if m.DirectErr != nil {
+		return "", m.DirectErr
+	}
+	if m.name == "telegram" {
+		return userID, nil
+	}
+	return "dm-" + userID, nil
+}
+
+// DeleteCommand records the command in Deleted.
+func (m *Messenger) DeleteCommand(_ context.Context, c messenger.Command) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Log = append(m.Log, "DeleteCommand")
+	m.Deleted = append(m.Deleted, c)
+	return nil
 }
 
 func (m *Messenger) CanManageThreads(_ context.Context, chatID string) (bool, error) {

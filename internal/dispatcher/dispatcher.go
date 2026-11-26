@@ -15,8 +15,11 @@ type Result struct {
 	Notification notify.Notification
 	// Topic is the forum topic the notification belongs to.
 	Topic platform.Topic
-	// Skip is true when no notification should be sent.
+	// Skip is true when no notification should be sent to chats.
 	Skip bool
+	// PersonalOnly is true when Notification goes only to the people the
+	// event concerns (Skip is true then).
+	PersonalOnly bool
 }
 
 // Dispatcher routes webhook events to the appropriate handler.
@@ -72,6 +75,9 @@ func (d *Dispatcher) Dispatch(lang i18n.Lang, p platform.Platform, eventName str
 	}
 
 	n, err := h.Handle(lang, payload)
+	if errors.Is(err, handler.ErrPersonalOnly) {
+		return Result{Notification: n, Topic: eventType.Topic, Skip: true, PersonalOnly: true}
+	}
 	if errors.Is(err, handler.ErrSkip) {
 		return Result{Topic: eventType.Topic, Skip: true}
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"html"
 	"log"
+	"net/http"
 	"net/url"
 	"slices"
 	"strings"
@@ -13,12 +14,13 @@ import (
 	"GitHub-GitLab-Notifier/internal/config"
 	"GitHub-GitLab-Notifier/internal/i18n"
 	"GitHub-GitLab-Notifier/internal/messenger"
+	"GitHub-GitLab-Notifier/internal/personal"
 	"GitHub-GitLab-Notifier/storage"
 )
 
 // commandNames lists the commands of the command menu, in order. Each has
 // a "cmd_<name>" translation used as its description.
-var commandNames = []string{"start", "help", "configure", "connect", "disconnect", "status", "lang", "version"}
+var commandNames = []string{"start", "help", "configure", "connect", "disconnect", "status", "lang", "link", "unlink", "me", "version"}
 
 // Core handles commands and button presses for every messenger.
 type Core struct {
@@ -26,6 +28,8 @@ type Core struct {
 	cfg     *config.Config
 	version string
 	ms      map[string]messenger.Messenger
+	// Verifier checks the tokens of /link.
+	Verifier personal.Verifier
 }
 
 var (
@@ -35,7 +39,8 @@ var (
 
 // New returns the core for the given adapters, keyed by messenger name.
 func New(store *storage.Store, cfg *config.Config, version string, ms map[string]messenger.Messenger) *Core {
-	return &Core{store: store, cfg: cfg, version: version, ms: ms}
+	return &Core{store: store, cfg: cfg, version: version, ms: ms,
+		Verifier: personal.Verifier{HTTP: &http.Client{Timeout: verifyTimeout}}}
 }
 
 // Commands returns the command menu in lang.
@@ -91,6 +96,12 @@ func (c *Core) HandleCommand(ctx context.Context, cmd messenger.Command) {
 		c.status(r)
 	case "lang":
 		c.setLang(r)
+	case "link":
+		c.link(r)
+	case "unlink":
+		c.unlink(r)
+	case "me":
+		c.me(r)
 	case "version":
 		c.reply(r, i18n.Tf(r.lang, i18n.MsgVersion, html.EscapeString(c.version)), nil)
 	default:

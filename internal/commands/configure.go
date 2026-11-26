@@ -77,6 +77,10 @@ func (c *Core) HandlePress(ctx context.Context, p messenger.Press) {
 	if m == nil {
 		return
 	}
+	if strings.HasPrefix(p.Data, pressMe) {
+		c.mePress(ctx, m, p)
+		return
+	}
 	step, value, ok := parseConfigureCallback(p.Data)
 	if !ok {
 		c.answer(ctx, m, p, "", false)

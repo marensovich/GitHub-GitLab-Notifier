@@ -63,3 +63,15 @@ func TestDispatchHandlerError(t *testing.T) {
 		t.Fatalf("want an error notification naming the event, got %+v", res)
 	}
 }
+
+func TestDispatchPersonalOnly(t *testing.T) {
+	d := NewDispatcher(i18n.EN, true)
+	res := d.Dispatch(i18n.EN, platform.GitHub, "pull_request",
+		[]byte(`{"action":"assigned","pull_request":{"number":3,"title":"x"},"repository":{"full_name":"octo/hello"}}`))
+	if !res.Skip || !res.PersonalOnly || res.Notification.Heading == "" {
+		t.Fatalf("result %+v", res)
+	}
+	if res := d.Dispatch(i18n.EN, platform.GitHub, "pull_request", []byte(`{"action":"labeled"}`)); res.PersonalOnly {
+		t.Errorf("skip marked personal: %+v", res)
+	}
+}
