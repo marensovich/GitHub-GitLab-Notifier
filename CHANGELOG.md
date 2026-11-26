@@ -60,6 +60,9 @@ Foundation of 2.0: one core for several messengers, with Telegram, Discord and M
 - Webhooks are answered with `202 QUEUED` once stored; a repository nobody is connected to gets `202 SKIPPED`
   ("not connected") and is listed on the panel.
 - The Docker image runs `serve` from `/` and reads `/etc/notifier/config.yaml`.
+- README rewritten for 2.0 (`config.yaml`, three messengers, the send queue); new
+  `docs/MIGRATION-2.0.md` (systemd, Docker, going back to 1.1.x) and `docs/ARCHITECTURE.md` (model, error
+  classes, adding a messenger or an event).
 
 ### Fixed
 
